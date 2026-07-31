@@ -16,6 +16,8 @@ import { MailerService } from "../common/mailer/mailer.service";
 import type { EnvConfig } from "../config/env.validation";
 import { StripeProvider } from "./providers/stripe.provider";
 import { LicensesService } from "../licenses/licenses.service";
+import { FlutterwaveProvider, type FlutterwaveEvent } from "./providers/flutterwave.provider";
+import { PayPalProvider, type PayPalEvent, type PayPalWebhookHeaders } from "./providers/paypal.provider";
 import { PaystackProvider, type PaystackEvent } from "./providers/paystack.provider";
 import { canTransition, isAlreadyInState } from "./order-status";
 
@@ -43,6 +45,8 @@ export class PaymentsService {
     private readonly config: ConfigService<EnvConfig, true>,
     private readonly stripe: StripeProvider,
     private readonly paystack: PaystackProvider,
+    private readonly flutterwave: FlutterwaveProvider,
+    private readonly paypal: PayPalProvider,
     private readonly auditLog: AuditLogService,
     private readonly mailer: MailerService,
     private readonly licenses: LicensesService,
@@ -102,6 +106,151 @@ export class PaymentsService {
       reference: transaction.reference,
       redirectUrl: transaction.authorizationUrl,
     };
+  }
+
+  async startFlutterwaveCheckout(userId: string, orderNumber: string) {
+    const order = await this.loadPayableOrder(userId, orderNumber);
+    const appUrl = this.config.get("APP_URL", { infer: true });
+
+    const payment = await this.flutterwave.initializePayment({
+      orderNumber: order.orderNumber,
+      // Converted to major units inside the provider — Flutterwave is the
+      // one integration here that does not take minor units.
+      amountMinorUnits: order.totalCents,
+      currency: order.currency,
+      customerEmail: order.user.email,
+      redirectUrl: `${appUrl}/orders/${order.orderNumber}?payment=success`,
+    });
+
+    await this.recordInitiated(order.id, "FLUTTERWAVE", order, payment.reference);
+    await this.auditLog.record({
+      userId,
+      action: "payment.initiated",
+      entity: "Order",
+      entityId: order.id,
+      metadata: { provider: "FLUTTERWAVE", ref: payment.reference },
+    });
+
+    return { provider: "FLUTTERWAVE", reference: payment.reference, redirectUrl: payment.redirectUrl };
+  }
+
+  async startPayPalCheckout(userId: string, orderNumber: string) {
+    const order = await this.loadPayableOrder(userId, orderNumber);
+    const appUrl = this.config.get("APP_URL", { infer: true });
+
+    const paypalOrder = await this.paypal.createOrder({
+      orderNumber: order.orderNumber,
+      amountMinorUnits: order.totalCents,
+      currency: order.currency,
+      returnUrl: `${appUrl}/orders/${order.orderNumber}?payment=success`,
+      cancelUrl: `${appUrl}/orders/${order.orderNumber}?payment=cancelled`,
+    });
+
+    await this.recordInitiated(order.id, "PAYPAL", order, paypalOrder.reference);
+    await this.auditLog.record({
+      userId,
+      action: "payment.initiated",
+      entity: "Order",
+      entityId: order.id,
+      metadata: { provider: "PAYPAL", ref: paypalOrder.reference },
+    });
+
+    return { provider: "PAYPAL", reference: paypalOrder.reference, redirectUrl: paypalOrder.redirectUrl };
+  }
+
+  async handleFlutterwaveWebhook(rawBody: Buffer, hashHeader: string | undefined): Promise<WebhookResult> {
+    this.assertWebhookPreconditions(rawBody, hashHeader, "verif-hash");
+
+    let event: FlutterwaveEvent;
+    try {
+      event = await this.flutterwave.verifyWebhookSignature(rawBody, hashHeader!);
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      this.logger.warn(`Rejected Flutterwave webhook: ${(error as Error).message}`);
+      throw new BadRequestException("Invalid webhook signature");
+    }
+
+    const reference = event.data?.tx_ref;
+    if (!reference) return { handled: false, reason: "no transaction reference" };
+
+    const eventType = event.event ?? event["event.type"] ?? "unknown";
+    // Like Paystack, Flutterwave carries no unique event id, so the key is
+    // (type + reference) — stable across redeliveries, distinct per event.
+    const claimed = await this.claimEvent("FLUTTERWAVE", `${eventType}:${reference}`, eventType);
+    if (!claimed) return { handled: false, reason: "duplicate" };
+
+    const orderNumber = event.data.meta?.orderNumber ?? reference;
+    const paidMinor =
+      event.data.amount === undefined ? null : FlutterwaveProvider.toMinorUnits(event.data.amount);
+
+    switch (eventType) {
+      case "charge.completed":
+        // Flutterwave sends charge.completed for failures too; the status
+        // inside the payload is what says whether money moved.
+        if (event.data.status !== "successful") {
+          return { handled: false, reason: `charge status ${event.data.status ?? "unknown"}` };
+        }
+        return this.applySuccess({
+          provider: "FLUTTERWAVE",
+          orderNumber,
+          providerRef: event.data.flw_ref ?? reference,
+          paidAmountMinor: paidMinor,
+          raw: event,
+        });
+      case "refund.completed":
+        return this.applyRefund("FLUTTERWAVE", orderNumber, event.data.flw_ref ?? reference);
+      default:
+        return { handled: false, reason: `unhandled event type ${eventType}` };
+    }
+  }
+
+  async handlePayPalWebhook(
+    rawBody: Buffer,
+    headers: PayPalWebhookHeaders,
+  ): Promise<WebhookResult> {
+    // PayPal spreads its signature across five headers; the transmission id
+    // stands in for "the signature is present" in the shared precondition.
+    this.assertWebhookPreconditions(rawBody, headers.transmissionId, "paypal-transmission-id");
+
+    let event: PayPalEvent;
+    try {
+      event = await this.paypal.verifyWebhookSignature(rawBody, headers);
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      // Verification is a remote call, so this also catches PayPal being
+      // unreachable — which must mean "unverified", never "assume valid".
+      this.logger.warn(`Rejected PayPal webhook: ${(error as Error).message}`);
+      throw new BadRequestException("Invalid webhook signature");
+    }
+
+    const eventType = event.event_type ?? "unknown";
+    const orderNumber = PayPalProvider.orderNumberFrom(event);
+    if (!orderNumber) return { handled: false, reason: "no order reference" };
+
+    // PayPal does supply a unique event id, so idempotency keys off that
+    // rather than a synthesised one.
+    const eventId = event.id ?? `${eventType}:${orderNumber}`;
+    const claimed = await this.claimEvent("PAYPAL", eventId, eventType);
+    if (!claimed) return { handled: false, reason: "duplicate" };
+
+    const providerRef = event.resource?.id ?? orderNumber;
+
+    switch (eventType) {
+      case "PAYMENT.CAPTURE.COMPLETED":
+      case "CHECKOUT.ORDER.APPROVED":
+        return this.applySuccess({
+          provider: "PAYPAL",
+          orderNumber,
+          providerRef,
+          paidAmountMinor: PayPalProvider.paidMinorUnitsFrom(event),
+          raw: event,
+        });
+      case "PAYMENT.CAPTURE.REFUNDED":
+      case "PAYMENT.CAPTURE.REVERSED":
+        return this.applyRefund("PAYPAL", orderNumber, providerRef);
+      default:
+        return { handled: false, reason: `unhandled event type ${eventType}` };
+    }
   }
 
   private async loadPayableOrder(userId: string, orderNumber: string) {
@@ -454,13 +603,17 @@ export class PaymentsService {
 
   /** Lets the frontend hide payment buttons for providers that aren't set up. */
   async availableProviders(): Promise<{ provider: PaymentProvider; configured: boolean }[]> {
-    const [stripe, paystack] = await Promise.all([
+    const [stripe, paystack, flutterwave, paypal] = await Promise.all([
       this.stripe.isConfigured(),
       this.paystack.isConfigured(),
+      this.flutterwave.isConfigured(),
+      this.paypal.isConfigured(),
     ]);
     return [
       { provider: "STRIPE", configured: stripe },
       { provider: "PAYSTACK", configured: paystack },
+      { provider: "FLUTTERWAVE", configured: flutterwave },
+      { provider: "PAYPAL", configured: paypal },
     ];
   }
 }

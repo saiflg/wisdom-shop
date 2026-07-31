@@ -171,6 +171,15 @@ export class OrdersService {
       await tx.cartItem.deleteMany({ where: { cartId } });
 
       return created;
+    },
+    {
+      // Prisma defaults to a 5s interactive-transaction timeout. The work in
+      // here is bounded (one write per cart line, then the order), so this is
+      // not covering for a slow query — but a checkout that exceeds the
+      // default returns a 500 at the single worst moment in the funnel, and
+      // 5s is not much headroom on a loaded database. Raised deliberately.
+      timeout: 15_000,
+      maxWait: 10_000,
     });
 
     await this.auditLog.record({

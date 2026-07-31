@@ -3,6 +3,7 @@ import {
   isIndexable,
   toSearchDocument,
   type IndexableProduct,
+  PRIMARY_KEY,
 } from "./search-document";
 
 function product(overrides: Partial<IndexableProduct> = {}): IndexableProduct {
@@ -50,10 +51,27 @@ describe("toSearchDocument", () => {
     });
   });
 
+  it("has more than one field ending in \"id\", which is why the primary key is declared", () => {
+    // Meilisearch infers the primary key from field names and REFUSES when
+    // several fields end in "id". This document has `id` and `vendorId`, so
+    // inference fails and every write is silently rejected — the index stays
+    // empty while searches still return 200.
+    //
+    // This test exists so that failure mode is visible here rather than in
+    // production. If it ever goes green with only one candidate, the explicit
+    // PRIMARY_KEY is still correct; do not take it as licence to remove it.
+    const candidates = Object.keys(toSearchDocument(product())).filter((key) =>
+      key.toLowerCase().endsWith("id"),
+    );
+
+    expect(candidates.length).toBeGreaterThan(1);
+    expect(candidates).toContain(PRIMARY_KEY);
+  });
+
   it("does not publish stock levels or internal state", () => {
     // The index is queried by the public storefront; anything in a document
     // is effectively public even if no screen shows it today.
-    const doc = toSearchDocument(product()) as Record<string, unknown>;
+    const doc = toSearchDocument(product()) as unknown as Record<string, unknown>;
 
     expect(doc).not.toHaveProperty("stockQty");
     expect(doc).not.toHaveProperty("status");

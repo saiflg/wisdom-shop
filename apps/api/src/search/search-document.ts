@@ -7,6 +7,13 @@
 
 export const PRODUCTS_INDEX = "products";
 
+/**
+ * Declared rather than inferred. Meilisearch guesses the primary key from
+ * field names and refuses when more than one ends in "id" — this document has
+ * both `id` and `vendorId`, which is exactly that case.
+ */
+export const PRIMARY_KEY = "id";
+
 export interface IndexableProduct {
   id: string;
   title: string;

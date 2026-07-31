@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   INDEX_SETTINGS,
+  PRIMARY_KEY,
   isIndexable,
   PRODUCTS_INDEX,
   toSearchDocument,
@@ -47,9 +48,26 @@ export class SearchService implements OnModuleInit {
       );
       return;
     }
+    await this.ensureIndex();
     // Settings are idempotent, so applying them on every boot keeps a fresh
     // Meilisearch volume configured without a separate provisioning step.
     await this.request("PUT", `/indexes/${PRODUCTS_INDEX}/settings`, INDEX_SETTINGS);
+  }
+
+  /**
+   * Creates the index with an **explicit primary key**.
+   *
+   * Meilisearch otherwise infers it from field names, and refuses when more
+   * than one field ends in "id" — this document has both `id` and
+   * `vendorId`, so inference is ambiguous and *every document write is
+   * rejected*. The index still exists and searches still succeed, they just
+   * return nothing, so the failure looks like an empty catalogue rather than
+   * a broken integration. Declaring the key removes the guesswork.
+   *
+   * Already-exists is the expected response on every boot after the first.
+   */
+  private async ensureIndex(): Promise<void> {
+    await this.request("POST", "/indexes", { uid: PRODUCTS_INDEX, primaryKey: PRIMARY_KEY });
   }
 
   private async request<T>(
@@ -92,7 +110,11 @@ export class SearchService implements OnModuleInit {
       await this.removeProduct(product.id);
       return;
     }
-    await this.request("PUT", `/indexes/${PRODUCTS_INDEX}/documents`, [toSearchDocument(product)]);
+    await this.request(
+      "PUT",
+      `/indexes/${PRODUCTS_INDEX}/documents?primaryKey=${PRIMARY_KEY}`,
+      [toSearchDocument(product)],
+    );
   }
 
   async removeProduct(productId: string): Promise<void> {
@@ -104,6 +126,8 @@ export class SearchService implements OnModuleInit {
   async reindexAll(): Promise<{ indexed: number; enabled: boolean }> {
     if (!this.enabled) return { indexed: 0, enabled: false };
 
+    await this.ensureIndex();
+
     const products = await this.prisma.product.findMany({
       where: { status: "PUBLISHED", deletedAt: null },
       include: { categories: { include: { category: true } } },
@@ -114,7 +138,7 @@ export class SearchService implements OnModuleInit {
     // leaves the shop with no search results in between.
     await this.request(
       "PUT",
-      `/indexes/${PRODUCTS_INDEX}/documents`,
+      `/indexes/${PRODUCTS_INDEX}/documents?primaryKey=${PRIMARY_KEY}`,
       products.map((product) => toSearchDocument(product)),
     );
 

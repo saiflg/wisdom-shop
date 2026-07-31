@@ -35,6 +35,24 @@ export class PaymentsController {
     return this.payments.startPaystackCheckout(userId, orderNumber);
   }
 
+  @Post("flutterwave/checkout/:orderNumber")
+  @ApiOperation({
+    summary: "Start a Flutterwave payment for one of your PENDING orders",
+    description: "503 if no Flutterwave secret key is configured, 409 if the order is not PENDING.",
+  })
+  startFlutterwaveCheckout(@CurrentUser("id") userId: string, @Param("orderNumber") orderNumber: string) {
+    return this.payments.startFlutterwaveCheckout(userId, orderNumber);
+  }
+
+  @Post("paypal/checkout/:orderNumber")
+  @ApiOperation({
+    summary: "Start a PayPal order for one of your PENDING orders",
+    description: "503 if no PayPal credentials are configured, 409 if the order is not PENDING.",
+  })
+  startPayPalCheckout(@CurrentUser("id") userId: string, @Param("orderNumber") orderNumber: string) {
+    return this.payments.startPayPalCheckout(userId, orderNumber);
+  }
+
   @Get(":orderNumber")
   @ApiOperation({ summary: "Payment attempts recorded against one of your orders" })
   list(@CurrentUser("id") userId: string, @Param("orderNumber") orderNumber: string) {

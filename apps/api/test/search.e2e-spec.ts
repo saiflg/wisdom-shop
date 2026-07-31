@@ -27,6 +27,7 @@ async function settle(ms = 900): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+
 describe("Product search (e2e)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -38,9 +39,37 @@ describe("Product search (e2e)", () => {
 
   let adminToken: string;
   let draftId: string;
+  let publishedId: string;
 
   const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
   const http = () => request(app.getHttpServer());
+
+  /**
+   * Polls until a search result matches, instead of sleeping a fixed amount.
+   *
+   * Meilisearch indexes asynchronously, so there is always a gap between the
+   * write returning and the document being queryable. A fixed sleep has to
+   * guess how long that takes, and the guess is wrong exactly when the machine
+   * is busy — this suite failed in a full run for that reason while passing
+   * alone. Polling waits only as long as it actually needs to and fails with
+   * the real assertion rather than a timeout.
+   */
+  async function waitForSearch(
+    query: string,
+    predicate: (ids: string[]) => boolean,
+    timeoutMs = 15_000,
+  ): Promise<string[]> {
+    const deadline = Date.now() + timeoutMs;
+    let ids: string[] = [];
+
+    for (;;) {
+      const res = await http().get(`/v1/products?search=${query}`).expect(200);
+      ids = res.body.data.map((p: { id: string }) => p.id);
+      if (predicate(ids)) return ids;
+      if (Date.now() > deadline) return ids;
+      await settle(200);
+    }
+  }
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -73,8 +102,10 @@ describe("Product search (e2e)", () => {
       })
       .expect(201);
 
+    publishedId = published.body.id;
+
     await http()
-      .patch(`/v1/admin/products/${published.body.id}`)
+      .patch(`/v1/admin/products/${publishedId}`)
       .set(auth(adminToken))
       .send({ status: "PUBLISHED" })
       .expect(200);
@@ -107,10 +138,9 @@ describe("Product search (e2e)", () => {
   });
 
   it("finds a published product by a word from its title", async () => {
-    const res = await http()
-      .get(`/v1/products?search=Zylophone`)
-      .expect(200);
+    await waitForSearch("Zylophone", (ids) => ids.includes(publishedId));
 
+    const res = await http().get(`/v1/products?search=Zylophone`).expect(200);
     const titles = res.body.data.map((p: { title: string }) => p.title);
     expect(titles).toContain(`Zylophone Handbook ${suffix}`);
   });
@@ -118,8 +148,9 @@ describe("Product search (e2e)", () => {
   it("tolerates a typo, which the database fallback cannot", async () => {
     // This is the whole reason for running a search engine: "Zylophon"
     // matches nothing under a SQL `contains`.
-    const res = await http().get(`/v1/products?search=Zylophon`).expect(200);
+    await waitForSearch("Zylophon", (ids) => ids.includes(publishedId));
 
+    const res = await http().get(`/v1/products?search=Zylophon`).expect(200);
     const titles = res.body.data.map((p: { title: string }) => p.title);
     expect(titles).toContain(`Zylophone Handbook ${suffix}`);
   });
@@ -150,22 +181,20 @@ describe("Product search (e2e)", () => {
       .set(auth(adminToken))
       .send({ status: "PUBLISHED" })
       .expect(200);
-    await settle();
 
-    const visible = await http().get(`/v1/products?search=Qwertium`).expect(200);
-    expect(visible.body.data.map((p: { id: string }) => p.id)).toContain(created.body.id);
+    const visible = await waitForSearch("Qwertium", (ids) => ids.includes(created.body.id));
+    expect(visible).toContain(created.body.id);
 
     await http()
       .patch(`/v1/admin/products/${created.body.id}`)
       .set(auth(adminToken))
       .send({ status: "DRAFT" })
       .expect(200);
-    await settle();
 
     // A withdrawn product that stayed in the index would keep appearing in
     // results that lead nowhere.
-    const gone = await http().get(`/v1/products?search=Qwertium`).expect(200);
-    expect(gone.body.data.map((p: { id: string }) => p.id)).not.toContain(created.body.id);
+    const gone = await waitForSearch("Qwertium", (ids) => !ids.includes(created.body.id));
+    expect(gone).not.toContain(created.body.id);
   });
 
   it("still applies the other listing filters to search results", async () => {

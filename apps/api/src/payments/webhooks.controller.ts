@@ -43,4 +43,36 @@ export class WebhooksController {
     const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
     return this.payments.handlePaystackWebhook(rawBody ?? Buffer.alloc(0), signature);
   }
+
+  @Public()
+  @Post("flutterwave")
+  @HttpCode(HttpStatus.OK)
+  @ApiExcludeEndpoint()
+  async flutterwave(@Req() req: Request, @Headers("verif-hash") hash?: string) {
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+    return this.payments.handleFlutterwaveWebhook(rawBody ?? Buffer.alloc(0), hash);
+  }
+
+  @Public()
+  @Post("paypal")
+  @HttpCode(HttpStatus.OK)
+  @ApiExcludeEndpoint()
+  async paypal(
+    @Req() req: Request,
+    // PayPal spreads its signature across five headers rather than one.
+    @Headers("paypal-transmission-id") transmissionId?: string,
+    @Headers("paypal-transmission-time") transmissionTime?: string,
+    @Headers("paypal-transmission-sig") transmissionSig?: string,
+    @Headers("paypal-cert-url") certUrl?: string,
+    @Headers("paypal-auth-algo") authAlgo?: string,
+  ) {
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+    return this.payments.handlePayPalWebhook(rawBody ?? Buffer.alloc(0), {
+      transmissionId,
+      transmissionTime,
+      transmissionSig,
+      certUrl,
+      authAlgo,
+    });
+  }
 }

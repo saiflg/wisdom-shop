@@ -9,7 +9,7 @@ Each phase is completed, tested, and documented before the next begins.
 | 3 | Product Catalog | ✅ Done — verified |
 | 4 | Shopping Cart | ✅ Done — verified |
 | 5 | Checkout | ✅ Done — verified |
-| 6 | Payment Gateway Integration | 🟡 Stripe + Paystack verified — Flutterwave/PayPal pending |
+| 6 | Payment Gateway Integration | ✅ Done — all four providers verified against mocked APIs |
 | 7 | Order Management | ✅ Done — verified |
 | 8 | Vendor Marketplace | ✅ Done — verified |
 | 9 | Educational Management Software Marketplace | 🟡 Licensing + handoff done — downloads pending |
@@ -1714,47 +1714,175 @@ and verified for real — not just traced by hand:
      container — they share `apps/web/.next` and clobber each other. Not
      a code defect; the README now documents building with dev stopped.
 
+## Phase 6c — Flutterwave and PayPal
+
+Completes the four-provider set the brief called for. Both were built the
+same way as Stripe and Paystack: a provider class that owns the wire format,
+with `PaymentsService` owning the order state machine.
+
+**What is and is not proven.** Every test here mocks the provider's HTTP API.
+That pins the request we *would* send and every branch of the response
+handling — it cannot tell us Flutterwave or PayPal accepts it. Both remain
+unverified against a real sandbox account, which is called out under Known
+gaps and is the one thing to do before taking real money.
+
+### Flutterwave
+
+- **Amounts are in MAJOR units.** The only integration here that is not in
+  minor units. `toMajorUnits`/`toMinorUnits` isolate the conversion, and the
+  round-trip is tested across a range of values because `19.99 * 100` is
+  `1998.9999999999998` in binary floating point — a truncation would
+  undercharge by a cent on a large share of prices.
+- **Webhooks authenticate with a shared secret**, not an HMAC: Flutterwave
+  sends the configured hash verbatim in `verif-hash`. Compared with
+  `timingSafeEqual`, but **length is checked first** — `timingSafeEqual`
+  throws on unequal lengths, so without that guard a short header would be a
+  500 rather than a rejection.
+- **`charge.completed` is sent for failures too.** The status inside the
+  payload is what says money moved. Treating the event type as success would
+  mark failed payments paid.
+
+### PayPal
+
+- **Verification is a remote call.** PayPal has no local signature scheme;
+  the five `paypal-*` headers are posted back to PayPal to be adjudicated.
+  This **fails closed**: if the call errors or returns anything other than
+  `SUCCESS`, the webhook is rejected. Failing open would let anyone who can
+  reach the endpoint mark orders paid whenever PayPal happened to be down.
+- **Sandbox is the default**, including when `PAYPAL_ENV` is set to
+  something unrecognised. A misconfiguration should not be able to move real
+  money.
+- **The order number travels as `custom_id`**, so it comes back on the
+  webhook without trusting anything the buyer controls. PayPal puts it in
+  different places by event type, so both shapes are read.
+- OAuth tokens are cached until 60s before expiry rather than minted per
+  request.
+
+### Verification log (2026-07-31) — Phase 6c
+
+- 30 provider unit tests, 15 new e2e tests (`flutterwave-paypal.e2e-spec.ts`)
+- Final state: **19 e2e suites / 241 tests passing**, 17 unit suites / 208
+  passing, lint clean over `src` and `test`, web production build clean, 77
+  web tests passing
+- **Mutation check.** Replaced PayPal's verification condition with `if
+  (false)` — fail open. Four e2e tests failed, including "fails closed when
+  PayPal is unreachable". The safety property is genuinely covered, not
+  asserted vacuously.
+
+**The first full run did not pass**, and the two failures are worth recording
+because neither was in the payments code:
+
+1. **Checkout exceeded Prisma's 5s interactive-transaction timeout** (6034ms)
+   under full-suite load. The work inside the transaction is bounded — one
+   write per cart line plus the order — so this was machine load, not a slow
+   query. Raised to 15s deliberately: a checkout that times out returns a 500
+   at the worst moment in the funnel, and 5s is thin headroom on a loaded
+   database. That is a production concern, not just a test one.
+2. **`search.e2e-spec.ts` waited on asynchronous indexing with a fixed 900ms
+   sleep.** A sleep has to guess how long indexing takes, and guesses wrong
+   exactly when the machine is busy — which is why it passed alone and failed
+   in a full run. Replaced with polling on the observable result, bounded by a
+   timeout, so it waits only as long as it needs to and still fails with the
+   real assertion rather than a timeout.
+
+The first of these also explains an earlier unexplained `cart.e2e-spec.ts`
+failure in a full run — same signature, same conditions — though that was
+never reproduced, so this is a plausible cause and not a confirmed one.
+
+### The bug this phase actually found: search was silently indexing nothing
+
+Unrelated to payments, caught because the full e2e run was re-run at the end.
+`search.e2e-spec.ts` began failing with every query returning `[]`.
+
+Meilisearch **infers an index's primary key from field names, and refuses
+when more than one field ends in `id`**. The product document has both `id`
+and `vendorId`, so inference was ambiguous and *every document write was
+rejected*. The index existed, settings applied, searches returned 200 — the
+only symptom was an empty result set. `numberOfDocuments: 0` and
+`primaryKey: null` gave it away.
+
+Two things made this worse than an ordinary bug, and both are worth keeping
+in mind:
+
+1. **The fail-soft design hid it.** Indexing deliberately logs a warning
+   rather than throwing, so search stays an enhancement and never takes the
+   shop down. That is still the right call, but it means a *permanently*
+   broken index looks identical to an empty catalogue.
+2. **Two tests passed vacuously throughout.** "never surfaces an unpublished
+   product" and "returns nothing rather than everything" both assert on an
+   empty array, which is exactly what a completely broken index returns.
+   They were green the entire time search was dead.
+
+Fixed by declaring `primaryKey: "id"` explicitly at index creation and on
+every document write, rather than relying on inference. Inference is fragile
+precisely because adding an innocuous field like `vendorId` breaks it.
+
 ## Known gaps
 
-- **No checkout, orders, or payments yet** — Phases 5–7. The cart page
-  intentionally stops at a subtotal with no "Checkout" button until there's
-  a checkout flow behind it.
-- **No guest carts.** Adding to cart requires sign-in (see the Phase 4
-  decision note above).
-- **Cart prices are live, not locked.** A cart line re-reads the current
-  product/variant price on every fetch, so a price change between adding
-  and viewing is reflected immediately. That's correct for a cart, but
-  checkout will need to snapshot prices into `OrderItem.unitPriceCents`
-  (the column already exists) and decide how to handle a price that moved
-  mid-session.
-- **Stock isn't reserved.** Stock is validated when adding to the cart but
-  nothing is held, so two users can both hold the last unit in their carts.
-  Checkout must re-validate and decrement atomically.
-- **No verify-email / password-reset / 2FA-management UI.** Those API
-  endpoints are complete and documented in Swagger, and login handles a
-  2FA challenge, but there are no `/verify-email`, `/reset-password`, or
-  account-settings pages yet.
-- **No admin UI.** Admin catalog endpoints are role-gated and working,
-  but they're API-only — no dashboard screens (Phase 11). There's also no
-  endpoint for granting/revoking roles, so promoting a user to ADMIN
-  currently requires a direct database write.
-- **Product images are URLs, not uploads.** No S3/R2 client is wired up;
-  the seed points at Unsplash URLs. Real upload handling comes with the
-  storage work.
-- **Search is a SQL `contains` match**, not Meilisearch. Meilisearch runs
-  in Docker Compose but nothing indexes to it yet — fine at demo volume,
-  will need revisiting before real catalog size.
-- No BullMQ processors or payment/notification provider SDKs — only env
-  vars are reserved (Phases 6/8/9). `MailerService` is real (nodemailer)
-  but has no queue/retry behind it.
-- Test coverage is meaningful but not exhaustive: `auth` and `catalog`
-  have unit + e2e suites; the frontend has no component tests yet.
-- **Jest warns "a worker process has failed to exit gracefully"** after
-  the unit suite. All tests pass, but something (likely argon2's
-  threadpool) isn't torn down. Harmless locally; worth fixing with
-  `--detectOpenHandles` before it causes CI hangs. Deliberately *not*
-  papered over with `forceExit`, which would hide the leak.
-- **E2E suites run serially** (`maxWorkers: 1`). They share one Postgres
-  and each boots its own Nest app, so parallel workers both exhausted this
-  machine and risked cross-suite interference on shared tables. If the
-  suite count grows a lot, consider a per-worker schema instead.
+*Rewritten 2026-07-31. The previous version had gone badly stale — it still
+claimed there was no checkout, no admin UI, and that search was a SQL
+`contains` match, all of which had been false for some time. Stale docs are
+worse than no docs, so this list is now the honest one.*
+
+### Not built, and known
+
+- **No payment provider has ever been exercised against a real account.**
+  All four (Stripe, Paystack, Flutterwave, PayPal) are tested against mocked
+  HTTP APIs with locally-generated signatures. That proves our handling of
+  every response branch; it does not prove the providers accept our requests.
+  **This is the single thing to do before taking real money.**
+- **Refunds do not move money.** An order can be marked `REFUNDED` — by an
+  admin, or by a provider refund webhook — but nothing calls a provider's
+  refund API. The status is a record of a refund issued out-of-band, not a
+  refund. Anything else would be a lie in the UI.
+- **No `/verify-email` or `/reset-password` pages.** The API endpoints are
+  complete and in Swagger, and email is sent, but the links have no page to
+  land on. 2FA and password change *do* have UI, on the account security page.
+- **No job queue.** BullMQ is in the compose file and the dependency list but
+  nothing uses it. `MailerService` sends synchronously via nodemailer, so a
+  slow SMTP server slows the request that triggered it and a failed send is
+  lost rather than retried.
+- **No guest carts.** Adding to cart requires sign-in — a deliberate Phase 4
+  decision, but a real conversion cost worth revisiting.
+- **Never deployed.** Phase 15 produced a compose file, nginx config and
+  deployment doc, and the images build, but nothing has run outside this
+  machine's dev stack. TLS, DNS, backups and log shipping are untested.
+
+### Sharp edges in what *is* built
+
+- **Cart prices are live; order prices are snapshots.** A cart line re-reads
+  the current price on every fetch, so a repricing shows up immediately.
+  Checkout freezes it into `OrderItem.unitPriceCents`, and `expectedTotalCents`
+  makes a mid-checkout change a 409 rather than a surprise charge.
+- **Stock is not reserved in the cart**, only compare-and-swapped at checkout.
+  Two people can hold the last unit in their carts; the second to check out
+  gets "just went out of stock". Correct, but it is a race the customer sees.
+- **Search failing looks like an empty catalogue.** Indexing fails soft by
+  design, so the shop never goes down with Meilisearch — but a permanently
+  broken index is indistinguishable from "no products match" from the outside.
+  This exact failure happened (see Phase 6c) and no test caught it for a
+  while, because tests asserting on empty results pass when *everything* is
+  empty. Worth an explicit health check on document count.
+- **Checkout's transaction timeout is set to 15s** (Prisma defaults to 5s).
+  The work inside is bounded, but the default was tight enough to produce
+  500s under full-suite load on this machine.
+
+### Testing
+
+- 19 API e2e suites and a unit suite; 77 web component tests. Coverage is
+  meaningful but not uniform — payments, auth and search are covered hardest;
+  admin screens are the thinnest.
+- **E2E suites run serially** (`maxWorkers: 1`). They share one Postgres and
+  each boots its own Nest app; parallel workers exhausted this machine and
+  risked cross-suite interference. A per-worker schema is the fix if the
+  suite count grows much further.
+- **Some suites are load-sensitive.** Two failures have been traced to
+  machine load rather than logic (a Prisma transaction timeout, and a fixed
+  sleep waiting on asynchronous indexing). Both were fixed at the cause —
+  the sleep became a poll — but an earlier `cart.e2e-spec.ts` failure in a
+  full run was **never reproduced or explained**, and is recorded here rather
+  than quietly forgotten.
+- **Jest warns "a worker process has failed to exit gracefully"** after the
+  unit suite. Everything passes, but something (likely argon2's threadpool)
+  is not torn down. Deliberately *not* papered over with `forceExit`, which
+  would hide the leak.
