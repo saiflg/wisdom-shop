@@ -11,12 +11,19 @@ const LINKS = [
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/vendors", label: "Vendors" },
   { href: "/admin/users", label: "Users" },
+  // Shown to all staff; the page itself refuses anyone who is not a super
+  // admin, matching the server. Hiding the link entirely would leave a super
+  // admin wondering where the settings went if their roles were misread.
+  { href: "/admin/settings", label: "Settings" },
 ];
 
 export function AdminNav() {
   const pathname = usePathname();
   return (
-    <nav className="mb-8 flex flex-wrap gap-2" aria-label="Admin">
+    <nav
+      className="mb-8 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"
+      aria-label="Admin"
+    >
       {LINKS.map((link) => {
         const active = pathname === link.href;
         return (
@@ -26,8 +33,8 @@ export function AdminNav() {
             aria-current={active ? "page" : undefined}
             className={
               active
-                ? "rounded-full bg-brand-gradient px-4 py-1.5 text-sm font-medium text-white"
-                : "rounded-full border border-slate-200 px-4 py-1.5 text-sm font-medium transition hover:border-brand-400 dark:border-slate-800"
+                ? "whitespace-nowrap rounded-full bg-brand-gradient px-4 py-1.5 text-sm font-medium text-white"
+                : "whitespace-nowrap rounded-full border border-slate-200 px-4 py-1.5 text-sm font-medium transition hover:border-brand-400 dark:border-slate-800"
             }
           >
             {link.label}

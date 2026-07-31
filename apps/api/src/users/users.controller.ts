@@ -1,11 +1,25 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiPropertyOptional, ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import {
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from "class-validator";
 import { RoleName } from "@prisma/client";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { UsersService } from "./users.service";
+import { STRONG_PASSWORD_REGEX } from "../auth/dto/register.dto";
 import type { AuthenticatedUser } from "../auth/interfaces/jwt-payload.interface";
 
 class QueryUsersDto {
@@ -42,6 +56,47 @@ class GrantRoleDto {
   role!: RoleName;
 }
 
+class CreateUserDto {
+  @ApiProperty()
+  @IsEmail()
+  @MaxLength(255)
+  email!: string;
+
+  // The same strength rule as public registration. An account an admin
+  // created is not a weaker account.
+  @ApiProperty({ description: "Min 10 chars, upper/lower/number/symbol" })
+  @IsString()
+  @MinLength(10)
+  @MaxLength(128)
+  @Matches(STRONG_PASSWORD_REGEX, {
+    message: "password must include an uppercase letter, lowercase letter, number, and symbol",
+  })
+  password!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  firstName!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  lastName!: string;
+
+  @ApiPropertyOptional({ enum: RoleName, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(RoleName, { each: true })
+  roles?: RoleName[];
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  markEmailVerified?: boolean = true;
+}
+
 @ApiTags("admin/users")
 @ApiBearerAuth()
 @Roles("ADMIN", "SUPER_ADMIN")
@@ -58,6 +113,16 @@ export class AdminUsersController {
   @Get(":id")
   findOne(@Param("id") id: string) {
     return this.users.findById(id);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: "Create a user",
+    description:
+      "Roles go through the same escalation policy as granting a role to an existing user — creating an account is not a way around it.",
+  })
+  create(@CurrentUser() actor: AuthenticatedUser, @Body() dto: CreateUserDto) {
+    return this.users.createUser(actor.id, actor.roles as RoleName[], dto);
   }
 
   @Post(":id/roles")

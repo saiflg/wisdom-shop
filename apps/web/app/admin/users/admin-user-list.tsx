@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useAdminUsers, useGrantRole, useRevokeRole } from "@/lib/use-admin";
 import { useAuthStore } from "@/store/auth-store";
+import { CreateUserForm } from "./create-user-form";
 
 /**
  * VENDOR is deliberately absent: it follows vendor approval and the server
@@ -53,6 +54,8 @@ export function AdminUserList() {
 
   return (
     <div className="space-y-5">
+      <CreateUserForm />
+
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -30,6 +30,27 @@ enum RoleName {
   DEVELOPER
 }
 
+/// Runtime configuration editable by a super admin, so deploying a key change
+/// does not require editing .env and restarting the API.
+///
+/// Secret values (provider keys, SMTP passwords) are stored encrypted with the
+/// same AES-256-GCM service used for TOTP secrets, and are never returned to
+/// any client — the admin API answers with a masked hint instead.
+model Setting {
+  key       String  @id
+  /// Ciphertext when `isSecret`, plaintext otherwise.
+  value     String
+  isSecret  Boolean @default(false)
+
+  updatedById String?
+  updatedBy   User?   @relation("SettingUpdates", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
 model User {
   id                String    @id @default(cuid())
   email             String    @unique
@@ -64,6 +85,7 @@ model User {
   auditLogs               AuditLog[]
   orderStatusChanges      OrderStatusHistory[] @relation("OrderStatusChanges")
   licenses                License[]
+  settingUpdates          Setting[]            @relation("SettingUpdates")
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

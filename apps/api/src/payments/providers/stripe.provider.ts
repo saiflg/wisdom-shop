@@ -1,12 +1,12 @@
 import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import Stripe from "stripe";
-import type { EnvConfig } from "../../config/env.validation";
+import { SettingsService } from "../../settings/settings.service";
 
 /**
  * Thin wrapper around the Stripe SDK.
  *
- * The client is created lazily and only if STRIPE_SECRET_KEY is configured.
+ * The client is created lazily and only if a secret key is configured, from
+ * Admin → Settings → Payments or the STRIPE_SECRET_KEY environment variable.
  * The project owner supplies that key themselves — nothing in this repo
  * ships a key, and with none set every call that would reach Stripe fails
  * with a clear 503 instead of a confusing SDK error.
@@ -19,27 +19,28 @@ import type { EnvConfig } from "../../config/env.validation";
 export class StripeProvider {
   private readonly logger = new Logger(StripeProvider.name);
   private client: Stripe | null = null;
+  /** The key the cached client was built with, so a key change takes effect. */
+  private clientKey: string | null = null;
 
-  constructor(private readonly config: ConfigService<EnvConfig, true>) {
-    if (!this.config.get("STRIPE_SECRET_KEY", { infer: true })) {
-      this.logger.warn(
-        "STRIPE_SECRET_KEY not configured — Stripe payment initiation is disabled. Set it in .env to enable.",
-      );
-    }
+  constructor(private readonly settings: SettingsService) {}
+
+  async isConfigured(): Promise<boolean> {
+    return this.settings.isConfigured("STRIPE_SECRET_KEY");
   }
 
-  get isConfigured(): boolean {
-    return Boolean(this.config.get("STRIPE_SECRET_KEY", { infer: true }));
-  }
-
-  private getClient(): Stripe {
-    const secretKey = this.config.get("STRIPE_SECRET_KEY", { infer: true });
+  private async getClient(): Promise<Stripe> {
+    const secretKey = await this.settings.get("STRIPE_SECRET_KEY");
     if (!secretKey) {
       throw new ServiceUnavailableException(
-        "Card payments are not configured. Set STRIPE_SECRET_KEY to enable them.",
+        "Card payments are not configured. Add a Stripe secret key in Admin → Settings → Payments to enable them.",
       );
     }
-    this.client ??= new Stripe(secretKey);
+    // Rebuilt when the key changes: a client cached from the previous key
+    // would keep charging the old account after a rotation.
+    if (!this.client || this.clientKey !== secretKey) {
+      this.client = new Stripe(secretKey);
+      this.clientKey = secretKey;
+    }
     return this.client;
   }
 
@@ -58,7 +59,8 @@ export class StripeProvider {
     successUrl: string;
     cancelUrl: string;
   }): Promise<{ id: string; url: string | null }> {
-    const session = await this.getClient().checkout.sessions.create({
+    const client = await this.getClient();
+    const session = await client.checkout.sessions.create({
       mode: "payment",
       client_reference_id: input.orderNumber,
       customer_email: input.customerEmail,
@@ -86,11 +88,11 @@ export class StripeProvider {
    * tolerance, or no webhook secret is configured — a webhook we cannot
    * authenticate must never be trusted.
    */
-  verifyWebhookSignature(rawBody: Buffer, signatureHeader: string): Stripe.Event {
-    const webhookSecret = this.config.get("STRIPE_WEBHOOK_SECRET", { infer: true });
+  async verifyWebhookSignature(rawBody: Buffer, signatureHeader: string): Promise<Stripe.Event> {
+    const webhookSecret = await this.settings.get("STRIPE_WEBHOOK_SECRET");
     if (!webhookSecret) {
       throw new ServiceUnavailableException(
-        "STRIPE_WEBHOOK_SECRET is not configured, so webhooks cannot be verified.",
+        "No Stripe webhook signing secret is configured, so webhooks cannot be verified.",
       );
     }
 

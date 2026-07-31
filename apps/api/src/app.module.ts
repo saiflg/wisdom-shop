@@ -22,6 +22,7 @@ import { VendorsModule } from "./vendors/vendors.module";
 import { LicensesModule } from "./licenses/licenses.module";
 import { UsersModule } from "./users/users.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
+import { SettingsModule } from "./settings/settings.module";
 
 @Module({
   imports: [
@@ -58,8 +59,12 @@ import { AnalyticsModule } from "./analytics/analytics.module";
     }),
     PrismaModule,
     AuditLogModule,
-    MailerModule,
     EncryptionModule,
+    // Depends on Prisma, AuditLog and Encryption, so it is listed after them;
+    // MailerModule and PaymentsModule in turn read their configuration from
+    // this one.
+    SettingsModule,
+    MailerModule,
     HealthModule,
     AuthModule,
     CategoriesModule,

@@ -527,6 +527,78 @@ The behaviour is now pinned by `admin-order-list.test.tsx` so it stays a
 decision rather than becoming an accident. The lasting fix is a shared
 transition table both sides import; that is a refactor, not a patch.
 
+## Post-completion — runtime settings, admin user creation, storefront redesign
+
+### Runtime settings (Admin → Settings)
+
+Payment credentials, SMTP and store details are now editable by a super admin
+without editing `.env` and restarting. Backed by a `settings` table read
+through `SettingsService`.
+
+Decisions worth stating, because each cuts against an easier option:
+
+- **Database wins over environment.** A saved value that the environment
+  could override would make the screen decorative. The environment stays the
+  way to bootstrap a deployment before anyone can log in, and is the only
+  source in CI.
+- **A closed registry, not free-form key/value.** `settings.registry.ts` lists
+  every writable key. This table holds payment credentials, so an endpoint
+  that writes arbitrary keys is an endpoint that can be pointed at anything
+  the application later reads — `DATABASE_URL` and `JWT_ACCESS_SECRET` are
+  rejected with a 400, and there is a test for exactly that.
+- **Secrets never leave the server.** They are encrypted at rest with the same
+  AES-256-GCM service used for TOTP secrets, and the API returns a masked
+  hint (`sk_••••4242`). A UI that can display a key is a UI that leaks it to
+  anyone who reaches the screen or its network log. The audit entry records
+  *which keys* changed and not their values — encrypting the column would be
+  pointless if the value were copied into a table admins can read.
+- **SUPER_ADMIN only**, a narrower gate than the rest of the admin area, which
+  MANAGER and SUPPORT can reach.
+
+Both payment providers and the mailer were rewritten to read through this
+service. The mailer previously built its SMTP transport once in the
+constructor, which would have kept using the old server until the API was
+restarted — the settings screen would have appeared to work and silently done
+nothing. It now rebuilds when the underlying values change, and
+`POST /v1/admin/settings/email/test` opens and authenticates a connection
+without sending mail, because SMTP settings that quietly do not work are
+otherwise only discovered when a customer never receives a password reset.
+
+### Admin user creation
+
+`POST /v1/admin/users`. Roles go through the **same** `canManageRole` policy
+as granting a role to an existing user — without that, creation is a trivial
+bypass: an ADMIN who cannot promote anyone to SUPER_ADMIN could simply create
+one instead. Password rules match public registration; an account an admin
+created is not a weaker account.
+
+**A bug this caught, and a lesson repeated.** The first implementation wrote
+`if (refusal) throw ...` against `canManageRole`, which returns a decision
+*object* — always truthy — so it refused every role including permitted ones.
+The two "refuses X" tests passed **vacuously**; only the positive case ("lets
+a SUPER_ADMIN create staff with a privileged role") caught it. Same lesson as
+the Phase 6 webhook tests: reject-only tests prove nothing without a matching
+accept case.
+
+### Storefront redesign
+
+Header rebuilt around a dark masthead with a prominent search field, a
+scrolling category strip, and a real mobile menu. Search moves to its own row
+on small screens rather than being hidden — hiding it would remove the main
+way to find anything on the device most people browse from. A site footer was
+added to the root layout rather than to each page, so it cannot be forgotten
+on a new route; every link in it points at a route that exists, because a
+dead footer link reads as neglect rather than as work in progress.
+
+Product grids went from 1–3 columns to 2–5, and cards use `object-contain`
+with a two-line clamped title: catalogue imagery is book covers and boxed
+software, and `object-cover` crops the title off.
+
+`useSearchParams` was deliberately left out of the header. It opts a client
+component out of static rendering unless wrapped in Suspense, and this header
+is on every page — prefilling the search box is not worth making every page
+dynamic.
+
 ## Post-completion fix — every form in the app was broken
 
 Reported by the user, who could not sign in: the login form showed a red

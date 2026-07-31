@@ -144,7 +144,7 @@ export class PaymentsService {
 
     let event: Stripe.Event;
     try {
-      event = this.stripe.verifyWebhookSignature(rawBody, signatureHeader!);
+      event = await this.stripe.verifyWebhookSignature(rawBody, signatureHeader!);
     } catch (error) {
       if (error instanceof ServiceUnavailableException) throw error;
       this.logger.warn(`Rejected Stripe webhook with invalid signature: ${(error as Error).message}`);
@@ -184,7 +184,7 @@ export class PaymentsService {
 
     let event: PaystackEvent;
     try {
-      event = this.paystack.verifyWebhookSignature(rawBody, signatureHeader!);
+      event = await this.paystack.verifyWebhookSignature(rawBody, signatureHeader!);
     } catch (error) {
       if (error instanceof ServiceUnavailableException) throw error;
       this.logger.warn(`Rejected Paystack webhook with invalid signature: ${(error as Error).message}`);
@@ -453,10 +453,14 @@ export class PaymentsService {
   }
 
   /** Lets the frontend hide payment buttons for providers that aren't set up. */
-  availableProviders(): { provider: PaymentProvider; configured: boolean }[] {
+  async availableProviders(): Promise<{ provider: PaymentProvider; configured: boolean }[]> {
+    const [stripe, paystack] = await Promise.all([
+      this.stripe.isConfigured(),
+      this.paystack.isConfigured(),
+    ]);
     return [
-      { provider: "STRIPE", configured: this.stripe.isConfigured },
-      { provider: "PAYSTACK", configured: this.paystack.isConfigured },
+      { provider: "STRIPE", configured: stripe },
+      { provider: "PAYSTACK", configured: paystack },
     ];
   }
 }

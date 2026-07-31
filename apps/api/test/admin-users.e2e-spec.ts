@@ -202,6 +202,103 @@ describe("Admin user & role management (e2e)", () => {
       .expect(409);
   });
 
+  describe("creating users", () => {
+    const created: string[] = [];
+
+    it("lets an admin create an ordinary user who can then sign in", async () => {
+      const email = `${FIXTURE_PREFIX}created-${suffix}@wisdomshop.example`;
+      const res = await http()
+        .post("/v1/admin/users")
+        .set(auth(adminToken))
+        .send({ email, password, firstName: "New", lastName: "User", markEmailVerified: true })
+        .expect(201);
+
+      created.push(res.body.id);
+      expect(res.body.roles).toContain("CUSTOMER");
+      expect(res.body.emailVerifiedAt).not.toBeNull();
+
+      // The account must actually work, not merely exist.
+      const login = await http().post("/v1/auth/login").send({ email, password }).expect(200);
+      expect(login.body.accessToken).toBeDefined();
+    });
+
+    it("does NOT let an ADMIN create a SUPER_ADMIN", async () => {
+      // Creation would otherwise be a trivial way around the escalation
+      // policy: an admin who cannot promote anyone to super admin could just
+      // create one instead.
+      const email = `${FIXTURE_PREFIX}escalate-${suffix}@wisdomshop.example`;
+      await http()
+        .post("/v1/admin/users")
+        .set(auth(adminToken))
+        .send({ email, password, firstName: "Esc", lastName: "Alate", roles: ["SUPER_ADMIN"] })
+        .expect(403);
+
+      // And the refusal must not leave a half-created account behind.
+      const orphan = await prisma.user.findUnique({ where: { email } });
+      expect(orphan).toBeNull();
+    });
+
+    it("lets a SUPER_ADMIN create staff with a privileged role", async () => {
+      const email = `${FIXTURE_PREFIX}staff-${suffix}@wisdomshop.example`;
+      const res = await http()
+        .post("/v1/admin/users")
+        .set(auth(superToken))
+        .send({ email, password, firstName: "Staff", lastName: "Member", roles: ["ADMIN"] })
+        .expect(201);
+
+      created.push(res.body.id);
+      expect(res.body.roles).toEqual(expect.arrayContaining(["CUSTOMER", "ADMIN"]));
+    });
+
+    it("refuses VENDOR at creation, as it does when granting", async () => {
+      await http()
+        .post("/v1/admin/users")
+        .set(auth(superToken))
+        .send({
+          email: `${FIXTURE_PREFIX}vendor-${suffix}@wisdomshop.example`,
+          password,
+          firstName: "Ven",
+          lastName: "Dor",
+          roles: ["VENDOR"],
+        })
+        .expect(403);
+    });
+
+    it("refuses a duplicate email", async () => {
+      await http()
+        .post("/v1/admin/users")
+        .set(auth(adminToken))
+        .send({ email: plainEmail, password, firstName: "Dup", lastName: "Licate" })
+        .expect(409);
+    });
+
+    it("enforces the same password strength as public registration", async () => {
+      await http()
+        .post("/v1/admin/users")
+        .set(auth(adminToken))
+        .send({
+          email: `${FIXTURE_PREFIX}weak-${suffix}@wisdomshop.example`,
+          password: "weak",
+          firstName: "Weak",
+          lastName: "Pass",
+        })
+        .expect(400);
+    });
+
+    it("is not open to ordinary users", async () => {
+      await http()
+        .post("/v1/admin/users")
+        .set(auth(plainToken))
+        .send({
+          email: `${FIXTURE_PREFIX}nope-${suffix}@wisdomshop.example`,
+          password,
+          firstName: "No",
+          lastName: "Pe",
+        })
+        .expect(403);
+    });
+  });
+
   it("404s for an unknown user", async () => {
     await http().get("/v1/admin/users/not-a-real-id").set(auth(adminToken)).expect(404);
   });

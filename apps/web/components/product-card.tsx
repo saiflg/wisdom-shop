@@ -8,28 +8,34 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/products/${product.slug}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+      className="group flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white transition hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-800">
+      {/* `contain` rather than `cover`: catalogue imagery is book covers and
+          boxed software, and cropping those cuts off the title. */}
+      <div className="relative aspect-square overflow-hidden bg-white p-3 dark:bg-slate-100">
         {image ? (
           <Image
             src={image.url}
             alt={image.altText ?? product.title}
             fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover transition duration-300 group-hover:scale-105"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            className="object-contain p-2 transition duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-slate-400">No image</div>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <span className="text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
+      <div className="flex flex-1 flex-col gap-1 p-3">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
           {formatProductType(product.type)}
         </span>
-        <h3 className="mt-1 font-medium leading-snug">{product.title}</h3>
-        <p className="mt-auto pt-3 text-lg font-semibold">
+        {/* Clamped to two lines so cards in a row stay the same height
+            regardless of title length. */}
+        <h3 className="line-clamp-2 text-sm font-medium leading-snug text-slate-900 group-hover:text-brand-600 dark:text-slate-100 dark:group-hover:text-brand-400">
+          {product.title}
+        </h3>
+        <p className="mt-auto pt-2 text-lg font-bold">
           {formatPrice(product.priceCents, product.currency)}
         </p>
       </div>

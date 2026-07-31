@@ -1,7 +1,6 @@
 import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { EnvConfig } from "../../config/env.validation";
+import { SettingsService } from "../../settings/settings.service";
 
 /** The subset of Paystack's transaction-initialise response we rely on. */
 interface PaystackInitResponse {
@@ -39,23 +38,17 @@ export class PaystackProvider {
   private readonly logger = new Logger(PaystackProvider.name);
   private static readonly API_BASE = "https://api.paystack.co";
 
-  constructor(private readonly config: ConfigService<EnvConfig, true>) {
-    if (!this.config.get("PAYSTACK_SECRET_KEY", { infer: true })) {
-      this.logger.warn(
-        "PAYSTACK_SECRET_KEY not configured — Paystack payments are disabled. Set it in .env to enable.",
-      );
-    }
+  constructor(private readonly settings: SettingsService) {}
+
+  async isConfigured(): Promise<boolean> {
+    return this.settings.isConfigured("PAYSTACK_SECRET_KEY");
   }
 
-  get isConfigured(): boolean {
-    return Boolean(this.config.get("PAYSTACK_SECRET_KEY", { infer: true }));
-  }
-
-  private requireSecretKey(): string {
-    const key = this.config.get("PAYSTACK_SECRET_KEY", { infer: true });
+  private async requireSecretKey(): Promise<string> {
+    const key = await this.settings.get("PAYSTACK_SECRET_KEY");
     if (!key) {
       throw new ServiceUnavailableException(
-        "Paystack payments are not configured. Set PAYSTACK_SECRET_KEY to enable them.",
+        "Paystack payments are not configured. Add a Paystack secret key in Admin → Settings → Payments to enable them.",
       );
     }
     return key;
@@ -71,7 +64,7 @@ export class PaystackProvider {
     const response = await fetch(`${PaystackProvider.API_BASE}/transaction/initialize`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.requireSecretKey()}`,
+        Authorization: `Bearer ${await this.requireSecretKey()}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -100,8 +93,8 @@ export class PaystackProvider {
    * the secret key. Compared in constant time so the check can't be probed
    * byte-by-byte via timing.
    */
-  verifyWebhookSignature(rawBody: Buffer, signatureHeader: string): PaystackEvent {
-    const expected = createHmac("sha512", this.requireSecretKey()).update(rawBody).digest("hex");
+  async verifyWebhookSignature(rawBody: Buffer, signatureHeader: string): Promise<PaystackEvent> {
+    const expected = createHmac("sha512", await this.requireSecretKey()).update(rawBody).digest("hex");
 
     const provided = Buffer.from(signatureHeader, "utf8");
     const computed = Buffer.from(expected, "utf8");

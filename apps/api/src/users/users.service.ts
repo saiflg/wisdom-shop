@@ -1,5 +1,6 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma, RoleName } from "@prisma/client";
+import * as argon2 from "argon2";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditLogService } from "../common/audit/audit-log.service";
 import { canManageRole, wouldSelfLockOut } from "./role-policy";
@@ -62,6 +63,79 @@ export class UsersService {
     const user = await this.prisma.user.findFirst({ where: { id, deletedAt: null }, select: USER_SELECT });
     if (!user) throw new NotFoundException("User not found");
     return { ...user, roles: user.roles.map((r) => r.role.name) };
+  }
+
+  /**
+   * Creates a user on an admin's behalf — for staff who will never go through
+   * public registration, and for support creating an account on request.
+   *
+   * The role is put through the *same* `canManageRole` policy as granting a
+   * role to an existing user. Without that, creation would be a trivial
+   * bypass: an ADMIN who cannot promote anyone to SUPER_ADMIN could simply
+   * create one instead.
+   */
+  async createUser(
+    actorUserId: string,
+    actorRoles: RoleName[],
+    input: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      roles?: RoleName[];
+      markEmailVerified?: boolean;
+    },
+  ) {
+    const email = input.email.toLowerCase().trim();
+    const requestedRoles = input.roles ?? [];
+
+    for (const role of requestedRoles) {
+      // canManageRole always returns a decision object, so the check is on
+      // `.allowed` — testing the object itself is always true and would
+      // refuse every role, including the ones that are permitted.
+      const decision = canManageRole(actorRoles, role);
+      if (!decision.allowed) throw new ForbiddenException(decision.reason);
+    }
+
+    const existing = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (existing) throw new ConflictException("An account with that email already exists");
+
+    const passwordHash = await argon2.hash(input.password);
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          firstName: input.firstName.trim(),
+          lastName: input.lastName.trim(),
+          // An admin creating the account has already established who this
+          // person is, so requiring them to click a verification link adds
+          // nothing. Left to the caller rather than assumed either way.
+          emailVerifiedAt: input.markEmailVerified ? new Date() : null,
+        },
+        select: USER_SELECT,
+      });
+
+      // CUSTOMER is everyone's baseline, exactly as in public registration.
+      const roleNames: RoleName[] = ["CUSTOMER", ...requestedRoles.filter((r) => r !== "CUSTOMER")];
+      for (const name of roleNames) {
+        const role = await tx.role.upsert({ where: { name }, update: {}, create: { name } });
+        await tx.userRole.create({ data: { userId: created.id, roleId: role.id } });
+      }
+
+      return created;
+    });
+
+    await this.auditLog.record({
+      userId: actorUserId,
+      action: "user.created_by_admin",
+      entity: "User",
+      entityId: user.id,
+      metadata: { email, roles: requestedRoles },
+    });
+
+    return this.findById(user.id);
   }
 
   private async rolesOf(userId: string): Promise<RoleName[]> {

@@ -40,7 +40,7 @@ export default function HomePage() {
         </Link>
       </section>
 
-      <section className="mx-auto grid max-w-5xl grid-cols-1 gap-4 px-6 pb-24 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 pb-16 sm:px-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {CATEGORIES.map((category) => (
           <Link
             key={category.slug}

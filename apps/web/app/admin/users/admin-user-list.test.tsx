@@ -5,6 +5,12 @@ import { useAuthStore } from "@/store/auth-store";
 const grantMutate = jest.fn();
 const revokeMutate = jest.fn();
 
+// The list now renders CreateUserForm, which reaches for react-query. Mocked
+// so these tests stay about the role controls rather than needing a provider.
+jest.mock("@/lib/use-settings", () => ({
+  useCreateUser: () => ({ mutateAsync: jest.fn(), isPending: false }),
+}));
+
 jest.mock("@/lib/use-admin", () => ({
   useAdminUsers: () => ({
     data: {
