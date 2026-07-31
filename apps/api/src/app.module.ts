@@ -25,6 +25,7 @@ import { AnalyticsModule } from "./analytics/analytics.module";
 import { SettingsModule } from "./settings/settings.module";
 import { StorageModule } from "./storage/storage.module";
 import { DownloadsModule } from "./downloads/downloads.module";
+import { ReviewsModule } from "./reviews/reviews.module";
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { DownloadsModule } from "./downloads/downloads.module";
     UsersModule,
     AnalyticsModule,
     DownloadsModule,
+    ReviewsModule,
   ],
   providers: [
     // Order matters: throttling first, then auth (populates req.user),

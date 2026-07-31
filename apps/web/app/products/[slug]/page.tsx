@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { AddToCart } from "@/components/add-to-cart";
+import { ProductReviews } from "@/components/product-reviews";
 import { fetchProductBySlug, formatPrice, formatProductType } from "@/lib/catalog";
 
 interface PageProps {
@@ -139,6 +140,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
             )}
           </div>
         </div>
+
+        {/* Client component: reviews depend on who is signed in, while the
+            rest of this page is server-rendered from the public product. */}
+        <ProductReviews slug={product.slug} />
       </div>
     </main>
   );

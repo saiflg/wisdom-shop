@@ -527,6 +527,62 @@ The behaviour is now pinned by `admin-order-list.test.tsx` so it stays a
 decision rather than becoming an accident. The lasting fix is a shared
 transition table both sides import; that is a refactor, not a patch.
 
+## Post-completion — product reviews
+
+The `Review` model had existed since the Phase 1 schema with nothing reading
+or writing it. No migration was needed — including the
+`@@unique([productId, userId])` that makes "one review per person per
+product" a database guarantee rather than a hope.
+
+### Verified purchases only
+
+`canReview` requires a **settled order**. The alternative — any signed-in
+account may review anything — makes a rating a measure of who is most
+motivated to post, which for a marketplace means competitors and the seller's
+own friends. Requiring a purchase costs the price of the product per fake
+review, which is the only thing that reliably deters them.
+
+The cost is real and is stated in the code: fewer reviews, and nothing from
+someone who bought the same book elsewhere. That is the trade, made
+deliberately rather than by omission.
+
+### Smaller decisions that could each have gone the other way
+
+- **Moderators can remove a review but never edit one.** A review carries its
+  author's name, so editing it puts words in their mouth. Removal is a soft
+  delete and is audited as `review.moderated` when someone removes another
+  person's review, separately from `review.removed`.
+- **Removing your own review lets you write another.** The soft-deleted row
+  still occupies the unique slot, so the write revives it rather than
+  inserting — there is a test that fails if that becomes an insert.
+- **Reviews show a first name and last initial.** A review page is public;
+  a full name attached to a purchase history is more than a customer agreed
+  to publish by leaving a rating.
+- **The summary is computed, never stored.** A cached average drifts from the
+  reviews it claims to summarise the moment one is edited or removed. The
+  listing returns the summary alongside the page so a product page makes one
+  request rather than two.
+- **The rating picker is a real radio group**, visually hidden behind stars,
+  so it is reachable by keyboard. `StarRating` carries an accessible name
+  ("Rated 4.5 out of 5") instead of leaving a screen reader to count glyphs.
+
+### Verification log (2026-07-31) — reviews
+
+- **144 API unit** (up from 128), **199 API e2e across 16 suites**, **77
+  frontend**; lint, typecheck and production build clean.
+- `review-policy.spec.ts` (16 tests) covers every order status against every
+  eligibility case, plus the summary maths — including that an out-of-range
+  rating cannot invent a distribution bucket.
+- `reviews.e2e-spec.ts` (17 tests) proves it over HTTP: a stranger is
+  refused, an unpaid order is refused, a duplicate is a 409, a moderator can
+  remove but not edit, and the average follows a removal instead of counting
+  a hidden row.
+
+**A real duplication the tests caught.** A component test failed with "found
+multiple elements" because the empty state and the eligibility line both said
+"Only customers who bought this product can review it" — the same sentence
+twice on one screen. The fix was to the component, not the assertion.
+
 ## Post-completion — file storage, image uploads, secure downloads
 
 The gap this closes: customers could buy a digital product and receive
