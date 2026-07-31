@@ -18,6 +18,7 @@ const COLUMNS = [
       { label: "Create an account", href: "/register" },
       { label: "Your orders", href: "/orders" },
       { label: "Your licences", href: "/account/licenses" },
+      { label: "Your downloads", href: "/account/downloads" },
       { label: "Addresses", href: "/account/addresses" },
     ],
   },

@@ -527,6 +527,84 @@ The behaviour is now pinned by `admin-order-list.test.tsx` so it stays a
 decision rather than becoming an accident. The lasting fix is a shared
 transition table both sides import; that is a refactor, not a patch.
 
+## Post-completion — file storage, image uploads, secure downloads
+
+The gap this closes: customers could buy a digital product and receive
+nothing. Licensing and the EMS handoff existed since Phase 9; **delivery did
+not**.
+
+- `POST /v1/uploads/images` + a public `GET /v1/uploads/images/:name` for
+  product imagery, wired into the product form.
+- `POST /v1/admin/products/:id/files` attaches a downloadable artefact.
+- `GET /v1/downloads` and `GET /v1/downloads/:fileId` for customers, behind
+  an entitlement check.
+- `/account/downloads` on the storefront.
+
+### Storage is an interface with one implementation
+
+`StorageService` wraps local disk behind four methods. Moving to S3 or R2
+means writing a second driver; nothing that calls it changes. What must not
+happen is callers building paths themselves, because then the containment
+check stops being the only way in.
+
+This was chosen over waiting for a storage decision because the abstraction is
+needed either way, and local disk is fully testable today. Its limits are
+recorded in `docs/DEPLOYMENT.md` rather than left to be discovered: it is a
+single-node story, and the `storage-data` volume is **not** covered by the
+database backup.
+
+### The security work is the point
+
+Two features, four distinct ways to get this wrong, each closed deliberately:
+
+1. **Path traversal.** Storage keys are generated server-side and never
+   derived from the uploaded filename. The public image route matches the
+   requested name against the exact generated-key pattern *before touching the
+   filesystem*, so `../` never reaches disk. `StorageService` then re-checks
+   containment anyway — the backstop for the day someone adds a route that
+   passes a key through from a request.
+2. **Stored XSS.** SVG is refused explicitly. An SVG is XML that may contain
+   `<script>`, and a browser executes it when served inline — serving one from
+   the API's own origin would be stored XSS available to **every approved
+   vendor**. Content types come from an allowlist, never from the upload.
+3. **Header injection.** The original filename is echoed into
+   `Content-Disposition: attachment; filename="..."`, so quotes, backslashes
+   and control characters are stripped. Downloads are always `attachment` and
+   always `application/octet-stream`: a mislabelled file must not render.
+4. **Selling something and giving it away.** `canDownload` is a pure function
+   with every branch named. A customer needs a *settled* order — PENDING has
+   not been paid for, and a refunded customer no longer owns what they bought.
+   A vendor reaches only their own product's file; SUPPORT deliberately does
+   not get blanket access.
+
+Storage keys never appear in any client-facing response. A client has no use
+for one, and publishing it invites someone to try addressing the file
+directly.
+
+### Verification log (2026-07-31) — uploads & downloads
+
+- **128 API unit** (up from 87), **182 API e2e across 15 suites**, 70
+  frontend; lint, typecheck and production build clean.
+- `storage.spec.ts` and `entitlement.spec.ts` (41 tests) cover the pure rules:
+  traversal strings, null bytes, uppercase extensions, header-injection
+  filenames, and every order status against every role.
+- `downloads.e2e-spec.ts` (17 tests) proves it over HTTP, including that a
+  refund revokes access and restoring the order restores it.
+
+**A test bug worth recording.** Two download assertions failed on
+`res.text` being undefined: supertest does not parse
+`application/octet-stream`, so the bytes arrive in `res.body` as a Buffer. The
+product was correct; the test's assumption was not. Notably the *negative*
+assertions (`expect(res.text).not.toContain(secret)`) had been passing — they
+only worked because error responses are JSON, and would have been vacuous
+against a successful binary response.
+
+**One unexplained failure, stated rather than smoothed over.**
+`cart.e2e-spec.ts` failed 11 of 12 in one full run, then passed 12/12 alone
+and 182/182 on the next full run. The failing run took 36s against 17s
+normally, which points at machine load, but the failure did not reproduce and
+the output was not captured — so the cause is unknown rather than diagnosed.
+
 ## Post-completion — vendor dashboard
 
 `/v1/vendor/products` and `/v1/vendor/earnings` had been built and tested

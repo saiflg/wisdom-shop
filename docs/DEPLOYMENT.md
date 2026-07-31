@@ -135,8 +135,17 @@ Stated plainly rather than left to be discovered:
   manual or a cron job you add.
 - **No log aggregation or error tracking.** `SENTRY_DSN` exists in the env
   schema but nothing reads it yet.
-- **No object storage**, so digital-product downloads are not implemented
-  (Phase 9 is licensing and handoff only).
+- **File storage is local disk.** Product images and downloadable files are
+  written under `STORAGE_ROOT`. This works, and is tested, but it is a
+  single-node story: with more than one API replica each gets its own
+  directory and a file uploaded to one is missing from the others. Mount a
+  shared volume across replicas, or write an S3/R2 driver — `StorageService`
+  exists so that swap touches one file.
+
+  The directory is backed by the `storage-data` volume in
+  `docker-compose.prod.yml`, so it survives a rebuild — but it is **not
+  covered by the database backup above**. Back it up separately, or a restored
+  database will reference files that no longer exist.
 - **No horizontal scaling story beyond the migrate split.** The API is
   stateless and should scale, but nothing has been tested with more than one
   replica.

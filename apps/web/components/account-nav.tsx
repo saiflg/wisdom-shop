@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/account/security", label: "Security" },
   { href: "/account/addresses", label: "Addresses" },
   { href: "/account/licenses", label: "Licenses" },
+  { href: "/account/downloads", label: "Downloads" },
   { href: "/orders", label: "Orders" },
   // Shown to everyone: the page itself is where you apply if you have no
   // vendor account, so hiding it would hide the way in.

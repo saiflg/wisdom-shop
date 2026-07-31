@@ -36,3 +36,4 @@ coverage/
 # nginx container (see docker-compose.prod.yml); a private key committed here
 # would be a private key published to every clone.
 deploy/nginx/certs/
+.storage/

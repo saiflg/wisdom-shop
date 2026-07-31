@@ -11,6 +11,8 @@ import {
   toProductPayload,
   type ProductFormValues,
 } from "@/lib/product-form";
+import { ImageUploader } from "./image-uploader";
+import { ProductFiles } from "./product-files";
 import {
   flattenCategories,
   useAdminCategories,
@@ -263,9 +265,20 @@ export function ProductForm({
             placeholder={"https://example.com/cover.jpg\nhttps://example.com/back.jpg"}
             className={`mt-1.5 ${inputClass}`}
           />
+          <ImageUploader
+            onUploaded={(url) =>
+              // Appended rather than replacing: hand-typed URLs for imagery
+              // hosted elsewhere keep working alongside uploads.
+              setValues((current) => ({
+                ...current,
+                imageUrls: current.imageUrls ? `${current.imageUrls}
+${url}` : url,
+              }))
+            }
+          />
           <p className="mt-1 text-xs text-slate-500">
-            One per line; the first is the one shown in listings. There is no file upload yet, so
-            these must be URLs that are already hosted somewhere.
+            One per line; the first is the one shown in listings. Upload above, or paste URLs of
+            images already hosted somewhere.
           </p>
         </div>
       </div>
@@ -292,6 +305,11 @@ export function ProductForm({
           New products are created as drafts and stay invisible in the shop until you publish them.
         </p>
       )}
+
+      {/* Only when editing: a file needs a product to hang off. Staff only —
+          the vendor file endpoints are not built yet, so showing this to a
+          vendor would offer a control that 403s. */}
+      {!isCreate && productId && scope === "admin" && <ProductFiles productId={productId} />}
     </form>
   );
 }

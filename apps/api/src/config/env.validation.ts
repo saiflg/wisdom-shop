@@ -60,6 +60,12 @@ export const envSchema = z.object({
   // Set it to the real hop count (1 behind the bundled nginx) only once a
   // proxy is genuinely in front, and see docs/DEPLOYMENT.md.
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
+  // Where uploaded files live. Relative paths resolve from the API's working
+  // directory. Local disk is a single-node story: with more than one replica
+  // each gets its own directory — see docs/DEPLOYMENT.md.
+  STORAGE_ROOT: z.string().default(".storage"),
+  // Applies to product images and to downloadable product files.
+  MAX_UPLOAD_MB: z.coerce.number().int().positive().max(500).default(25),
   // Serves /docs in production too. Off by default: the schema describes
   // every route, DTO and auth requirement, which no real client needs.
   SWAGGER_ENABLED: z

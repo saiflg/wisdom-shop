@@ -23,6 +23,8 @@ import { LicensesModule } from "./licenses/licenses.module";
 import { UsersModule } from "./users/users.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { SettingsModule } from "./settings/settings.module";
+import { StorageModule } from "./storage/storage.module";
+import { DownloadsModule } from "./downloads/downloads.module";
 
 @Module({
   imports: [
@@ -64,6 +66,7 @@ import { SettingsModule } from "./settings/settings.module";
     // MailerModule and PaymentsModule in turn read their configuration from
     // this one.
     SettingsModule,
+    StorageModule,
     MailerModule,
     HealthModule,
     AuthModule,
@@ -77,6 +80,7 @@ import { SettingsModule } from "./settings/settings.module";
     LicensesModule,
     UsersModule,
     AnalyticsModule,
+    DownloadsModule,
   ],
   providers: [
     // Order matters: throttling first, then auth (populates req.user),

@@ -316,6 +316,7 @@ model Product {
   categories ProductCategory[]
   images     ProductImage[]
   variants   ProductVariant[]
+  files      ProductFile[]
   reviews    Review[]
   cartItems  CartItem[]
   orderItems OrderItem[]
@@ -341,6 +342,30 @@ model ProductCategory {
   @@id([productId, categoryId])
   @@index([categoryId])
   @@map("product_categories")
+}
+
+/// A downloadable artefact attached to a product — the thing a customer
+/// actually receives when they buy a digital good.
+///
+/// Only the storage key is recorded, never a URL: these files must never be
+/// reachable without an entitlement check, so there is deliberately no
+/// address that could be shared or guessed. See src/downloads.
+model ProductFile {
+  id           String @id @default(cuid())
+  productId    String
+  /// Server-generated. Never derived from the uploaded filename, so a
+  /// hostile name cannot escape the storage root or choose its extension.
+  storageKey   String @unique
+  originalName String
+  contentType  String
+  sizeBytes    Int
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@map("product_files")
 }
 
 model ProductImage {
