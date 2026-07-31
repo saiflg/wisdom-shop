@@ -527,6 +527,46 @@ The behaviour is now pinned by `admin-order-list.test.tsx` so it stays a
 decision rather than becoming an accident. The lasting fix is a shared
 transition table both sides import; that is a refactor, not a patch.
 
+## Post-completion fix — every form in the app was broken
+
+Reported by the user, who could not sign in: the login form showed a red
+"required" under fields that plainly contained text.
+
+`FormField` was a plain function component, while every caller spreads
+react-hook-form's `register(...)` onto it — and that object contains a
+`ref`. React does not pass refs to non-`forwardRef` function components; it
+drops them. So react-hook-form never bound to any `<input>`, no keystroke
+was ever recorded, and submitting sent an empty object. The validation
+message was therefore *correct* about what it was given, which is what made
+it point at the schema rather than at the missing ref. Fixed by making
+`FormField` a `forwardRef` component.
+
+**This affected login, registration, change-password, 2FA enrolment and the
+checkout address form — i.e. every form in the product.**
+
+### Why nothing caught it
+
+This is the important part, and it is a straight indictment of how the
+frontend was verified. Lint, typecheck, the production build, 141 API e2e
+tests and 31 frontend tests were all green. Every one of them could be green
+with the app completely unusable, because:
+
+- the API tests drove HTTP directly and never touched a form;
+- the "live route checks" in Phases 10–12 asserted a **200 status code**,
+  which a broken form returns perfectly well;
+- the Phase 14 frontend tests covered admin *lists and guards* — components
+  that display data — and not a single one typed into an input.
+
+I verified the login *endpoint* repeatedly and never once verified the login
+*form*. A 200 from `/login` says the page rendered, not that it works.
+
+`login-form.test.tsx` now covers it: six tests that type into the fields and
+assert the submitted body matches what was typed. Mutation-checked —
+reverting `forwardRef` turns all six red.
+
+**Rule this establishes:** a form is not verified until a test has typed
+into it and asserted what got submitted. Rendering is not working.
+
 ## Phase 15 — Production deployment
 
 **Status is deliberately amber, not green.** The production images build and

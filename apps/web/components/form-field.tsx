@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
 
 interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
@@ -6,7 +6,21 @@ interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   hint?: ReactNode;
 }
 
-export function FormField({ label, error, hint, id, name, ...inputProps }: FormFieldProps) {
+/**
+ * MUST stay a forwardRef component.
+ *
+ * Every caller spreads react-hook-form's `register(...)` onto this, and that
+ * object contains a `ref`. React does not pass refs to plain function
+ * components — it drops them — so without forwardRef the ref never reaches
+ * the `<input>`, react-hook-form never binds to the field, and the value the
+ * user types is never recorded. The form then fails validation on submit
+ * with "required" on fields that visibly contain text, which points at the
+ * validation schema rather than at the missing ref.
+ */
+export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function FormField(
+  { label, error, hint, id, name, ...inputProps },
+  ref,
+) {
   const fieldId = id ?? name;
   const errorId = `${fieldId}-error`;
 
@@ -16,6 +30,7 @@ export function FormField({ label, error, hint, id, name, ...inputProps }: FormF
         {label}
       </label>
       <input
+        ref={ref}
         id={fieldId}
         name={name}
         aria-invalid={error ? true : undefined}
@@ -31,4 +46,4 @@ export function FormField({ label, error, hint, id, name, ...inputProps }: FormF
       )}
     </div>
   );
-}
+});
