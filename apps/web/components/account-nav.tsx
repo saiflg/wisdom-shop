@@ -9,6 +9,9 @@ const LINKS = [
   { href: "/account/addresses", label: "Addresses" },
   { href: "/account/licenses", label: "Licenses" },
   { href: "/orders", label: "Orders" },
+  // Shown to everyone: the page itself is where you apply if you have no
+  // vendor account, so hiding it would hide the way in.
+  { href: "/vendor", label: "Sell" },
 ];
 
 export function AccountNav() {

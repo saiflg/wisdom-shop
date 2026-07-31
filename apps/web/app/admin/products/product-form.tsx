@@ -16,6 +16,7 @@ import {
   useAdminCategories,
   useCreateProduct,
   useUpdateProduct,
+  type CatalogScope,
 } from "@/lib/use-catalog-admin";
 
 const inputClass =
@@ -24,20 +25,24 @@ const inputClass =
 export function ProductForm({
   productId,
   initialValues,
+  scope = "admin",
 }: {
   productId?: string;
   initialValues?: ProductFormValues;
+  /** Vendors post to their own endpoints, which scope every write to them. */
+  scope?: CatalogScope;
 }) {
   const router = useRouter();
   const isCreate = !productId;
+  const basePath = scope === "vendor" ? "/vendor/products" : "/admin/products";
 
   const [values, setValues] = useState<ProductFormValues>(initialValues ?? emptyProductForm);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   const { data: categoryTree } = useAdminCategories();
-  const create = useCreateProduct();
-  const update = useUpdateProduct();
+  const create = useCreateProduct(scope);
+  const update = useUpdateProduct(scope);
   const pending = create.isPending || update.isPending;
 
   const categoryOptions = flattenCategories(categoryTree);
@@ -65,7 +70,7 @@ export function ProductForm({
         const created = await create.mutateAsync(payload);
         // Straight to the edit screen: a new product is a DRAFT, and
         // publishing it is the next thing anyone wants to do.
-        router.push(`/admin/products/${created.id}`);
+        router.push(`${basePath}/${created.id}`);
         return;
       }
       await update.mutateAsync({ id: productId, payload });
@@ -241,7 +246,9 @@ export function ProductForm({
           </select>
           {categoryOptions.length === 0 && (
             <p className="mt-1 text-xs text-slate-500">
-              No categories yet — create some under Categories first.
+              {scope === "vendor"
+                ? "No categories are available yet. Ask an administrator to add some."
+                : "No categories yet — create some under Categories first."}
             </p>
           )}
         </div>
@@ -273,7 +280,7 @@ export function ProductForm({
         </button>
         <button
           type="button"
-          onClick={() => router.push("/admin/products")}
+          onClick={() => router.push(basePath)}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium transition hover:border-brand-400 dark:border-slate-700"
         >
           Back to products

@@ -24,8 +24,9 @@ const COLUMNS = [
   {
     heading: "Sell with us",
     links: [
-      { label: "Become a vendor", href: "/register" },
-      { label: "Vendor dashboard", href: "/account" },
+      { label: "Become a vendor", href: "/vendor" },
+      { label: "Your products", href: "/vendor/products" },
+      { label: "Your earnings", href: "/vendor/earnings" },
     ],
   },
   {

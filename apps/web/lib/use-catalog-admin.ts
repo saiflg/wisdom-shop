@@ -13,6 +13,21 @@ function authHeaders(token: string | null): Record<string, string> {
 /** Roles the API accepts on /v1/admin/products and /v1/admin/categories. */
 const CATALOG_ROLES = ["ADMIN", "SUPER_ADMIN", "MANAGER", "EDITOR"];
 
+/**
+ * Which set of product endpoints to talk to.
+ *
+ * The two are deliberately different URLs rather than one endpoint that
+ * inspects the caller: `/v1/vendor/products` resolves the vendor id from the
+ * token on every request, so a vendor can only ever reach their own rows. A
+ * shared endpoint would have to be trusted to filter correctly, and that is
+ * exactly the kind of thing that quietly stops filtering.
+ */
+export type CatalogScope = "admin" | "vendor";
+
+function productsBase(scope: CatalogScope): string {
+  return scope === "vendor" ? "/v1/vendor/products" : "/v1/admin/products";
+}
+
 export function useCanEditCatalog(): boolean {
   const user = useAuthStore((s) => s.user);
   return user?.roles.some((role) => CATALOG_ROLES.includes(role)) ?? false;
@@ -45,9 +60,15 @@ export interface AdminCategory {
 const PRODUCTS_KEY = "admin-catalog-products";
 const CATEGORIES_KEY = "admin-catalog-categories";
 
-export function useAdminProducts(query: { search?: string; status?: string; page?: number }) {
+export function useAdminProducts(
+  query: { search?: string; status?: string; page?: number },
+  scope: CatalogScope = "admin",
+) {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const canEdit = useCanEditCatalog();
+  const canEditAsStaff = useCanEditCatalog();
+  // A vendor's own gate is their vendor status, checked by the page; staff
+  // access is by role.
+  const canEdit = scope === "vendor" ? true : canEditAsStaff;
 
   const params = new URLSearchParams();
   if (query.search) params.set("search", query.search);
@@ -56,34 +77,35 @@ export function useAdminProducts(query: { search?: string; status?: string; page
   params.set("limit", "20");
 
   return useQuery({
-    queryKey: [PRODUCTS_KEY, query.search ?? "", query.status ?? "", query.page ?? 1],
+    queryKey: [PRODUCTS_KEY, scope, query.search ?? "", query.status ?? "", query.page ?? 1],
     enabled: Boolean(accessToken) && canEdit,
     queryFn: () =>
-      apiFetch<Paginated<AdminProduct>>(`/v1/admin/products?${params.toString()}`, {
+      apiFetch<Paginated<AdminProduct>>(`${productsBase(scope)}?${params.toString()}`, {
         headers: authHeaders(accessToken),
       }),
   });
 }
 
-export function useAdminProduct(id: string | null) {
+export function useAdminProduct(id: string | null, scope: CatalogScope = "admin") {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const canEdit = useCanEditCatalog();
+  const canEditAsStaff = useCanEditCatalog();
+  const canEdit = scope === "vendor" ? true : canEditAsStaff;
 
   return useQuery({
-    queryKey: [PRODUCTS_KEY, "one", id],
+    queryKey: [PRODUCTS_KEY, scope, "one", id],
     enabled: Boolean(accessToken) && canEdit && Boolean(id),
     queryFn: () =>
-      apiFetch<AdminProduct>(`/v1/admin/products/${id}`, { headers: authHeaders(accessToken) }),
+      apiFetch<AdminProduct>(`${productsBase(scope)}/${id}`, { headers: authHeaders(accessToken) }),
   });
 }
 
-export function useCreateProduct() {
+export function useCreateProduct(scope: CatalogScope = "admin") {
   const accessToken = useAuthStore((s) => s.accessToken);
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: ProductPayload) =>
-      apiFetch<AdminProduct>("/v1/admin/products", {
+      apiFetch<AdminProduct>(productsBase(scope), {
         method: "POST",
         headers: authHeaders(accessToken),
         body: payload,
@@ -92,13 +114,13 @@ export function useCreateProduct() {
   });
 }
 
-export function useUpdateProduct() {
+export function useUpdateProduct(scope: CatalogScope = "admin") {
   const accessToken = useAuthStore((s) => s.accessToken);
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<ProductPayload> }) =>
-      apiFetch<AdminProduct>(`/v1/admin/products/${id}`, {
+      apiFetch<AdminProduct>(`${productsBase(scope)}/${id}`, {
         method: "PATCH",
         headers: authHeaders(accessToken),
         body: payload,
@@ -107,13 +129,13 @@ export function useUpdateProduct() {
   });
 }
 
-export function useDeleteProduct() {
+export function useDeleteProduct(scope: CatalogScope = "admin") {
   const accessToken = useAuthStore((s) => s.accessToken);
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (id: string) =>
-      apiFetch<void>(`/v1/admin/products/${id}`, {
+      apiFetch<void>(`${productsBase(scope)}/${id}`, {
         method: "DELETE",
         headers: authHeaders(accessToken),
       }),

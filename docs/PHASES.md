@@ -527,6 +527,57 @@ The behaviour is now pinned by `admin-order-list.test.tsx` so it stays a
 decision rather than becoming an accident. The lasting fix is a shared
 transition table both sides import; that is a refactor, not a patch.
 
+## Post-completion — vendor dashboard
+
+`/v1/vendor/products` and `/v1/vendor/earnings` had been built and tested
+since Phase 8 with no way to reach them, so an approved vendor could do
+nothing at all.
+
+- `/vendor` — apply when you have no account; otherwise your store, its
+  status, its commission rate, and headline earnings.
+- `/vendor/products` (+ `/new`, `/[id]`) — the vendor's own catalogue.
+- `/vendor/earnings` — every order line with its snapshotted commission.
+
+### The product form is shared, not copied
+
+Rather than duplicate a 250-line form, `ProductForm` and the product hooks
+take a `scope` of `"admin"` or `"vendor"` that selects the endpoint prefix.
+
+The two endpoints stay separate on the server on purpose: `/v1/vendor/*`
+resolves the vendor id from the token on **every** request, so a vendor can
+only ever reach their own rows. One shared endpoint inspecting the caller
+would have to be trusted to filter correctly, and that is exactly the sort of
+thing that quietly stops filtering after a refactor.
+
+### The gate is on vendor status, not the VENDOR role
+
+`RequireApprovedVendor` reads the vendor account, not `user.roles`. The two
+disagree in the moment that matters: the API revokes the role when an account
+is suspended, but a token minted beforehand still carries it. The server
+checks status on every vendor route via `requireApprovedVendorId`, so gating
+the UI on anything else would render screens whose every request then 403s.
+
+Each non-approved state gets its own wording, because "we are still reviewing
+you" and "you have been suspended" call for completely different responses
+from the reader. Eight tests pin this, including that a suspended vendor
+holding the VENDOR role still sees nothing.
+
+### Verification log (2026-07-31) — vendor dashboard
+
+- **70 frontend tests** (up from 62) and **165 API tests**; lint, typecheck
+  and production build clean.
+- Exercised in a real browser: applied as a vendor, approved the application
+  from the admin screen, then created and published a product from the vendor
+  side and confirmed it appeared in the shop under that vendor.
+
+**A flaky test fixed rather than shrugged at.** `security.e2e-spec.ts` failed
+once in a full run and passed alone. The cause was the same clock dependency
+already fixed for the global-bucket test: a burst that straddles a rate-limit
+window boundary is split across two allowances and legitimately sees no 429,
+and on a loaded machine the requests spread out enough for that to happen.
+The strict-bucket test now retries the same way, so it no longer depends on
+how busy the machine is.
+
 ## Post-completion — catalogue management UI
 
 Until now the API had full CRUD for products and categories and **no way to
