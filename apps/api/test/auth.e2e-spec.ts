@@ -93,7 +93,7 @@ describe("Auth (e2e)", () => {
       .expect(403);
   });
 
-  it("rotates tokens on refresh, and rejects the old refresh cookie on reuse", async () => {
+  it("rotates tokens on refresh, and tolerates an immediate same-client replay", async () => {
     const res = await request(app.getHttpServer())
       .post("/v1/auth/refresh")
       .set("Cookie", refreshCookie)
@@ -104,14 +104,26 @@ describe("Auth (e2e)", () => {
     const rotatedCookie = extractRefreshCookie(res);
     expect(rotatedCookie).not.toBe(refreshCookie);
 
-    // Reusing the now-rotated-out cookie must fail (stolen-token containment).
-    await request(app.getHttpServer())
+    // This used to assert 401. It now asserts 200, deliberately: an immediate
+    // replay from the same client, one step behind, is two browser tabs
+    // sharing a cookie — not theft. Treating it as theft signed people out of
+    // a browser they were actively using.
+    //
+    // Stolen-token containment is unchanged and is covered in depth by
+    // refresh-race.e2e-spec.ts: a replay from further back in the chain, from
+    // a different client, or outside the grace window still burns every
+    // session. Those cases are not asserted here because they revoke the
+    // session this suite goes on to use.
+    const replay = await request(app.getHttpServer())
       .post("/v1/auth/refresh")
       .set("Cookie", refreshCookie)
       .set(CSRF_HEADER_NAME, "1")
-      .expect(401);
+      .expect(200);
 
-    refreshCookie = rotatedCookie;
+    // The replay gets its own token rather than a copy of the other tab's.
+    expect(extractRefreshCookie(replay)).not.toBe(rotatedCookie);
+
+    refreshCookie = extractRefreshCookie(replay);
   });
 
   it("logs out and invalidates the refresh cookie", async () => {

@@ -527,6 +527,80 @@ The behaviour is now pinned by `admin-order-list.test.tsx` so it stays a
 decision rather than becoming an accident. The lasting fix is a shared
 transition table both sides import; that is a refactor, not a patch.
 
+## Post-completion — refresh token races across browser tabs
+
+The client-side single-flight fix stopped one tab refreshing twice, but two
+tabs share a cookie jar and cannot coordinate: both send the same refresh
+cookie, one rotates it, and the other arrives holding a token that was valid
+when it left and rotated out microseconds later. The server correctly called
+that theft and revoked every session — signing the user out of a browser they
+were actively using.
+
+**The containment behaviour is unchanged.** A replay is now tolerated only
+when all three of these hold, and each condition exists to stop the exception
+becoming a hole:
+
+1. **It happened just now** — within `REFRESH_REUSE_GRACE_MS` (default 15s,
+   `0` restores strict detection).
+2. **The chain has not moved on** — the token's direct successor must still be
+   live. A replay from more than one step back is not something a race
+   produces; a captured token is.
+3. **It is the same client** — user agent must match. IP is deliberately *not*
+   compared: mobile clients change IP between requests routinely, so matching
+   on it would sign real users out constantly while barely inconveniencing an
+   attacker replaying a captured session.
+
+Tolerating a race does not resurrect the replayed token and does not hand back
+the successor — tokens are stored hashed, so the original string is not
+recoverable. It issues a fresh pair and leaves the other tab's token alone, so
+both tabs end up with their own, which is the state two devices would be in.
+Races are audited as `auth.refresh_token_race_tolerated`, separately from
+`auth.refresh_token_reuse_detected`, so a spike in one stays distinguishable
+from a spike in the other.
+
+### A concurrency hole found while testing this
+
+Writing the e2e test surfaced something worse than the bug being fixed. The
+first parallel test passed while producing **no audit events at all** — which
+made no sense until it did: two concurrent refreshes both read the token as
+live, and the unconditional `update` let *both* rotate it and succeed. So a
+stolen token used at the same moment as the legitimate one was never detected
+at all, and the reuse check simply never ran.
+
+Rotation is now a compare-and-swap (`where: { id, revokedAt: null }`), so
+exactly one request can claim it and the loser goes through the same
+evaluation as any other replay. `lets only one concurrent request rotate a
+token` pins it.
+
+This is worth recording as a testing lesson, not just a bug: the test passed,
+and passing was the *symptom*. Checking why it produced no audit trail is what
+found it.
+
+### Verification log (2026-07-31) — refresh races
+
+- **87 unit**, **163 e2e across 14 suites**; lint and typecheck clean.
+- `refresh-race.spec.ts` (12 tests) pins each condition and both window
+  boundaries. `refresh-race.e2e-spec.ts` (6 tests) covers the real flow,
+  including three that assert theft containment still burns everything.
+- **Mutation-checked.** Removing the chain-position and same-client conditions
+  turned exactly the two theft tests red and left the race tests green.
+- Verified in two real browser tabs: both reloaded, both stayed signed in,
+  zero `reuse_detected` events. Previously every page load produced a pair.
+
+Two pre-existing auth e2e assertions were **deliberately changed** rather than
+worked around: they asserted that an immediate same-client replay returns 401,
+which is exactly the behaviour being fixed. The strict cases they were
+protecting are covered in more depth by the new suite, and the change is
+called out in the test itself so it cannot be mistaken for drift.
+
+**Process note, third occurrence.** `prisma migrate dev` silently created no
+migration: it needs a confirmation to add a unique constraint and refuses to
+run non-interactively. I missed it because the command was chained and I read
+only `tail -5`, which showed npm's update banner instead of the actual output
+— the same mistake as the `timeout`-wrapped build in Phase 10 and the
+`pnpm add` in Phase 14. The migration is now hand-written, with a comment
+saying why.
+
 ## Post-completion — runtime settings, admin user creation, storefront redesign
 
 ### Runtime settings (Admin → Settings)

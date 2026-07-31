@@ -44,6 +44,13 @@ export const envSchema = z.object({
   // that wasn't configured deliberately. See src/orders/pricing.ts.
   SHIPPING_FLAT_CENTS: z.coerce.number().int().min(0).default(0),
   TAX_PERCENT: z.coerce.number().min(0).max(100).default(0),
+  // How long after a refresh token is rotated a replay of it is treated as a
+  // browser-tab race rather than theft. See src/auth/refresh-race.ts for the
+  // three conditions that must all hold; this only bounds the first.
+  //
+  // Set to 0 to restore strict detection, at the cost of signing users out
+  // when they open two tabs at once.
+  REFRESH_REUSE_GRACE_MS: z.coerce.number().int().min(0).max(120_000).default(15_000),
   // Number of reverse proxies in front of the API. 0 means do not trust
   // X-Forwarded-For at all.
   //

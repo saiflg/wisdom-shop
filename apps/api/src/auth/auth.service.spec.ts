@@ -27,6 +27,7 @@ function buildPrismaMock() {
     refreshToken: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
     },
@@ -205,24 +206,35 @@ describe("AuthService", () => {
       });
       const { service } = buildService(prisma);
 
+      // Rotation is a compare-and-swap now, so the mock has to report that
+      // this request won it.
+      (prisma.refreshToken.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+
       const result = await service.refresh({ sub: "user_1", tokenId: "token_1", type: "refresh" }, "raw-refresh-token", {});
 
       expect(result.accessToken).toBe("signed-token");
-      expect(prisma.refreshToken.update).toHaveBeenCalledWith({
-        where: { id: "token_1" },
-        data: { revokedAt: expect.any(Date) },
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { id: "token_1", revokedAt: null },
+        // Revoked and linked to its successor in one write.
+        data: { revokedAt: expect.any(Date), replacedById: expect.any(String) },
       });
     });
 
     it("burns every session when a revoked (already-rotated) token is reused", async () => {
       const prisma = buildPrismaMock();
-      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue({
+      // Revoked long enough ago to be outside any race window, and with no
+      // recorded successor — an unambiguous replay.
+      const rotated = {
         id: "token_1",
         userId: "user_1",
         tokenHash: hashToken("raw-refresh-token"),
-        revokedAt: new Date(),
+        revokedAt: new Date(Date.now() - 10 * 60_000),
         expiresAt: new Date(Date.now() + 60_000),
-      });
+        userAgent: null,
+        replacedBy: null,
+      };
+      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue(rotated);
+      (prisma.refreshToken.findUniqueOrThrow as jest.Mock).mockResolvedValue(rotated);
       const { service } = buildService(prisma);
 
       await expect(

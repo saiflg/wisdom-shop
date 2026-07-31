@@ -25,6 +25,7 @@ import type {
   TwoFactorChallengePayload,
 } from "./interfaces/jwt-payload.interface";
 import { hashToken } from "./utils/hash-token";
+import { isBenignRefreshRace } from "./refresh-race";
 import {
   clearedState,
   isLockedOut,
@@ -293,7 +294,27 @@ export class AuthService {
     return false;
   }
 
+  /**
+   * Public form. The refresh token's row id is deliberately not exposed:
+   * several callers spread this straight into an HTTP response, and an
+   * internal identifier has no business being there.
+   */
   async issueTokenPair(userId: string, email: string, roles: RoleName[], meta: RequestMeta): Promise<TokenPair> {
+    const issued = await this.issueTokenPairInternal(userId, email, roles, meta);
+    return {
+      accessToken: issued.accessToken,
+      refreshToken: issued.refreshToken,
+      refreshTokenExpiresAt: issued.refreshTokenExpiresAt,
+    };
+  }
+
+  /** Also returns the stored row's id, so rotation can record its successor. */
+  private async issueTokenPairInternal(
+    userId: string,
+    email: string,
+    roles: RoleName[],
+    meta: RequestMeta,
+  ): Promise<TokenPair & { refreshTokenId: string }> {
     const accessToken = await this.jwt.signAsync(
       { sub: userId, email, roles, type: "access" } satisfies AccessTokenPayload,
       {
@@ -325,30 +346,21 @@ export class AuthService {
       },
     });
 
-    return { accessToken, refreshToken, refreshTokenExpiresAt };
+    return { accessToken, refreshToken, refreshTokenExpiresAt, refreshTokenId: tokenId };
   }
 
   async refresh(payload: RefreshTokenPayload, rawToken: string, meta: RequestMeta): Promise<TokenPair> {
-    const existing = await this.prisma.refreshToken.findUnique({ where: { id: payload.tokenId } });
+    const existing = await this.prisma.refreshToken.findUnique({
+      where: { id: payload.tokenId },
+      include: { replacedBy: { select: { revokedAt: true } } },
+    });
 
     if (!existing || existing.tokenHash !== hashToken(rawToken)) {
       throw new UnauthorizedException("Invalid refresh token");
     }
 
     if (existing.revokedAt) {
-      // Reuse of a rotated-out token indicates the token was stolen — burn
-      // every session for this user as a containment measure.
-      await this.prisma.refreshToken.updateMany({
-        where: { userId: existing.userId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
-      await this.auditLog.record({
-        userId: existing.userId,
-        action: "auth.refresh_token_reuse_detected",
-        entity: "User",
-        entityId: existing.userId,
-      });
-      throw new UnauthorizedException("Refresh token has already been used");
+      return this.handleRotatedToken(existing.id, meta, null);
     }
 
     if (existing.expiresAt.getTime() < Date.now()) {
@@ -360,13 +372,108 @@ export class AuthService {
       include: { roles: { include: { role: true } } },
     });
 
-    await this.prisma.refreshToken.update({
-      where: { id: existing.id },
-      data: { revokedAt: new Date() },
+    const roles = user.roles.map((r) => r.role.name);
+    const issued = await this.issueTokenPairInternal(user.id, user.email, roles, meta);
+
+    // Compare-and-swap, not a plain update. Two concurrent refreshes both
+    // read the token as live, and an unconditional write let *both* rotate it
+    // and succeed — so a stolen token used at the same moment as the real one
+    // was never detected at all. `revokedAt: null` in the WHERE means exactly
+    // one request can claim the rotation; the loser is routed through the
+    // same path as any other replay.
+    //
+    // Revoking and recording the successor in one write also keeps the chain
+    // position a replay is judged against from ever being half-written.
+    const claimed = await this.prisma.refreshToken.updateMany({
+      where: { id: existing.id, revokedAt: null },
+      data: { revokedAt: new Date(), replacedById: issued.refreshTokenId },
     });
 
-    const roles = user.roles.map((r) => r.role.name);
-    return this.issueTokenPair(user.id, user.email, roles, meta);
+    if (claimed.count === 0) {
+      // Another request rotated this token between our read and our write.
+      // The pair we just issued is a legitimate one for this user, so it is
+      // handed over if this turns out to be a race rather than theft.
+      return this.handleRotatedToken(existing.id, meta, {
+        accessToken: issued.accessToken,
+        refreshToken: issued.refreshToken,
+        refreshTokenExpiresAt: issued.refreshTokenExpiresAt,
+      });
+    }
+
+    return {
+      accessToken: issued.accessToken,
+      refreshToken: issued.refreshToken,
+      refreshTokenExpiresAt: issued.refreshTokenExpiresAt,
+    };
+  }
+
+  /**
+   * Decides what a replay of an already-rotated token means.
+   *
+   * `alreadyIssued` is a pair minted before we discovered the token had been
+   * rotated (the compare-and-swap path). Passing it back avoids issuing a
+   * second one; when the replay turns out to be theft it is revoked along
+   * with everything else, so nothing escapes.
+   */
+  private async handleRotatedToken(
+    tokenId: string,
+    meta: RequestMeta,
+    alreadyIssued: TokenPair | null,
+  ): Promise<TokenPair> {
+    const token = await this.prisma.refreshToken.findUniqueOrThrow({
+      where: { id: tokenId },
+      include: { replacedBy: { select: { revokedAt: true } } },
+    });
+
+    const graceMs = this.config.get("REFRESH_REUSE_GRACE_MS", { infer: true });
+
+    if (
+      isBenignRefreshRace({
+        token: { revokedAt: token.revokedAt, userAgent: token.userAgent },
+        successor: token.replacedBy,
+        requestUserAgent: meta.userAgent,
+        graceMs,
+      })
+    ) {
+      // Two tabs sent the same cookie at once. Issuing a fresh pair leaves the
+      // other tab's token alone, so both end up with their own — the same
+      // state two devices would be in. Recorded under its own action so a
+      // spike in races stays distinguishable from a spike in theft.
+      await this.auditLog.record({
+        userId: token.userId,
+        action: "auth.refresh_token_race_tolerated",
+        entity: "User",
+        entityId: token.userId,
+      });
+
+      if (alreadyIssued) return alreadyIssued;
+
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: token.userId },
+        include: { roles: { include: { role: true } } },
+      });
+      return this.issueTokenPair(
+        user.id,
+        user.email,
+        user.roles.map((r) => r.role.name),
+        meta,
+      );
+    }
+
+    // Reuse of a rotated-out token indicates the token was stolen — burn
+    // every session for this user as a containment measure. This includes any
+    // pair minted moments ago on the compare-and-swap path.
+    await this.prisma.refreshToken.updateMany({
+      where: { userId: token.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    await this.auditLog.record({
+      userId: token.userId,
+      action: "auth.refresh_token_reuse_detected",
+      entity: "User",
+      entityId: token.userId,
+    });
+    throw new UnauthorizedException("Refresh token has already been used");
   }
 
   async logout(payload: RefreshTokenPayload): Promise<void> {

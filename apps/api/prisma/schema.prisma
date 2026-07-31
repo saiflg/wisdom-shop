@@ -142,6 +142,16 @@ model RefreshToken {
   userAgent String?
   ipAddress String?
 
+  /// The token issued when this one was rotated out.
+  ///
+  /// Recorded so a replay can be placed in the chain: a token whose successor
+  /// is still live is one step behind (two browser tabs racing), while one
+  /// whose successor has itself been rotated is a replay from further back,
+  /// which no race produces. See src/auth/refresh-race.ts.
+  replacedById String?       @unique
+  replacedBy   RefreshToken? @relation("TokenRotation", fields: [replacedById], references: [id])
+  replaces     RefreshToken? @relation("TokenRotation")
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
