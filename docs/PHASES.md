@@ -527,6 +527,64 @@ The behaviour is now pinned by `admin-order-list.test.tsx` so it stays a
 decision rather than becoming an accident. The lasting fix is a shared
 transition table both sides import; that is a refactor, not a patch.
 
+## Post-completion — search indexing
+
+Meilisearch had been running and authenticated since Phase 1 with **nothing
+writing to it**. Search fell back to a SQL `contains`, which matches
+substrings and nothing else — no typo tolerance, no relevance ranking.
+
+`MEILI_HOST` was in `.env` but *not* in the env schema, so Zod stripped it and
+the application could not read it at all. It is now declared, and the compose
+file sets the in-network address (`http://meilisearch:7700`) rather than the
+host-side `localhost` that `.env` carries for tools run from the host.
+
+### Search is an enhancement, never a dependency
+
+Every method in `SearchService` fails soft. If Meilisearch is unreachable,
+misconfigured, or not running, indexing is skipped and `searchIds` returns
+null so the caller falls back to the database. **A shop that cannot sell
+anything because its search engine is down is a worse outcome than a shop
+with unranked results.**
+
+This was verified by stopping the container mid-session: the same query
+returned the same product with the engine down. Requests also carry a 5s
+timeout, so a *hung* engine cannot hold a storefront request open
+indefinitely — which is the failure mode that a plain try/catch misses.
+
+### Search decides what matches; the database still does everything else
+
+`searchIds` returns ids only. The database continues to apply category, type
+and price filters and to do the paging, so search changes *which products
+match a phrase* and nothing else about how listings behave. The id list is
+capped, which is not a real limit at this catalogue size; lifting it would
+mean handing paging to Meilisearch too.
+
+### Drafts are kept out of the index entirely
+
+Filtering unpublished products at query time would work right up until
+someone forgot the filter. Keeping them out means an unreleased title cannot
+leak through search however the query is written — and unpublishing a live
+product removes its document, so a withdrawn item stops appearing in results
+that lead nowhere.
+
+The document also carries no stock levels, status or metadata: anything in a
+document queried by the public storefront is effectively public, even if no
+screen shows it today.
+
+### Verification log (2026-07-31) — search
+
+- **178 API unit** (up from 169), **226 API e2e across 18 suites**; lint,
+  typecheck and production build clean.
+- `search.e2e-spec.ts` (9 tests) runs against the real Meilisearch. The
+  headline one searches `Zylophon` and finds *Zylophone Handbook* — a
+  deliberate typo that the SQL fallback cannot match, so the test fails if
+  search silently stops being used. It also asserts `search.enabled` up
+  front, so the suite cannot quietly measure the fallback instead.
+- Also covered: a draft never surfaces, unpublishing removes the document,
+  other listing filters still apply to search results, and a phrase matching
+  nothing returns nothing rather than everything — an empty id list must mean
+  "no matches", not "no filter".
+
 ## Post-completion — coupons
 
 `Coupon` had existed since the Phase 1 schema and `Order.couponId` was always

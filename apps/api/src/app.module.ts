@@ -27,6 +27,7 @@ import { StorageModule } from "./storage/storage.module";
 import { DownloadsModule } from "./downloads/downloads.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { CouponsModule } from "./coupons/coupons.module";
+import { SearchModule } from "./search/search.module";
 
 @Module({
   imports: [
@@ -71,6 +72,8 @@ import { CouponsModule } from "./coupons/coupons.module";
     StorageModule,
     // Global, and before OrdersModule which redeems inside its checkout tx.
     CouponsModule,
+    // Global, and before the catalog modules that index into it.
+    SearchModule,
     MailerModule,
     HealthModule,
     AuthModule,

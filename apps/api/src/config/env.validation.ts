@@ -60,6 +60,11 @@ export const envSchema = z.object({
   // Set it to the real hop count (1 behind the bundled nginx) only once a
   // proxy is genuinely in front, and see docs/DEPLOYMENT.md.
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
+  // Search. Both must be set for search indexing to run at all; with either
+  // missing the shop falls back to database matching, which is the same
+  // behaviour as Meilisearch being unreachable.
+  MEILI_HOST: optionalSecret,
+  MEILI_MASTER_KEY: optionalSecret,
   // Where uploaded files live. Relative paths resolve from the API's working
   // directory. Local disk is a single-node story: with more than one replica
   // each gets its own directory — see docs/DEPLOYMENT.md.

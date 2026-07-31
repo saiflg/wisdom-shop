@@ -58,6 +58,10 @@ services:
     environment:
       DATABASE_URL: postgresql://wisdom:wisdom@postgres:5432/wisdom_shop?schema=public
       REDIS_URL: redis://redis:6379
+      # Service name, not localhost: .env holds the host-side address for
+      # tools run from the host, but inside the network this is the reachable
+      # one.
+      MEILI_HOST: http://meilisearch:7700
       PORT: 4000
     ports:
       - "4000:4000"

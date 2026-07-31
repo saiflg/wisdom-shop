@@ -149,8 +149,17 @@ Stated plainly rather than left to be discovered:
 - **No horizontal scaling story beyond the migrate split.** The API is
   stateless and should scale, but nothing has been tested with more than one
   replica.
-- **Meilisearch is running and reachable but nothing indexes into it**, so
-  search falls back to Postgres queries.
+- **Search is a soft dependency, by design.** Products are indexed into
+  Meilisearch on every write, and the storefront falls back to database
+  matching whenever the engine is unreachable — verified by stopping the
+  container and confirming search still returns results. The fallback has no
+  typo tolerance or relevance ranking, so a prolonged outage degrades results
+  rather than breaking the shop.
+
+  A fresh Meilisearch volume starts empty. Index settings are applied on API
+  boot, but the documents are not: run
+  `POST /v1/admin/search/reindex` once after restoring or replacing that
+  volume.
 - **Only Stripe and Paystack are implemented.** Flutterwave and PayPal are in
   the env schema and the UI gates on what is configured, but there are no
   providers behind them.
