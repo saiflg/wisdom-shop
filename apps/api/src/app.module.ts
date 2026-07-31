@@ -26,6 +26,7 @@ import { SettingsModule } from "./settings/settings.module";
 import { StorageModule } from "./storage/storage.module";
 import { DownloadsModule } from "./downloads/downloads.module";
 import { ReviewsModule } from "./reviews/reviews.module";
+import { CouponsModule } from "./coupons/coupons.module";
 
 @Module({
   imports: [
@@ -68,6 +69,8 @@ import { ReviewsModule } from "./reviews/reviews.module";
     // this one.
     SettingsModule,
     StorageModule,
+    // Global, and before OrdersModule which redeems inside its checkout tx.
+    CouponsModule,
     MailerModule,
     HealthModule,
     AuthModule,

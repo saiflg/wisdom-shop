@@ -527,6 +527,72 @@ The behaviour is now pinned by `admin-order-list.test.tsx` so it stays a
 decision rather than becoming an accident. The lasting fix is a shared
 transition table both sides import; that is a refactor, not a patch.
 
+## Post-completion — coupons
+
+`Coupon` had existed since the Phase 1 schema and `Order.couponId` was always
+null. Two fields were missing and were added: `Coupon.minSubtotalCents`, and
+`Order.discountCents` — **there was nowhere to record what a discount actually
+took off.**
+
+### Where the money bugs are
+
+`coupon-policy.ts` is pure, because every one of its edge cases is a way to
+charge the wrong amount:
+
+- **The discount is clamped to the subtotal.** A £50 fixed-amount coupon
+  against a £10 order takes off £10. Unclamped, the total goes negative, which
+  downstream means refunding the customer for the privilege of shopping.
+- **And clamped at zero**, so a negative coupon cannot *increase* the price.
+- **Tax is computed on the discounted goods**, not the full price — taxing
+  what nobody paid is simply wrong. Shipping is deliberately *not* discounted:
+  a coupon reduces the price of the goods, not the cost of moving them.
+- **Percentages round to the minor unit.** 15% of 19.99 is 2.9985 and has to
+  land on a whole number of cents.
+- **Exactly one of percentage or fixed amount.** Both would leave "which wins"
+  to whoever reads the code next; neither is a coupon that does nothing.
+  Refused at creation rather than left to surprise someone at checkout.
+
+### Redemption is a compare-and-swap, inside the checkout transaction
+
+`redeemWithin` increments `redeemedCount` with `where: { redeemedCount: { lt:
+maxRedemptions } }`. Two customers racing for the last use both pass
+validation; only one can win the update, and the loser's checkout rolls back
+rather than overselling the discount.
+
+It runs **inside** the caller's transaction on purpose: a stock conflict later
+in checkout must roll the redemption back, not burn a use of the coupon on an
+order that never existed.
+
+### Two smaller calls
+
+- **The discount itself is not editable after creation.** Orders snapshot what
+  they were charged, but a code already in circulation silently changing value
+  underneath customers is a support problem. Deactivate and issue a new one.
+- **Deleting a used coupon is refused** with a 409 — it would orphan the
+  discount recorded on those orders. Deactivation is the supported path.
+- **Preview answers 200 even for an invalid code**, so the cart shows the
+  reason inline rather than treating it as a failure. Unknown codes get the
+  same shape as any other refusal, so the endpoint is not an oracle for
+  guessing valid codes.
+
+### Verification log (2026-07-31) — coupons
+
+- **169 API unit** (up from 144), **217 API e2e across 17 suites**, 77
+  frontend; lint, typecheck and production build clean.
+- `coupon-policy.spec.ts` covers the clamps, the rounding, the expiry
+  boundary (a coupon "valid until noon" does not work *at* noon), and the
+  off-by-one on the last redemption.
+- `coupons.e2e-spec.ts` (18 tests) proves it over HTTP, including that the
+  expected-total guard is checked against the *discounted* figure.
+
+**A test that passed for the wrong reason, caught and fixed.** The rollback
+test originally added an out-of-stock product to the cart — which failed at
+the *cart* step, so checkout was never reached and the transaction rollback
+was never exercised. It now stocks the product, adds it to the cart, empties
+the shelf underneath, and checks out: the stock compare-and-swap fails
+mid-transaction, and the test asserts both that `redeemedCount` is still 0 and
+that no order was left behind.
+
 ## Post-completion — product reviews
 
 The `Review` model had existed since the Phase 1 schema with nothing reading

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { formatPrice } from "@/lib/catalog";
-import { useAddresses, useCheckoutPreview, usePlaceOrder } from "@/lib/use-checkout";
+import { useAddresses, useCheckoutPreview, usePlaceOrder, usePreviewCoupon, type CouponPreview } from "@/lib/use-checkout";
 import { useAuthStore } from "@/store/auth-store";
 import { AddressForm } from "./address-form";
 
@@ -15,6 +15,10 @@ export function CheckoutView() {
   const { data: preview, isLoading, error } = useCheckoutPreview();
   const { data: addresses } = useAddresses();
   const placeOrder = usePlaceOrder();
+  const previewCoupon = usePreviewCoupon();
+
+  const [couponCode, setCouponCode] = useState("");
+  const [coupon, setCoupon] = useState<CouponPreview | null>(null);
 
   const [addressId, setAddressId] = useState<string>("");
   const [showNewAddress, setShowNewAddress] = useState(false);
@@ -69,12 +73,28 @@ export function CheckoutView() {
 
   const needsAddress = preview.requiresShipping && !addressId;
 
+  // The server recomputes all of this; these values only decide what the
+  // customer is shown and what the expected-total guard is checked against.
+  const discountCents = coupon?.valid ? (coupon.discountCents ?? 0) : 0;
+  const discountedTotalCents = Math.max(0, preview.totalCents - discountCents);
+
+  async function applyCoupon(event: React.FormEvent) {
+    event.preventDefault();
+    const code = couponCode.trim();
+    if (!code) return;
+    const result = await previewCoupon.mutateAsync({ code, subtotalCents: preview!.subtotalCents });
+    setCoupon(result);
+  }
+
   async function handlePlaceOrder() {
     setPriceChanged(null);
     try {
       const order = await placeOrder.mutateAsync({
         ...(addressId ? { addressId } : {}),
-        expectedTotalCents: preview!.totalCents,
+        ...(coupon?.valid ? { couponCode: coupon.code } : {}),
+        // The discounted figure, so the guard compares against what the
+        // customer actually saw.
+        expectedTotalCents: discountedTotalCents,
       });
       router.push(`/orders/${order.orderNumber}`);
     } catch (err) {
@@ -123,11 +143,52 @@ export function CheckoutView() {
             <dt className="text-slate-600 dark:text-slate-400">Tax</dt>
             <dd>{formatPrice(preview.taxCents, preview.currency)}</dd>
           </div>
+          {discountCents > 0 && (
+            <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+              <dt>Discount ({coupon?.code})</dt>
+              <dd>−{formatPrice(discountCents, preview.currency)}</dd>
+            </div>
+          )}
           <div className="flex justify-between border-t border-slate-200 pt-2 text-base font-bold dark:border-slate-800">
             <dt>Total</dt>
-            <dd>{formatPrice(preview.totalCents, preview.currency)}</dd>
+            <dd>{formatPrice(discountedTotalCents, preview.currency)}</dd>
           </div>
         </dl>
+
+        <form onSubmit={applyCoupon} className="mt-4 flex flex-wrap gap-2">
+          <label htmlFor="coupon-code" className="sr-only">Coupon code</label>
+          <input
+            id="coupon-code"
+            value={couponCode}
+            onChange={(e) => setCouponCode(e.target.value)}
+            placeholder="Coupon code"
+            className="min-w-[10rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900"
+          />
+          <button
+            type="submit"
+            disabled={previewCoupon.isPending}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium transition hover:border-brand-400 disabled:opacity-60 dark:border-slate-700"
+          >
+            {previewCoupon.isPending ? "Checking…" : "Apply"}
+          </button>
+        </form>
+
+        {coupon && (
+          <p
+            role="status"
+            className={
+              coupon.valid
+                ? "mt-2 text-sm text-emerald-700 dark:text-emerald-400"
+                : "mt-2 text-sm text-red-700 dark:text-red-400"
+            }
+          >
+            {coupon.valid
+              ? `${coupon.code} applied.`
+              : // The API explains which rule the code failed; that is more
+                // useful than "invalid coupon".
+                coupon.message}
+          </p>
+        )}
       </section>
 
       {preview.requiresShipping && (

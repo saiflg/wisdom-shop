@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsInt, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 export class CreateOrderDto {
   @ApiPropertyOptional({
@@ -20,4 +20,10 @@ export class CreateOrderDto {
   @IsInt()
   @Min(0)
   expectedTotalCents?: number;
+
+  @ApiPropertyOptional({ description: "Coupon code to apply; matched case-insensitively" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  couponCode?: string;
 }

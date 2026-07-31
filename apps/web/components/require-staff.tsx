@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/admin/products", label: "Products" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/coupons", label: "Coupons" },
   { href: "/admin/vendors", label: "Vendors" },
   { href: "/admin/users", label: "Users" },
   // Shown to all staff; the page itself refuses anyone who is not a super

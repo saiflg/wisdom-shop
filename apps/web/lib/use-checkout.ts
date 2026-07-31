@@ -55,7 +55,7 @@ export function usePlaceOrder() {
   const accessToken = useAuthStore((s) => s.accessToken);
 
   return useMutation({
-    mutationFn: (body: { addressId?: string; expectedTotalCents: number }) =>
+    mutationFn: (body: { addressId?: string; expectedTotalCents: number; couponCode?: string }) =>
       apiFetch<Order>("/v1/orders", {
         method: "POST",
         headers: authHeaders(accessToken),
@@ -113,5 +113,32 @@ export function useOrders() {
     queryKey: ["orders"],
     enabled: status === "authenticated" && Boolean(accessToken),
     queryFn: () => apiFetch<Order[]>("/v1/orders", { headers: authHeaders(accessToken) }),
+  });
+}
+
+export interface CouponPreview {
+  code: string;
+  valid: boolean;
+  discountCents?: number;
+  reason?: string;
+  message?: string;
+}
+
+/**
+ * Quotes a coupon without consuming it.
+ *
+ * The endpoint answers 200 even for an invalid code, so an unusable coupon
+ * is a message beside the field rather than an error state for the page.
+ */
+export function usePreviewCoupon() {
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  return useMutation({
+    mutationFn: (input: { code: string; subtotalCents: number }) =>
+      apiFetch<CouponPreview>("/v1/coupons/preview", {
+        method: "POST",
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        body: input,
+      }),
   });
 }

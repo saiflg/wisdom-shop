@@ -8,6 +8,7 @@ describe("calculateOrderTotals", () => {
     );
 
     expect(result).toEqual({
+      discountCents: 0,
       subtotalCents: 5000,
       shippingCents: 0,
       taxCents: 0,
@@ -61,5 +62,60 @@ describe("calculateOrderTotals", () => {
     );
 
     expect(result.totalCents).toBe(0);
+  });
+});
+
+describe("calculateOrderTotals with a discount", () => {
+  const config = { shippingFlatCents: 500, taxPercent: 10 };
+
+  it("taxes the discounted goods, not the full price", () => {
+    // Taxing the pre-discount price would charge tax on money nobody paid.
+    const result = calculateOrderTotals(
+      { subtotalCents: 10_000, requiresShipping: true, discountCents: 2000 },
+      config,
+    );
+
+    expect(result.discountCents).toBe(2000);
+    // (10000 - 2000 + 500) * 10% = 850
+    expect(result.taxCents).toBe(850);
+    expect(result.totalCents).toBe(10_000 - 2000 + 500 + 850);
+  });
+
+  it("does not discount shipping", () => {
+    // A coupon reduces the price of the goods, not the cost of moving them.
+    const result = calculateOrderTotals(
+      { subtotalCents: 1000, requiresShipping: true, discountCents: 1000 },
+      { shippingFlatCents: 500, taxPercent: 0 },
+    );
+
+    expect(result.shippingCents).toBe(500);
+    expect(result.totalCents).toBe(500);
+  });
+
+  it("never produces a negative total", () => {
+    // The clamp is the difference between a free order and refunding the
+    // customer for shopping.
+    const result = calculateOrderTotals(
+      { subtotalCents: 1000, requiresShipping: false, discountCents: 99_999 },
+      { shippingFlatCents: 0, taxPercent: 0 },
+    );
+
+    expect(result.discountCents).toBe(1000);
+    expect(result.totalCents).toBe(0);
+  });
+
+  it("ignores a negative discount rather than adding to the price", () => {
+    const result = calculateOrderTotals(
+      { subtotalCents: 1000, requiresShipping: false, discountCents: -500 },
+      { shippingFlatCents: 0, taxPercent: 0 },
+    );
+
+    expect(result.discountCents).toBe(0);
+    expect(result.totalCents).toBe(1000);
+  });
+
+  it("treats an absent discount as zero", () => {
+    const result = calculateOrderTotals({ subtotalCents: 1000, requiresShipping: false }, config);
+    expect(result.discountCents).toBe(0);
   });
 });

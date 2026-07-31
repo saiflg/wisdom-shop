@@ -11,6 +11,7 @@ import { AuditLogService } from "../common/audit/audit-log.service";
 import { MailerService } from "../common/mailer/mailer.service";
 import type { EnvConfig } from "../config/env.validation";
 import { calculateOrderTotals } from "./pricing";
+import { CouponsService } from "../coupons/coupons.service";
 import { generateOrderNumber } from "./order-number";
 import type { CreateOrderDto } from "./dto/create-order.dto";
 
@@ -35,6 +36,7 @@ export class OrdersService {
     private readonly config: ConfigService<EnvConfig, true>,
     private readonly auditLog: AuditLogService,
     private readonly mailer: MailerService,
+    private readonly coupons: CouponsService,
   ) {}
 
   /** Everything the checkout page needs to show totals before committing. */
@@ -73,7 +75,21 @@ export class OrdersService {
     }
 
     const subtotalCents = lines.reduce((sum, l) => sum + l.unitPriceCents * l.quantity, 0);
-    const totals = calculateOrderTotals({ subtotalCents, requiresShipping }, this.pricingConfig());
+
+    // Evaluated before the transaction so an invalid code fails fast without
+    // touching stock. It is *redeemed* inside the transaction below, where
+    // the compare-and-swap lives.
+    const preview = dto.couponCode
+      ? await this.coupons.preview(dto.couponCode, subtotalCents)
+      : null;
+    if (preview && !preview.valid) {
+      throw new BadRequestException(preview.message);
+    }
+
+    const totals = calculateOrderTotals(
+      { subtotalCents, requiresShipping, discountCents: preview?.valid ? preview.discountCents : 0 },
+      this.pricingConfig(),
+    );
 
     // If the customer was shown a different total, stop and tell them what
     // changed instead of quietly charging the new amount.
@@ -86,6 +102,13 @@ export class OrdersService {
     }
 
     const order = await this.prisma.$transaction(async (tx) => {
+      // Claimed inside the transaction, so a later stock conflict rolls the
+      // redemption back rather than burning a use of the coupon on an order
+      // that never existed.
+      const redemption = dto.couponCode
+        ? await this.coupons.redeemWithin(tx, dto.couponCode, subtotalCents)
+        : null;
+
       // Compare-and-swap each stocked line. `updateMany` with a `gte` guard
       // decrements only if enough is still on hand, so two simultaneous
       // checkouts for the last unit cannot both succeed — the loser sees
@@ -119,7 +142,9 @@ export class OrdersService {
           addressId: dto.addressId,
           status: "PENDING",
           currency,
+          couponId: redemption?.couponId,
           subtotalCents: totals.subtotalCents,
+          discountCents: totals.discountCents,
           shippingCents: totals.shippingCents,
           taxCents: totals.taxCents,
           totalCents: totals.totalCents,

@@ -474,6 +474,10 @@ model Order {
   subtotalCents Int
   taxCents      Int         @default(0)
   shippingCents Int         @default(0)
+  /// What the coupon took off, snapshotted. Stored rather than recomputed
+  /// because a coupon can later be edited or deactivated, and the order must
+  /// always show what was actually charged.
+  discountCents Int         @default(0)
   totalCents    Int
   currency      String      @default("USD")
   couponId      String?
@@ -611,9 +615,17 @@ model ProcessedWebhookEvent {
 model Coupon {
   id            String   @id @default(cuid())
   code          String   @unique
+  /// Exactly one of percentOff / amountOffCents is set; the API refuses a
+  /// coupon that sets both or neither, so there is never a question of which
+  /// one wins.
   percentOff    Int?
   amountOffCents Int?
+  /// Smallest order the coupon applies to, compared against the pre-discount
+  /// subtotal.
+  minSubtotalCents Int?
   maxRedemptions Int?
+  /// Incremented by a compare-and-swap at checkout, so two simultaneous
+  /// redemptions of the last use cannot both succeed.
   redeemedCount  Int     @default(0)
   expiresAt      DateTime?
   active         Boolean  @default(true)
