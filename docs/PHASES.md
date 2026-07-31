@@ -567,6 +567,35 @@ reverting `forwardRef` turns all six red.
 **Rule this establishes:** a form is not verified until a test has typed
 into it and asserted what got submitted. Rendering is not working.
 
+### The second half: the fix looked like it had failed
+
+After the fix was committed and all tests were green, the user reported the
+form was *still* broken. It was — in their browser. `next dev` had never
+recompiled.
+
+This is the bind-mount watcher problem recorded in `PROGRESS.md`, and it is
+worse than it sounds: the file on disk was correct, the file inside the
+container was correct, every test read the correct file, and the browser was
+still executing the previous build. Reading a file to check a fix landed
+proves nothing about what the running app is serving.
+
+What settled it was the browser console, not any file:
+
+```
+Warning: Function components cannot be given refs.
+  at FormField (webpack-internal:///.../components/form-field.tsx:8:11)
+```
+
+Line 8 was where the *old* plain function sat. The stack trace was pointing
+at code that no longer existed on disk. `docker compose stop web && rm -rf
+apps/web/.next && docker compose up -d web` fixed it, and the same login
+then succeeded in a real browser.
+
+**Rule this establishes:** on this machine, after editing anything under
+`apps/web`, assume the dev server has *not* picked it up. Verify in a
+browser, not by re-reading the file. A passing test suite and a correct file
+on disk are both compatible with the user staring at last week's bundle.
+
 ## Phase 15 — Production deployment
 
 **Status is deliberately amber, not green.** The production images build and

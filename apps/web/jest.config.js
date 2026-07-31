@@ -15,6 +15,13 @@ const config = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
   },
+  // Same reasoning as the API's e2e config. Component tests that drive
+  // `userEvent` are slow, and running several suites in parallel on this
+  // machine pushed individual clicks past the default 5s timeout — suites
+  // that pass comfortably on their own failed only when run together. A red
+  // test that depends on how many other tests are running teaches nothing.
+  maxWorkers: 1,
+  testTimeout: 30000,
 };
 
 module.exports = createJestConfig(config);
