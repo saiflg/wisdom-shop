@@ -8,6 +8,8 @@ import { useIsStaff } from "@/lib/use-admin";
 
 const LINKS = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/products", label: "Products" },
+  { href: "/admin/categories", label: "Categories" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/vendors", label: "Vendors" },
   { href: "/admin/users", label: "Users" },

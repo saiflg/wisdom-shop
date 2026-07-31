@@ -136,7 +136,9 @@ export class ProductsService {
   private buildWhere(query: QueryProductsDto, statuses?: ProductStatus[]): Prisma.ProductWhereInput {
     return {
       deletedAt: null,
-      status: statuses ? { in: statuses } : undefined,
+      // An explicit statuses argument always wins, so a caller-supplied
+      // query.status can never widen the public listing beyond PUBLISHED.
+      status: statuses ? { in: statuses } : query.status,
       type: query.type,
       priceCents: {
         gte: query.minPrice,

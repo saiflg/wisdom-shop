@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
-import { ProductType } from "@prisma/client";
+import { ProductStatus, ProductType } from "@prisma/client";
 
 export enum ProductSort {
   NEWEST = "newest",
@@ -34,6 +34,16 @@ export class QueryProductsDto {
   @IsOptional()
   @IsEnum(ProductType)
   type?: ProductType;
+
+  /**
+   * Admin-only in effect. The public listing passes an explicit PUBLISHED
+   * filter that overrides this, so asking the storefront for `status=DRAFT`
+   * still returns only published products.
+   */
+  @ApiPropertyOptional({ enum: ProductStatus })
+  @IsOptional()
+  @IsEnum(ProductStatus)
+  status?: ProductStatus;
 
   @ApiPropertyOptional()
   @IsOptional()

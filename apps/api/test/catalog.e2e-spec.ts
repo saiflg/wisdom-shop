@@ -119,6 +119,28 @@ describe("Catalog (e2e)", () => {
     expect(listRes.body.data).toHaveLength(0);
   });
 
+  it("does not let the public listing be talked into showing drafts", async () => {
+    // The admin screen filters by status, so the parameter is now accepted on
+    // the shared query DTO. The public listing must still pin PUBLISHED —
+    // otherwise `?status=DRAFT` is a catalogue leak of unreleased products.
+    const res = await request(app.getHttpServer()).get("/v1/products?status=DRAFT").expect(200);
+
+    expect(res.body.data.map((p: { id: string }) => p.id)).not.toContain(productId);
+    expect(
+      res.body.data.every((p: { status: string }) => p.status === "PUBLISHED"),
+    ).toBe(true);
+  });
+
+  it("lets an admin filter their own list by status", async () => {
+    const drafts = await request(app.getHttpServer())
+      .get("/v1/admin/products?status=DRAFT")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(drafts.body.data.map((p: { id: string }) => p.id)).toContain(productId);
+    expect(drafts.body.data.every((p: { status: string }) => p.status === "DRAFT")).toBe(true);
+  });
+
   it("becomes publicly visible once published by an admin", async () => {
     await request(app.getHttpServer())
       .patch(`/v1/admin/products/${productId}`)

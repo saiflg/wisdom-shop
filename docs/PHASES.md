@@ -527,6 +527,58 @@ The behaviour is now pinned by `admin-order-list.test.tsx` so it stays a
 decision rather than becoming an accident. The lasting fix is a shared
 transition table both sides import; that is a refactor, not a patch.
 
+## Post-completion — catalogue management UI
+
+Until now the API had full CRUD for products and categories and **no way to
+reach it**. The catalogue could only be changed by the seed script or by
+hand-written HTTP calls, which meant the shop could not actually be stocked.
+
+- `/admin/products` — search, status filter, pagination, publish/unpublish in
+  one click, delete behind a confirm.
+- `/admin/products/new` and `/admin/products/[id]` — a shared form for create
+  and edit.
+- `/admin/categories` — tree view with create, rename, delete, and nesting.
+
+**One backend addition:** `status` on the product query DTO, so the admin
+list can show "what is still draft". The public listing passes an explicit
+`PUBLISHED` filter that overrides it, and there is a test asserting
+`/v1/products?status=DRAFT` still returns only published products — without
+that, the new parameter would be a catalogue leak of unreleased titles.
+
+### Money conversion was extracted on purpose
+
+`lib/product-form.ts` holds the form-to-payload mapping, away from the
+component, because the price conversion is the part most likely to be
+silently wrong: the API stores minor units and the form shows a decimal, so a
+rounding slip misprices the catalogue without erroring anywhere.
+
+`19.99 * 100` is `1998.9999999999998` in binary floating point. Truncating
+anywhere in that chain sells the product a cent cheap, forever, quietly.
+Rounding after the multiply is what lands it on 1999, and `parsePriceToCents`
+is pinned by tests over exactly the values that expose the problem.
+
+The same file also refuses input `Number()` would happily accept — `"1e5"`,
+`"12abc"`, `"-5"` — rather than sending a wrong price, and distinguishes
+**blank stock (unlimited)** from **zero stock (out of stock)**. Sending `0`
+for every digital product would mark the entire digital catalogue
+unpurchasable.
+
+### Verification log (2026-07-31) — catalogue UI
+
+- **62 frontend tests** (up from 40) and **165 API tests**; lint and
+  typecheck clean; production build clean.
+- `product-form.test.ts` (14 tests) covers the money conversion and payload
+  shaping. `product-list.test.tsx` (8 tests) covers publish/unpublish,
+  confirm-before-delete, per-product currency, and that a draft shows no
+  "View in shop" link — a draft has no public page, so that link would 404.
+- Exercised in a real browser: created a product, published it, and confirmed
+  it appeared in the shop.
+
+**Known limits, stated rather than left to be found:** images are entered as
+URLs because there is no upload endpoint or object storage yet — the same
+decision that blocks digital downloads. Variants are not editable from this
+screen; the API supports them and the form does not.
+
 ## Post-completion — refresh token races across browser tabs
 
 The client-side single-flight fix stopped one tab refreshing twice, but two
