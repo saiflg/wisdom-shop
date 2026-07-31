@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  // `prisma` is excluded, not merely unused. It holds seed.ts, which runs
+  // through ts-node and never needs compiling — but while it was included,
+  // TypeScript inferred the package root as rootDir and emitted
+  // dist/src/main.js instead of dist/main.js. That silently broke the
+  // production image's entry point, and shipped a compiled seed script
+  // (which can create a super admin) into the runtime image as well.
+  "exclude": ["node_modules", "test", "dist", "prisma", "**/*spec.ts"]
+}

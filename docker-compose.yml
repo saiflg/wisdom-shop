@@ -1,0 +1,86 @@
+name: wisdom-shop
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wisdom
+      POSTGRES_PASSWORD: wisdom
+      POSTGRES_DB: wisdom_shop
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.docker-data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wisdom -d wisdom_shop"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./.docker-data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    restart: unless-stopped
+    environment:
+      # The key IS enforced — an unauthenticated request to /indexes returns
+      # 401. What makes this a dev-only setup is that the key is a published
+      # placeholder and the port is bound to the host. In production: set a
+      # real MEILI_MASTER_KEY, use MEILI_ENV=production (which also disables
+      # the bundled dashboard), and drop the port mapping so only the api
+      # service can reach it over the compose network.
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-changeme_dev_master_key}
+      MEILI_ENV: development
+    ports:
+      - "7700:7700"
+    volumes:
+      - ./.docker-data/meilisearch:/meili_data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://wisdom:wisdom@postgres:5432/wisdom_shop?schema=public
+      REDIS_URL: redis://redis:6379
+      PORT: 4000
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/workspace/apps/api
+      - /workspace/apps/api/node_modules
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    volumes:
+      - ./apps/web:/workspace/apps/web
+      - /workspace/apps/web/node_modules

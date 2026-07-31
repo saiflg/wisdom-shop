@@ -1,0 +1,2 @@
+Static assets served from the site root (favicon, robots.txt, images).
+Kept in git so the production Dockerfile's COPY of this directory resolves.

@@ -1,0 +1,630 @@
+// Wisdom Shop — baseline schema (Phase 1: Architecture & Setup)
+// Conventions used throughout this schema:
+//  - cuid() primary keys (sortable-ish, collision-safe without a central sequencer)
+//  - createdAt/updatedAt audit fields on every table
+//  - deletedAt for soft deletes instead of hard DELETEs
+//  - explicit @@index on every foreign key used in hot query paths
+// Later phases (catalog, cart, checkout, vendor, edu-software) extend this file.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Identity & Access ──────────────────────────────────────────────
+
+enum RoleName {
+  GUEST
+  CUSTOMER
+  VENDOR
+  AFFILIATE
+  SUPPORT
+  EDITOR
+  MANAGER
+  ADMIN
+  SUPER_ADMIN
+  DEVELOPER
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerifiedAt   DateTime?
+  phone             String?   @unique
+  phoneVerifiedAt   DateTime?
+  passwordHash      String
+  firstName         String
+  lastName          String
+  avatarUrl         String?
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?
+
+  /// Brute-force defence. Counts *consecutive* failed password attempts and
+  /// is cleared on any success, so a user who mistypes and then gets it right
+  /// is never penalised. `lockedUntil` is a time box rather than a permanent
+  /// lock: a permanent one would hand an attacker a denial-of-service against
+  /// any account whose email they know.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  roles                   UserRole[]
+  refreshTokens           RefreshToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+  twoFactorRecoveryCodes  TwoFactorRecoveryCode[]
+  addresses               Address[]
+  vendor                  Vendor?
+  orders                  Order[]
+  cart                    Cart?
+  reviews                 Review[]
+  auditLogs               AuditLog[]
+  orderStatusChanges      OrderStatusHistory[] @relation("OrderStatusChanges")
+  licenses                License[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Role {
+  id          String     @id @default(cuid())
+  name        RoleName   @unique
+  description String?
+  permissions Permission[] @relation("RolePermissions")
+  users       UserRole[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id    String @id @default(cuid())
+  key   String @unique // e.g. "products.write", "orders.refund"
+  label String
+
+  roles Role[] @relation("RolePermissions")
+
+  @@map("permissions")
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model EmailVerificationToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  requestIp  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model TwoFactorRecoveryCode {
+  id       String    @id @default(cuid())
+  userId   String
+  codeHash String
+  usedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("two_factor_recovery_codes")
+}
+
+model Address {
+  id           String  @id @default(cuid())
+  userId       String
+  label        String? // "Home", "Office", ...
+  fullName     String
+  phone        String
+  line1        String
+  line2        String?
+  city         String
+  state        String?
+  postalCode   String?
+  country      String
+  isDefault    Boolean @default(false)
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+// ── Vendors ──────────────────────────────────────────────────────────
+
+enum VendorStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  REJECTED
+}
+
+model Vendor {
+  id          String       @id @default(cuid())
+  userId      String       @unique
+  storeName   String
+  slug        String       @unique
+  status      VendorStatus @default(PENDING)
+  commissionPct Decimal    @default(10.0) @db.Decimal(5, 2)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([status])
+  @@map("vendors")
+}
+
+// ── Catalog ──────────────────────────────────────────────────────────
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+  SUBSCRIPTION
+  LICENSE
+  DOWNLOADABLE
+  SOFTWARE
+  SERVICE
+  BUNDLE
+  GIFT_CARD
+  MEMBERSHIP
+  COURSE
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Category {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  parentId String?
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products ProductCategory[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  vendorId    String?
+  title       String
+  slug        String        @unique
+  description String
+  type        ProductType
+  status      ProductStatus @default(DRAFT)
+  priceCents  Int
+  currency    String        @default("USD")
+  sku         String?       @unique
+  stockQty    Int? // null for digital/unlimited items
+  metadata    Json? // type-specific fields: license terms, course length, etc.
+
+  vendor     Vendor?            @relation(fields: [vendorId], references: [id])
+  categories ProductCategory[]
+  images     ProductImage[]
+  variants   ProductVariant[]
+  reviews    Review[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  licenses   License[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([vendorId])
+  @@index([status])
+  @@index([type])
+  @@map("products")
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@index([categoryId])
+  @@map("product_categories")
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  altText   String?
+  position  Int     @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+model ProductVariant {
+  id         String  @id @default(cuid())
+  productId  String
+  name       String // e.g. "Hardcover", "1-Year License"
+  priceCents Int
+  sku        String? @unique
+  stockQty   Int?
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model Review {
+  id        String  @id @default(cuid())
+  productId String
+  userId    String
+  rating    Int // 1-5
+  title     String?
+  body      String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([productId, userId])
+  @@index([productId])
+  @@map("reviews")
+}
+
+// ── Cart & Orders ────────────────────────────────────────────────────
+
+model Cart {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  productId String
+  variantId String?
+  quantity  Int     @default(1)
+
+  cart    Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id])
+  variant ProductVariant? @relation(fields: [variantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId, variantId])
+  @@index([productId])
+  @@map("cart_items")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  userId        String
+  addressId     String?
+  status        OrderStatus @default(PENDING)
+  subtotalCents Int
+  taxCents      Int         @default(0)
+  shippingCents Int         @default(0)
+  totalCents    Int
+  currency      String      @default("USD")
+  couponId      String?
+
+  /// Fulfilment details, set by staff when the order ships.
+  carrier        String?
+  trackingNumber String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  cancelledAt    DateTime?
+  /// True once a cancellation has returned this order's items to stock, so a
+  /// re-run or a second cancellation can never inflate inventory.
+  stockRestored  Boolean   @default(false)
+
+  user    User        @relation(fields: [userId], references: [id])
+  address Address?    @relation(fields: [addressId], references: [id])
+  coupon  Coupon?     @relation(fields: [couponId], references: [id])
+  items   OrderItem[]
+  payments Payment[]
+  statusHistory OrderStatusHistory[]
+  licenses      License[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+/// Append-only record of every order status change.
+///
+/// `Order.status` only says where an order is now; support and finance need
+/// to know how it got there and who moved it. Rows are never updated or
+/// deleted, and `changedByUserId` is nullable because some transitions come
+/// from a payment webhook rather than a person.
+model OrderStatusHistory {
+  id              String      @id @default(cuid())
+  orderId         String
+  fromStatus      OrderStatus
+  toStatus        OrderStatus
+  changedByUserId String?
+  note            String?
+
+  order         Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedByUser User? @relation("OrderStatusChanges", fields: [changedByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@map("order_status_history")
+}
+
+model OrderItem {
+  id            String  @id @default(cuid())
+  orderId       String
+  productId     String
+  variantId     String?
+  titleSnapshot String // preserve product name at time of purchase
+  unitPriceCents Int
+  quantity      Int
+
+  /// Marketplace split, snapshotted at order time for the same reason prices
+  /// are: a later change to the vendor's rate must not silently rewrite what
+  /// was owed on past orders. `commissionCents` is the platform's take;
+  /// vendor earnings are (unitPriceCents * quantity) - commissionCents.
+  vendorId       String?
+  commissionPct  Decimal? @db.Decimal(5, 2)
+  commissionCents Int?
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id])
+  variant ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([vendorId])
+  @@map("order_items")
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYSTACK
+  FLUTTERWAVE
+  PAYPAL
+}
+
+enum PaymentStatus {
+  INITIATED
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id            String          @id @default(cuid())
+  orderId       String
+  provider      PaymentProvider
+  status        PaymentStatus   @default(INITIATED)
+  amountCents   Int
+  currency      String          @default("USD")
+  providerRef   String? // provider's transaction/session id
+  rawWebhook    Json?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([provider, providerRef])
+  @@map("payments")
+}
+
+/// Idempotency ledger for provider webhooks.
+///
+/// Payment providers retry deliveries and can send the same event more than
+/// once; without this, a retry could mark an order paid twice or trigger
+/// duplicate fulfilment. The unique constraint on (provider, eventId) is the
+/// actual guard — a concurrent duplicate loses the insert race and is
+/// treated as already-processed.
+model ProcessedWebhookEvent {
+  id        String          @id @default(cuid())
+  provider  PaymentProvider
+  eventId   String
+  eventType String
+  createdAt DateTime        @default(now())
+
+  @@unique([provider, eventId])
+  @@map("processed_webhook_events")
+}
+
+model Coupon {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  percentOff    Int?
+  amountOffCents Int?
+  maxRedemptions Int?
+  redeemedCount  Int     @default(0)
+  expiresAt      DateTime?
+  active         Boolean  @default(true)
+
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("coupons")
+}
+
+// ── Licensing (Educational Management Software) ──────────────────────
+
+enum LicenseStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+/// A license issued for a purchased software product.
+///
+/// Exactly one row per `OrderItem` — `orderItemId` is UNIQUE, and that
+/// constraint is what makes issuance idempotent. Licenses are created from
+/// the payment webhook path, which providers redeliver, so a second delivery
+/// must not mint a second key. Quantity is carried as `seats` rather than
+/// issuing N separate keys, so one purchase is one activatable license.
+model License {
+  id          String        @id @default(cuid())
+  key         String        @unique
+  userId      String
+  productId   String
+  orderId     String
+  orderItemId String        @unique
+  status      LicenseStatus @default(ACTIVE)
+  seats       Int           @default(1)
+  /// null means perpetual — subscription products set this explicitly.
+  expiresAt   DateTime?
+  activatedAt DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([productId])
+  @@map("licenses")
+}
+
+// ── Audit ────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id       String  @id @default(cuid())
+  userId   String?
+  action   String // e.g. "product.updated", "order.refunded"
+  entity   String // e.g. "Product"
+  entityId String?
+  metadata Json?
+
+  user User? @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}

@@ -1,0 +1,20 @@
+# Normalise line endings to LF everywhere, including in Windows working
+# copies.
+#
+# Without this, `core.autocrlf=true` (the Git for Windows default, and what
+# is set on the machine this was built on) checks these files out with CRLF.
+# That matters here because the Dockerfiles COPY straight from the working
+# copy into Linux images: a shell script or an nginx include carrying \r
+# fails inside the container with errors that point nowhere useful.
+* text=auto eol=lf
+
+# Binary files must never be touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

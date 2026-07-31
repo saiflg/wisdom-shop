@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+WORKDIR /workspace
+
+# Prisma's query engine binary needs a real libssl to dlopen — without this
+# it silently guesses "openssl-1.1.x" and fails at runtime on modern Alpine.
+RUN apk add --no-cache openssl
+
+RUN corepack enable
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/api/package.json ./apps/api/package.json
+
+RUN pnpm install --frozen-lockfile=false
+
+COPY apps/api ./apps/api
+
+WORKDIR /workspace/apps/api
+
+EXPOSE 4000
+
+CMD ["sh", "-c", "pnpm prisma:generate && pnpm dev"]

@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+.next/
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Testing / coverage
+coverage/
+
+# Docker volumes (local)
+.docker-data/
+
+# TLS material for the production stack. The directory is mounted into the
+# nginx container (see docker-compose.prod.yml); a private key committed here
+# would be a private key published to every clone.
+deploy/nginx/certs/

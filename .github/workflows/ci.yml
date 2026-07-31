@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wisdom
+          POSTGRES_PASSWORD: wisdom
+          POSTGRES_DB: wisdom_shop
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wisdom -d wisdom_shop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://wisdom:wisdom@localhost:5432/wisdom_shop?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: ci_only_access_secret_min_32_characters
+      JWT_REFRESH_SECRET: ci_only_refresh_secret_min_32_characters
+      TWO_FACTOR_ENCRYPTION_KEY: ci_only_2fa_encryption_key_min_32_chars
+      EDU_SETUP_SIGNING_SECRET: ci_only_edu_setup_secret_min_32_characters
+      # Same one-second window the local .env uses. The limits are still
+      # enforced — the security suite asserts a 429 on both buckets — but at
+      # the production window the whole e2e run shares one IP and would
+      # exhaust the 20-per-15-minutes credential bucket partway through.
+      RATE_LIMIT_TTL_MS: 1000
+      RATE_LIMIT_LIMIT: 100
+      AUTH_RATE_LIMIT_TTL_MS: 1000
+      AUTH_RATE_LIMIT_LIMIT: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @wisdom-shop/api run prisma:generate
+
+      - name: Apply database migrations
+        run: pnpm --filter @wisdom-shop/api exec prisma migrate deploy
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build
+        run: pnpm run build
+
+      # Runs every workspace package's `test` script, which now covers the
+      # frontend component tests as well as the API unit tests.
+      - name: Unit tests
+        run: pnpm run test
+
+      - name: E2E tests
+        run: pnpm --filter @wisdom-shop/api run test:e2e
+
+      # Builds the production images the deploy actually uses. Without this,
+      # a Dockerfile can break while every other check stays green — which is
+      # exactly what happened in Phase 15.
+      - name: Build production images
+        run: |
+          docker build -f apps/api/Dockerfile -t wisdom-shop-api:ci .
+          docker build -f apps/web/Dockerfile \
+            --build-arg NEXT_PUBLIC_APP_URL=http://localhost:3000 \
+            -t wisdom-shop-web:ci .
