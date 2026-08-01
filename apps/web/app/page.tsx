@@ -41,7 +41,7 @@ const SLIDES: HeroSlide[] = [
     description: "Buy a license here and finish setup straight into your school's own admin portal.",
     ctaLabel: "See school software",
     ctaHref: "/products?category=educational-software",
-    imageUrl: "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=1600",
+    imageUrl: "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=1600",
   },
   {
     id: "equipment",
