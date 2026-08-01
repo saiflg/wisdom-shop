@@ -43,6 +43,15 @@ export const envSchema = z.object({
   SEED_PLATFORM_ADMIN_EMAIL: z.string().email().optional(),
   SEED_PLATFORM_ADMIN_PASSWORD: z.string().min(12).optional(),
 
+  // The one deliberate exception to "every cross-app secret must be
+  // distinct" (see JWT secrets above): this value must be IDENTICAL to the
+  // shop's own EDU_SETUP_SIGNING_SECRET, since verifying a token the shop
+  // minted requires computing the same HMAC it did. See onboarding/
+  // edu-handoff-token.ts.
+  EDU_SETUP_SIGNING_SECRET: z
+    .string()
+    .min(32, "EDU_SETUP_SIGNING_SECRET must be at least 32 characters"),
+
   // Number of reverse proxies in front of the API — see the shop's own
   // env.validation.ts for why this defaults to 0 rather than trusting
   // X-Forwarded-For with nothing in front to set it.

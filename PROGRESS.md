@@ -169,21 +169,51 @@ student, link a guardian — was walked through manually in a real browser.
   exactly like a real tenant-isolation bug but aren't. Same fix the shop's
   own `refresh-race.e2e-spec.ts` already uses.
 
-**Not yet connected:** the shop already has a signed handoff mechanism for
-this exact purpose — `createHandoffToken`/`verifyHandoffToken` in
-`apps/api/src/licenses/edu-handoff.ts`, used when a customer completes a
-"School Setup" purchase (see Phase 9 above). `EDU_SETUP_REDIRECT_URL`
-currently points at a placeholder external domain, not at this app. Wiring
-that up — an `/onboarding` route in `apps/ems` that verifies the token with
-the shared `EDU_SETUP_SIGNING_SECRET` — is the natural next phase, now that
-apps/ems has a real school-admin console for a verified purchaser to land
-on and manage.
+**Phase 2b (done): the edu-handoff onboarding is wired up.** A customer who
+clicks "Complete Your School Setup" on a license (apps/api's existing
+`createHandoffToken`/`verifyHandoffToken` in
+`apps/api/src/licenses/edu-handoff.ts`, unchanged) now lands on a real
+`apps/ems` page that provisions their school and logs them straight into
+its dashboard — no more placeholder external domain.
 
-**Explicitly deferred, not part of Phase 2:** subdomain-based tenant
-routing, custom domains, per-school branding, the AI curriculum engine, the
-AI Teacher / live classroom, 2FA/lockout/real CSRF double-submit, payment
-gateways for schools, messaging, automated backups, and a platform-admin
-onboarding UI (schools are provisioned via API/script only for now).
+- `EDU_SETUP_REDIRECT_URL` now points at `apps/ems`'s own `/onboarding`
+  page (`http://localhost:3001/onboarding` in dev).
+- `apps/ems-api` verifies the token itself
+  (`onboarding/edu-handoff-token.ts`) — a byte-for-byte reimplementation of
+  the shop's verification logic, not shared code, since the two apps are
+  otherwise fully independent. `EDU_SETUP_SIGNING_SECRET` is the one
+  deliberate exception to "every cross-app secret must be distinct" (see
+  the JWT-secret-naming note above): both apps need the identical value to
+  compute the same HMAC.
+- `School.licenseKey` (unique, nullable) makes a license activate **at
+  most one school, ever**. The shop mints a fresh token on every click, so
+  a repeat click is the normal case, not a replay — `POST
+  /v1/onboarding/from-license` treats a known `licenseKey` as "already
+  done" (`{ alreadyOnboarded: true, schoolSlug }`) and returns the
+  existing school rather than erroring or re-provisioning. Verified: a
+  real, unmodified click of the shop's own button, through a real signed
+  token, actually lands on a working dashboard — not just typechecked, not
+  just a synthetic e2e token.
+- `apps/ems`'s `/login` now accepts `?schoolSlug=` to prefill the field —
+  the "already set up" page links there after a repeat click.
+- **Docker gotcha hit again during this phase, same class as before**:
+  `docker compose restart <service>` does **not** re-read `.env` for an
+  already-created container — only `docker compose up -d <service>`
+  (recreate) does. Spent real time chasing a stale
+  `EDU_SETUP_REDIRECT_URL` because of this before remembering. Same fix
+  needed after adding the new `/onboarding` route itself: Next's dev-mode
+  file watcher didn't pick up the new route on this machine until the
+  container was restarted (the same watch-mode quirk noted elsewhere in
+  this file) — a route that 404s despite the files visibly existing in the
+  container is that, not a real routing bug.
+
+**Explicitly deferred, still not part of any phase so far:** subdomain-
+based tenant routing, custom domains, per-school branding, the AI
+curriculum engine, the AI Teacher / live classroom, 2FA/lockout/real CSRF
+double-submit, payment gateways for schools, messaging, automated backups,
+and a platform-admin onboarding UI (schools are provisioned via API/script
+only — the edu-handoff flow above is the one exception, and it's
+self-service by design, not an admin UI).
 
 **Owner has AI provider API keys ready** for when the AI Teacher phase
 starts; not yet added to `.env`.

@@ -19,6 +19,8 @@ export interface ProvisionSchoolInput {
   adminPassword: string;
   adminFirstName: string;
   adminLastName: string;
+  /** Set when this school comes from the shop's "Complete Your School Setup" handoff — see onboarding/. */
+  licenseKey?: string;
 }
 
 @Injectable()
@@ -46,7 +48,13 @@ export class ProvisioningService {
     }
 
     const school = await this.controlPrisma.school.create({
-      data: { name: input.name, slug: input.slug, databaseName, status: "PROVISIONING" },
+      data: {
+        name: input.name,
+        slug: input.slug,
+        databaseName,
+        status: "PROVISIONING",
+        licenseKey: input.licenseKey,
+      },
     });
 
     return this.runProvisioning(school, input);

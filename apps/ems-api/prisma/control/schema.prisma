@@ -39,6 +39,12 @@ model School {
   slug         String       @unique
   databaseName String       @unique
   status       SchoolStatus @default(PROVISIONING)
+  /// Set only for schools created via the shop's "Complete Your School
+  /// Setup" handoff — the license key that activated it. @unique so the
+  /// same license can never provision a second school; the onboarding
+  /// endpoint treats a repeat with the same key as "already done", not an
+  /// error. Null for schools a platform admin created directly.
+  licenseKey   String?      @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

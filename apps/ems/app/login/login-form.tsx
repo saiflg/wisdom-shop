@@ -18,12 +18,15 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-export function LoginForm() {
+export function LoginForm({ defaultSchoolSlug }: { defaultSchoolSlug?: string } = {}) {
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { schoolSlug: defaultSchoolSlug },
+  });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);

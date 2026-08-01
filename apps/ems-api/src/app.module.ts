@@ -17,6 +17,7 @@ import { StudentsModule } from "./students/students.module";
 import { TeachersModule } from "./teachers/teachers.module";
 import { GuardiansModule } from "./guardians/guardians.module";
 import { EnrollmentsModule } from "./enrollments/enrollments.module";
+import { OnboardingModule } from "./onboarding/onboarding.module";
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { EnrollmentsModule } from "./enrollments/enrollments.module";
     TeachersModule,
     GuardiansModule,
     EnrollmentsModule,
+    OnboardingModule,
   ],
   providers: [
     // Order matters: throttling first, then auth (populates req.user), then
