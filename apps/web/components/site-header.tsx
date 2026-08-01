@@ -11,10 +11,12 @@ import { useCart, CART_QUERY_KEY } from "@/lib/use-cart";
 import { ThemeToggle } from "@/app/theme-toggle";
 
 const CATEGORY_LINKS = [
+  { label: "Home", href: "/" },
   { label: "All", href: "/products" },
   { label: "Books", href: "/products?type=DIGITAL" },
   { label: "Courses", href: "/products?type=COURSE" },
   { label: "Software", href: "/products?type=SOFTWARE" },
+  { label: "School Management Software", href: "/products?category=educational-software" },
   { label: "Licences", href: "/products?type=LICENSE" },
   { label: "Equipment", href: "/products?type=PHYSICAL" },
   { label: "Subscriptions", href: "/products?type=SUBSCRIPTION" },
