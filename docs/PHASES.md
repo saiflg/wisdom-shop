@@ -1817,6 +1817,119 @@ Fixed by declaring `primaryKey: "id"` explicitly at index creation and on
 every document write, rather than relying on inference. Inference is fragile
 precisely because adding an innocuous field like `vendorId` breaks it.
 
+## Phase 6d — Refunds that actually move money
+
+Until now an order could be marked `REFUNDED`, but nothing called a
+provider's refund API — the status recorded a refund issued out of band. This
+closes that, and it is the first code in the project that sends money *out*.
+
+### The ledger, not a flag
+
+Refunds live in their own table, one row per attempt, because a flag on the
+order cannot express any of what matters:
+
+- **refunds can be partial**, and several can apply to one order, so the
+  balance is arithmetic rather than a boolean;
+- **a retry must not send the money twice**, which
+  `@@unique([orderId, idempotencyKey])` enforces — the database is the guard,
+  not application logic;
+- **a failed attempt is worth as much as a successful one**, because "we tried
+  and the provider declined" is the question support gets asked.
+
+### Order of operations
+
+The sequence is the design, and it is deliberate:
+
+1. write a PENDING refund row inside a transaction, having re-read the balance;
+2. call the provider;
+3. record what it said.
+
+Writing first means a crash between 1 and 2 leaves a PENDING row — visible,
+reconcilable evidence that a refund may be in flight. The other order would
+leave the money gone with nothing to show for it, which is the failure that
+actually hurts. PENDING refunds count against the refundable balance for the
+same reason: money that may already be moving must not be refundable twice.
+FAILED ones do not count, so a provider outage cannot permanently strand a
+customer's refund behind a phantom balance.
+
+### PARTIALLY_REFUNDED
+
+A new order status, which needed decisions in three other places:
+
+- **Downloads stay available.** Refunds here are amounts, not line items, so a
+  partial refund does not say *which* item went back. Revoking every download
+  because some money was returned would take away files the customer still
+  paid for.
+- **Reviews stay verified.** The purchase still happened.
+- **Analytics reports gross *and* net.** A partially refunded order counts,
+  but its gross overstates what was kept, so settled refunds are subtracted.
+  Leaving the order out entirely would understate revenue by the whole order
+  to avoid overstating it by the refund. Both numbers are exposed because
+  "we took X and gave back Y" is what finance actually asks.
+
+### Per-provider awkwardness
+
+Each of the four needed something different, and getting any of them wrong
+sends the wrong amount:
+
+- **Stripe** refunds a *payment intent*, but what we stored is a Checkout
+  **Session** id. The session is resolved to its intent at refund time rather
+  than adding a column, so orders paid before this existed can still be
+  refunded. A `failed` or `canceled` refund throws rather than being returned
+  as a status — otherwise an order could be marked refunded on the strength
+  of a refusal.
+- **Flutterwave** needs its own numeric transaction id, which we never stored,
+  so the transaction is looked up by our `tx_ref` first. Amounts go out in
+  **major units**, like the rest of that integration.
+- **Paystack** takes the reference we already store, and has **no idempotency
+  header** — our unique constraint is the only guard, which is exactly why the
+  row is written before the call.
+- **PayPal** refunds a *capture*, and the stored reference is usually one —
+  but `CHECKOUT.ORDER.APPROVED` stores an order id instead, and PayPal's ids
+  carry no prefix to tell them apart. So it tries the capture and, only on
+  `RESOURCE_NOT_FOUND`, re-reads the reference as an order. A refusal for any
+  other reason surfaces as a refusal rather than sending us hunting for a
+  different resource to refund.
+
+### Webhook echo
+
+Every refund we issue also comes back as a webhook. Recording it again would
+double-count the money, which would then wrongly block further legitimate
+refunds and understate revenue — so `applyRefund` treats an amount already
+covered by the ledger as an echo, and only writes a row for refunds issued
+elsewhere (a dashboard refund, or a chargeback).
+
+Providers also disagree about what number they send: Paystack, Flutterwave and
+PayPal state the amount of *this* refund, while Stripe's `amount_refunded` is
+the running total for the charge. Reading one as the other double-counts on a
+second partial refund, so the caller has to say which it has.
+
+**Known limitation, stated rather than hidden**: the echo check is by amount,
+not by refund id, because the four providers put a refund's own id in
+different places. Two *identical* refunds — one ours, one from the dashboard —
+would be recorded as one. Recording too few is the safer error: it leaves
+money refundable rather than blocking a refund a customer is owed.
+
+### Verification log (2026-08-01) — Phase 6d
+
+- 19 pure policy tests, 22 provider refund tests, 22 e2e tests, 10 web
+  component tests
+- **Mutation checks**, since this is money:
+  - removed the over-refund guard → 2 e2e tests failed
+  - removed the idempotent-replay short-circuit → the replay test failed.
+    Notably the *concurrent* test still passed, because the unique constraint
+    caught it. That is the layering working as intended: the application
+    check is convenience, the database index is the guard.
+- Full suite: **20 API e2e suites / 263 tests, 20 unit suites / 250 tests, 87
+  web tests**, lint and typecheck clean, web production build clean.
+- Two bugs the tests caught, both mine and both in the test setup rather than
+  the code: a fixture email collided with a staff fixture (`support`), and
+  `ApiError` takes `(status, message)` rather than `(message, status)`.
+
+**Still not proven:** no refund has been run against a real provider sandbox.
+Every provider test mocks the HTTP API. That gap is the same one the payment
+providers have, and it is the outstanding risk before real money.
+
 ## Known gaps
 
 *Rewritten 2026-07-31. The previous version had gone badly stale — it still
@@ -1831,10 +1944,13 @@ worse than no docs, so this list is now the honest one.*
   HTTP APIs with locally-generated signatures. That proves our handling of
   every response branch; it does not prove the providers accept our requests.
   **This is the single thing to do before taking real money.**
-- **Refunds do not move money.** An order can be marked `REFUNDED` — by an
-  admin, or by a provider refund webhook — but nothing calls a provider's
-  refund API. The status is a record of a refund issued out-of-band, not a
-  refund. Anything else would be a lie in the UI.
+- **Refunds are implemented but unproven.** Full and partial refunds call the
+  real provider APIs, with an idempotent ledger behind them (Phase 6d) — but
+  like the payment paths, every test mocks the provider. No refund has been
+  run against a real sandbox account.
+- **A refund cannot be tied to specific line items.** Refunds are amounts
+  against an order, so "refund just this item" has to be done by working out
+  the amount. That is why a partial refund does not revoke downloads.
 - **No `/verify-email` or `/reset-password` pages.** The API endpoints are
   complete and in Swagger, and email is sent, but the links have no page to
   land on. 2FA and password change *do* have UI, on the account security page.

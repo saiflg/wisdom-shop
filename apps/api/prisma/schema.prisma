@@ -86,6 +86,7 @@ model User {
   orderStatusChanges      OrderStatusHistory[] @relation("OrderStatusChanges")
   licenses                License[]
   settingUpdates          Setting[]            @relation("SettingUpdates")
+  refundsIssued           Refund[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -462,6 +463,11 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+  /// Some money went back, but not all of it. A distinct state because the
+  /// customer still owns what they did not get refunded for — they keep
+  /// their downloads and their right to review — while finance needs to see
+  /// that the order is no longer worth its face value.
+  PARTIALLY_REFUNDED
   REFUNDED
 }
 
@@ -497,6 +503,7 @@ model Order {
   coupon  Coupon?     @relation(fields: [couponId], references: [id])
   items   OrderItem[]
   payments Payment[]
+  refunds       Refund[]
   statusHistory OrderStatusHistory[]
   licenses      License[]
 
@@ -589,9 +596,65 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  refunds Refund[]
+
   @@index([orderId])
   @@index([provider, providerRef])
   @@map("payments")
+}
+
+enum RefundStatus {
+  /// Recorded locally, provider outcome not yet known. A refund is written in
+  /// this state *before* the provider is called, so a crash mid-call leaves
+  /// evidence rather than nothing.
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+/// A refund we issued, one row per attempt.
+///
+/// Refunds are money leaving the merchant account, so this table is the
+/// ledger rather than a flag on the order. It exists because:
+///
+///   - refunds can be partial, and several of them can apply to one order,
+///     so a single boolean or status cannot express the balance;
+///   - a retry must not send the money twice, which is what
+///     `@@unique([orderId, idempotencyKey])` enforces — the database, not
+///     application logic, is the guard;
+///   - a failed attempt is as important to keep as a successful one, since
+///     "we tried and the provider said no" is the question support asks.
+model Refund {
+  id             String          @id @default(cuid())
+  orderId        String
+  paymentId      String
+  provider       PaymentProvider
+  status         RefundStatus    @default(PENDING)
+  /// Always minor units, whatever the provider's wire format uses.
+  amountCents    Int
+  currency       String
+  reason         String?
+  /// Supplied by the caller so a double-submitted form is one refund.
+  idempotencyKey String
+  /// The provider's own refund id, once it has given us one.
+  providerRef    String?
+  failureReason  String?
+  /// Null when a provider webhook told us about a refund issued elsewhere
+  /// (a chargeback, or someone refunding from the provider dashboard).
+  initiatedById  String?
+  rawResponse    Json?
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id])
+  initiatedBy User? @relation(fields: [initiatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orderId, idempotencyKey])
+  @@index([orderId])
+  @@index([provider, providerRef])
+  @@map("refunds")
 }
 
 /// Idempotency ledger for provider webhooks.

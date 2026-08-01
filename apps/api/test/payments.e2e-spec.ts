@@ -30,6 +30,7 @@ async function purgeFixtures(prisma: PrismaService): Promise<void> {
     const orders = await prisma.order.findMany({ where: { userId: { in: userIds } }, select: { id: true } });
     const orderIds = orders.map((o) => o.id);
     if (orderIds.length > 0) {
+      await prisma.refund.deleteMany({ where: { orderId: { in: orderIds } } });
       await prisma.payment.deleteMany({ where: { orderId: { in: orderIds } } });
       await prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
       await prisma.order.deleteMany({ where: { id: { in: orderIds } } });

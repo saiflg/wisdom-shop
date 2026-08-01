@@ -7,6 +7,9 @@ const STYLES: Record<OrderStatus, string> = {
   SHIPPED: "bg-blue-100 text-blue-900 dark:bg-blue-950/50 dark:text-blue-200",
   DELIVERED: "bg-green-100 text-green-900 dark:bg-green-950/50 dark:text-green-200",
   CANCELLED: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  // Amber rather than grey: a partial refund still needs attention,
+  // unlike a closed-out full refund.
+  PARTIALLY_REFUNDED: "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200",
   REFUNDED: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 };
 
@@ -17,6 +20,7 @@ const LABELS: Record<OrderStatus, string> = {
   SHIPPED: "Shipped",
   DELIVERED: "Delivered",
   CANCELLED: "Cancelled",
+  PARTIALLY_REFUNDED: "Partially refunded",
   REFUNDED: "Refunded",
 };
 

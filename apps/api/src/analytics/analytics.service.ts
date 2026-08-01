@@ -5,8 +5,19 @@ import { PrismaService } from "../prisma/prisma.service";
  * Order statuses that represent money actually taken. Revenue must never
  * count PENDING (not paid yet) or CANCELLED/REFUNDED (money returned) — the
  * same rule vendor earnings uses, kept consistent deliberately.
+ *
+ * PARTIALLY_REFUNDED counts, because most of that money is still ours — but
+ * its *gross* total overstates what was kept, so settled refunds are
+ * subtracted below. Leaving the order out entirely would understate revenue
+ * by the whole order to avoid overstating it by the refund.
  */
-const SETTLED_STATUSES = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
+const SETTLED_STATUSES = [
+  "PAID",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "PARTIALLY_REFUNDED",
+] as const;
 
 @Injectable()
 export class AnalyticsService {
@@ -27,6 +38,8 @@ export class AnalyticsService {
       licenseCount,
       byStatus,
       settledCurrencies,
+      refundAgg,
+      windowRefundAgg,
     ] = await Promise.all([
       this.prisma.order.aggregate({
         where: { deletedAt: null, status: { in: [...SETTLED_STATUSES] } },
@@ -54,10 +67,35 @@ export class AnalyticsService {
         distinct: ["currency"],
         select: { currency: true },
       }),
+      // Only SUCCEEDED refunds reduce revenue. A PENDING one has not moved
+      // yet and a FAILED one never will, so counting either would understate
+      // what was actually kept.
+      this.prisma.refund.aggregate({
+        where: { status: "SUCCEEDED", order: { deletedAt: null, status: { in: [...SETTLED_STATUSES] } } },
+        _sum: { amountCents: true },
+      }),
+      this.prisma.refund.aggregate({
+        where: {
+          status: "SUCCEEDED",
+          order: {
+            deletedAt: null,
+            status: { in: [...SETTLED_STATUSES] },
+            createdAt: { gte: since } },
+        },
+        _sum: { amountCents: true },
+      }),
     ]);
 
     const grossCents = settledAgg._sum.totalCents ?? 0;
     const recentCents = recentSettled._sum.totalCents ?? 0;
+    const refundedCents = refundAgg._sum.amountCents ?? 0;
+    const windowRefundedCents = windowRefundAgg._sum.amountCents ?? 0;
+
+    // Clamped: a refund ledger larger than the orders it belongs to would
+    // otherwise report negative revenue, which reads as a bug rather than
+    // the data problem it actually is.
+    const netCents = Math.max(0, grossCents - refundedCents);
+    const windowNetCents = Math.max(0, recentCents - windowRefundedCents);
 
     return {
       revenue: {
@@ -68,10 +106,17 @@ export class AnalyticsService {
         // instead of silently labelling the total with the wrong symbol.
         currencies: settledCurrencies.map((row) => row.currency).sort(),
         settledGrossCents: grossCents,
+        // What was actually kept. Gross is reported alongside rather than
+        // replaced, because "we took X and gave back Y" is the question
+        // finance asks, and a single netted number cannot answer it.
+        refundedCents,
+        settledNetCents: netCents,
         settledOrderCount: settledCount,
-        averageOrderValueCents: settledCount > 0 ? Math.round(grossCents / settledCount) : 0,
+        averageOrderValueCents: settledCount > 0 ? Math.round(netCents / settledCount) : 0,
         windowDays: days,
         windowGrossCents: recentCents,
+        windowRefundedCents,
+        windowNetCents,
         windowOrderCount: recentSettled._count,
       },
       orders: {

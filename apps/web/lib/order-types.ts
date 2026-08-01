@@ -41,6 +41,7 @@ export interface OrderItem {
 }
 
 export type OrderStatus =
+  | "PARTIALLY_REFUNDED"
   | "PENDING"
   | "PAID"
   | "PROCESSING"

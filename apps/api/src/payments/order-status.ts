@@ -10,10 +10,13 @@ import type { OrderStatus } from "@prisma/client";
  */
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PENDING: ["PAID", "CANCELLED"],
-  PAID: ["PROCESSING", "SHIPPED", "REFUNDED", "CANCELLED"],
-  PROCESSING: ["SHIPPED", "REFUNDED", "CANCELLED"],
-  SHIPPED: ["DELIVERED", "REFUNDED"],
-  DELIVERED: ["REFUNDED"],
+  PAID: ["PROCESSING", "SHIPPED", "PARTIALLY_REFUNDED", "REFUNDED", "CANCELLED"],
+  PROCESSING: ["SHIPPED", "PARTIALLY_REFUNDED", "REFUNDED", "CANCELLED"],
+  SHIPPED: ["DELIVERED", "PARTIALLY_REFUNDED", "REFUNDED"],
+  DELIVERED: ["PARTIALLY_REFUNDED", "REFUNDED"],
+  // Fulfilment continues after a partial refund — the customer still owns
+  // what they were not refunded for, and that part may still need shipping.
+  PARTIALLY_REFUNDED: ["PROCESSING", "SHIPPED", "DELIVERED", "REFUNDED"],
   CANCELLED: [],
   REFUNDED: [],
 };

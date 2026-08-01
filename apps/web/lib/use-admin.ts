@@ -74,6 +74,73 @@ export function useUpdateOrderStatus() {
   });
 }
 
+
+export interface RefundRecord {
+  id: string;
+  status: "PENDING" | "SUCCEEDED" | "FAILED";
+  amountCents: number;
+  currency: string;
+  reason: string | null;
+  providerRef: string | null;
+  failureReason: string | null;
+  provider: string;
+  createdAt: string;
+}
+
+export interface RefundSummary {
+  orderNumber: string;
+  currency: string;
+  status: string;
+  paidCents: number;
+  refundedCents: number;
+  refundableCents: number;
+  refundable: boolean;
+  refunds: RefundRecord[];
+}
+
+export function useOrderRefunds(orderNumber: string | null) {
+  const { accessToken, enabled } = useStaffQueryState();
+
+  return useQuery({
+    queryKey: ["admin-refunds", orderNumber ?? ""],
+    enabled: enabled && Boolean(orderNumber),
+    queryFn: () =>
+      apiFetch<RefundSummary>(`/v1/admin/orders/${encodeURIComponent(orderNumber!)}/refunds`, {
+        headers: authHeaders(accessToken),
+      }),
+  });
+}
+
+export function useIssueRefund() {
+  const queryClient = useQueryClient();
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  return useMutation({
+    mutationFn: ({
+      orderNumber,
+      amountCents,
+      reason,
+      idempotencyKey,
+    }: {
+      orderNumber: string;
+      amountCents?: number;
+      reason?: string;
+      idempotencyKey: string;
+    }) =>
+      apiFetch<RefundRecord>(`/v1/admin/orders/${encodeURIComponent(orderNumber)}/refunds`, {
+        method: "POST",
+        headers: authHeaders(accessToken),
+        // The key is always sent: a double-clicked button must not be two
+        // refunds, and the server treats a repeat as a replay.
+        body: { ...(amountCents !== undefined ? { amountCents } : {}), ...(reason ? { reason } : {}), idempotencyKey },
+      }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-refunds", variables.orderNumber] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    },
+  });
+}
+
 export interface AdminVendor {
   id: string;
   storeName: string;

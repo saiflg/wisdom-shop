@@ -1,6 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import Stripe from "stripe";
 import { SettingsService } from "../../settings/settings.service";
+import type { ProviderRefundInput, ProviderRefundResult } from "./provider-refund";
 
 /**
  * Thin wrapper around the Stripe SDK.
@@ -100,5 +101,75 @@ export class StripeProvider {
     // Deliberately using the static helper so signature verification does
     // not require a secret key (and therefore works in tests).
     return Stripe.webhooks.constructEvent(rawBody, signatureHeader, webhookSecret);
+  }
+
+  /**
+   * Refunds part or all of a payment.
+   *
+   * Stripe refunds a *payment intent*, but what we stored when the webhook
+   * arrived is the Checkout **Session** id — those are different objects, and
+   * passing a session id straight to `refunds.create` fails. The session is
+   * resolved to its payment intent below rather than adding a column, so
+   * orders paid before refunds existed can still be refunded.
+   *
+   * The idempotency key goes to Stripe as well as guarding our own table: if
+   * we crash after this call but before recording it, the retry returns the
+   * same refund instead of sending the money twice.
+   */
+  async refund(input: ProviderRefundInput): Promise<ProviderRefundResult> {
+    const client = await this.getClient();
+    const paymentIntentId = await this.resolvePaymentIntent(client, input.providerRef);
+
+    const refund = await client.refunds.create(
+      {
+        payment_intent: paymentIntentId,
+        amount: input.amountMinorUnits,
+        metadata: { orderNumber: input.orderNumber },
+      },
+      { idempotencyKey: input.idempotencyKey },
+    );
+
+    // "failed" and "canceled" mean no money moved. Returning them as a status
+    // would let the order be marked refunded on the strength of a refusal.
+    if (refund.status === "failed" || refund.status === "canceled") {
+      throw new ServiceUnavailableException(
+        `Stripe refused the refund (status ${refund.status}${
+          refund.failure_reason ? `: ${refund.failure_reason}` : ""
+        }).`,
+      );
+    }
+
+    return {
+      providerRefundId: refund.id,
+      status: refund.status === "succeeded" ? "SUCCEEDED" : "PENDING",
+      raw: refund,
+    };
+  }
+
+  /**
+   * Accepts either a payment intent id or a Checkout Session id.
+   *
+   * Prefix matching rather than a stored flag: Stripe's ids are stably
+   * prefixed, and this keeps working for rows written before this method
+   * existed.
+   */
+  private async resolvePaymentIntent(client: Stripe, providerRef: string): Promise<string> {
+    if (providerRef.startsWith("pi_")) return providerRef;
+
+    if (providerRef.startsWith("cs_")) {
+      const session = await client.checkout.sessions.retrieve(providerRef);
+      const intent = session.payment_intent;
+      const intentId = typeof intent === "string" ? intent : intent?.id;
+      if (!intentId) {
+        throw new ServiceUnavailableException(
+          "That Stripe checkout session has no payment to refund.",
+        );
+      }
+      return intentId;
+    }
+
+    throw new ServiceUnavailableException(
+      `Cannot refund Stripe reference "${providerRef}" — not a payment intent or checkout session.`,
+    );
   }
 }

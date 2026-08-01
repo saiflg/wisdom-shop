@@ -1,12 +1,20 @@
 import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import { timingSafeEqual } from "node:crypto";
 import { SettingsService } from "../../settings/settings.service";
+import type { ProviderRefundInput, ProviderRefundResult } from "./provider-refund";
 
 /** The subset of Flutterwave's payment-initialise response we rely on. */
 interface FlutterwaveInitResponse {
   status: string;
   message: string;
   data?: { link: string };
+}
+
+/** The subset of Flutterwave's refund response we rely on. */
+interface FlutterwaveRefundResponse {
+  status: string;
+  message: string;
+  data?: { id: number | string; status: string };
 }
 
 /** The subset of a Flutterwave webhook event we act on. */
@@ -143,5 +151,71 @@ export class FlutterwaveProvider {
     }
 
     return JSON.parse(rawBody.toString("utf8")) as FlutterwaveEvent;
+  }
+
+  /**
+   * Refunds part or all of a transaction.
+   *
+   * Two things make this the most awkward of the four:
+   *
+   * 1. **The refund endpoint needs Flutterwave's numeric transaction id**,
+   *    which is not what we store — we keep `flw_ref`, a string. So the
+   *    transaction is looked up by our own `tx_ref` (the order number)
+   *    first. Storing the numeric id at webhook time would save a call but
+   *    would not help any order paid before this existed.
+   * 2. **Amounts go out in MAJOR units**, like the rest of this integration.
+   *    Sending minor units here would refund a hundred times too much.
+   */
+  async refund(input: ProviderRefundInput): Promise<ProviderRefundResult> {
+    const secretKey = await this.requireSecretKey();
+    const transactionId = await this.resolveTransactionId(secretKey, input.orderNumber);
+
+    const res = await fetch(
+      `${FlutterwaveProvider.API_BASE}/transactions/${transactionId}/refund`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: FlutterwaveProvider.toMajorUnits(input.amountMinorUnits),
+        }),
+      },
+    );
+
+    const payload = (await res.json().catch(() => undefined)) as FlutterwaveRefundResponse | undefined;
+
+    if (!res.ok || payload?.status !== "success" || !payload.data) {
+      throw new ServiceUnavailableException(
+        `Flutterwave refused the refund: ${payload?.message ?? `HTTP ${res.status}`}`,
+      );
+    }
+
+    return {
+      providerRefundId: String(payload.data.id),
+      status: payload.data.status === "completed" ? "SUCCEEDED" : "PENDING",
+      raw: payload,
+    };
+  }
+
+  /** Finds the numeric transaction id from the reference we control. */
+  private async resolveTransactionId(secretKey: string, orderNumber: string): Promise<number | string> {
+    const res = await fetch(
+      `${FlutterwaveProvider.API_BASE}/transactions/verify_by_reference?tx_ref=${encodeURIComponent(orderNumber)}`,
+      { headers: { Authorization: `Bearer ${secretKey}` } },
+    );
+
+    const payload = (await res.json().catch(() => undefined)) as
+      | { status?: string; message?: string; data?: { id?: number | string } }
+      | undefined;
+
+    const id = payload?.data?.id;
+    if (!res.ok || payload?.status !== "success" || id === undefined || id === null) {
+      throw new ServiceUnavailableException(
+        `Could not find the Flutterwave transaction for ${orderNumber}: ${payload?.message ?? `HTTP ${res.status}`}`,
+      );
+    }
+    return id;
   }
 }

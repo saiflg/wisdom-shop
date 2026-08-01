@@ -10,7 +10,15 @@
  * downloads, vendor earnings and analytics — a PENDING order has not been
  * paid for, and a cancelled or refunded one was undone.
  */
-export const SETTLED_ORDER_STATUSES = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
+// PARTIALLY_REFUNDED is included: the purchase still happened, so the
+// review is still a verified one.
+export const SETTLED_ORDER_STATUSES = [
+  "PAID",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "PARTIALLY_REFUNDED",
+] as const;
 
 export type ReviewRefusal =
   | { allowed: true }

@@ -1,5 +1,6 @@
 import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import { SettingsService } from "../../settings/settings.service";
+import type { ProviderRefundInput, ProviderRefundResult } from "./provider-refund";
 
 /** The subset of a PayPal webhook event we act on. */
 export interface PayPalEvent {
@@ -251,5 +252,103 @@ export class PayPalProvider {
     if (value === undefined) return null;
     const minor = PayPalProvider.fromAmountValue(value);
     return Number.isFinite(minor) ? minor : null;
+  }
+
+  /**
+   * Refunds part or all of a capture.
+   *
+   * PayPal refunds a **capture**, and `providerRef` is usually one — but not
+   * always. `PAYMENT.CAPTURE.COMPLETED` gives us a capture id, while
+   * `CHECKOUT.ORDER.APPROVED` gives an *order* id, and PayPal's ids carry no
+   * prefix to tell them apart. So this tries the capture first and, only if
+   * PayPal says that resource does not exist, re-reads the reference as an
+   * order and refunds the capture inside it.
+   *
+   * `PayPal-Request-Id` is PayPal's idempotency header: a retry with the same
+   * key returns the original refund rather than sending money twice.
+   */
+  async refund(input: ProviderRefundInput): Promise<ProviderRefundResult> {
+    try {
+      return await this.refundCapture(input.providerRef, input);
+    } catch (error) {
+      if (!(error instanceof CaptureNotFoundError)) throw error;
+
+      const captureId = await this.resolveCaptureId(input.providerRef);
+      return this.refundCapture(captureId, input);
+    }
+  }
+
+  private async refundCapture(
+    captureId: string,
+    input: ProviderRefundInput,
+  ): Promise<ProviderRefundResult> {
+    const token = await this.accessToken();
+
+    const res = await fetch(
+      `${await this.apiBase()}/v2/payments/captures/${captureId}/refund`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "PayPal-Request-Id": input.idempotencyKey,
+        },
+        body: JSON.stringify({
+          amount: {
+            value: PayPalProvider.toAmountValue(input.amountMinorUnits),
+            currency_code: input.currency,
+          },
+          invoice_id: input.orderNumber,
+        }),
+      },
+    );
+
+    const payload = (await res.json().catch(() => undefined)) as
+      | { id?: string; status?: string; name?: string; message?: string }
+      | undefined;
+
+    if (res.status === 404 || payload?.name === "RESOURCE_NOT_FOUND") {
+      throw new CaptureNotFoundError(captureId);
+    }
+    if (!res.ok || !payload?.id) {
+      throw new ServiceUnavailableException(
+        `PayPal refused the refund: ${payload?.message ?? payload?.name ?? `HTTP ${res.status}`}`,
+      );
+    }
+
+    return {
+      providerRefundId: payload.id,
+      status: payload.status === "COMPLETED" ? "SUCCEEDED" : "PENDING",
+      raw: payload,
+    };
+  }
+
+  /** Reads an order and returns the capture inside it, when the stored reference was an order id. */
+  private async resolveCaptureId(orderId: string): Promise<string> {
+    const token = await this.accessToken();
+
+    const res = await fetch(`${await this.apiBase()}/v2/checkout/orders/${orderId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const payload = (await res.json().catch(() => undefined)) as
+      | { purchase_units?: { payments?: { captures?: { id?: string }[] } }[] }
+      | undefined;
+
+    const captureId = payload?.purchase_units?.[0]?.payments?.captures?.[0]?.id;
+    if (!res.ok || !captureId) {
+      throw new ServiceUnavailableException(
+        `Could not find a PayPal capture to refund for reference ${orderId}.`,
+      );
+    }
+    return captureId;
+  }
+}
+
+/** Internal signal that a reference was not a capture, so it may be an order. */
+class CaptureNotFoundError extends Error {
+  constructor(reference: string) {
+    super(`PayPal capture ${reference} not found`);
+    this.name = "CaptureNotFoundError";
   }
 }

@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api";
 import { formatPrice } from "@/lib/catalog";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { useAdminOrders, useUpdateOrderStatus } from "@/lib/use-admin";
+import { RefundPanel } from "./refund-panel";
 import type { OrderStatus } from "@/lib/order-types";
 
 const STATUSES: OrderStatus[] = [
@@ -14,6 +15,7 @@ const STATUSES: OrderStatus[] = [
   "SHIPPED",
   "DELIVERED",
   "CANCELLED",
+  "PARTIALLY_REFUNDED",
   "REFUNDED",
 ];
 
@@ -22,6 +24,9 @@ export function AdminOrderList() {
   const [search, setSearch] = useState("");
   const [applied, setApplied] = useState({ status: "", search: "" });
   const [actionError, setActionError] = useState<string | null>(null);
+  // Refund panels are opened one at a time and fetch on demand: loading a
+  // refund summary for every row would be a request per order on page load.
+  const [refundsOpenFor, setRefundsOpenFor] = useState<string | null>(null);
 
   const { data, isLoading, error } = useAdminOrders(applied);
   const updateStatus = useUpdateOrderStatus();
@@ -139,6 +144,25 @@ export function AdminOrderList() {
               <p className="mt-2 text-xs text-slate-500">
                 Illegal transitions are refused by the server, so only valid moves take effect.
               </p>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setRefundsOpenFor((current) =>
+                    current === order.orderNumber ? null : order.orderNumber,
+                  )
+                }
+                aria-expanded={refundsOpenFor === order.orderNumber}
+                className="mt-3 text-sm font-medium text-brand-600 transition hover:underline dark:text-brand-400"
+              >
+                {refundsOpenFor === order.orderNumber ? "Hide refunds" : "Refunds"}
+              </button>
+
+              {refundsOpenFor === order.orderNumber && (
+                <div className="mt-3">
+                  <RefundPanel orderNumber={order.orderNumber} />
+                </div>
+              )}
             </li>
           ))}
         </ul>

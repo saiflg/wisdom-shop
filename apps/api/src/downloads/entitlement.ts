@@ -12,7 +12,18 @@
  * and vendor earnings — a customer whose order is still PENDING has not paid,
  * and one who was refunded no longer owns what they bought.
  */
-export const SETTLED_ORDER_STATUSES = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
+// PARTIALLY_REFUNDED is included deliberately: refunds here are amounts,
+// not line items, so a partial refund does not say *which* item went back.
+// Revoking every download because some money was returned would take away
+// files the customer still paid for. Withdrawing access is a decision for a
+// full refund.
+export const SETTLED_ORDER_STATUSES = [
+  "PAID",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "PARTIALLY_REFUNDED",
+] as const;
 
 /** Staff who can see any product's file, for support and verification. */
 const CATALOGUE_STAFF = ["ADMIN", "SUPER_ADMIN", "MANAGER", "EDITOR"];

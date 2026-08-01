@@ -1,12 +1,20 @@
 import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { SettingsService } from "../../settings/settings.service";
+import type { ProviderRefundInput, ProviderRefundResult } from "./provider-refund";
 
 /** The subset of Paystack's transaction-initialise response we rely on. */
 interface PaystackInitResponse {
   status: boolean;
   message: string;
   data?: { authorization_url: string; access_code: string; reference: string };
+}
+
+/** The subset of Paystack's refund response we rely on. */
+interface PaystackRefundResponse {
+  status: boolean;
+  message: string;
+  data?: { id: number | string; status: string };
 }
 
 /** The subset of a Paystack webhook event we act on. */
@@ -103,5 +111,52 @@ export class PaystackProvider {
     }
 
     return JSON.parse(rawBody.toString("utf8")) as PaystackEvent;
+  }
+
+  /**
+   * Refunds part or all of a transaction.
+   *
+   * Paystack takes the original transaction *reference* — which is exactly
+   * what we stored — so no resolution step is needed here.
+   *
+   * It has **no idempotency header**, so a retried HTTP call really would
+   * create a second refund. Our `@@unique([orderId, idempotencyKey])` is the
+   * only guard, which is why the refund row is written before this is called.
+   *
+   * Amounts stay in minor units: Paystack works in kobo, matching storage.
+   */
+  async refund(input: ProviderRefundInput): Promise<ProviderRefundResult> {
+    const secretKey = await this.requireSecretKey();
+
+    const res = await fetch(`${PaystackProvider.API_BASE}/refund`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        transaction: input.providerRef,
+        amount: input.amountMinorUnits,
+        currency: input.currency,
+      }),
+    });
+
+    const payload = (await res.json().catch(() => undefined)) as PaystackRefundResponse | undefined;
+
+    // Paystack reports business failures in the body with HTTP 200, so the
+    // status code alone is not enough to know the money moved.
+    if (!res.ok || !payload?.status || !payload.data) {
+      throw new ServiceUnavailableException(
+        `Paystack refused the refund: ${payload?.message ?? `HTTP ${res.status}`}`,
+      );
+    }
+
+    return {
+      providerRefundId: String(payload.data.id),
+      // Paystack settles refunds asynchronously; "processed" is the only
+      // state that means done.
+      status: payload.data.status === "processed" ? "SUCCEEDED" : "PENDING",
+      raw: payload,
+    };
   }
 }

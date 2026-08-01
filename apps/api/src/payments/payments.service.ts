@@ -20,6 +20,7 @@ import { FlutterwaveProvider, type FlutterwaveEvent } from "./providers/flutterw
 import { PayPalProvider, type PayPalEvent, type PayPalWebhookHeaders } from "./providers/paypal.provider";
 import { PaystackProvider, type PaystackEvent } from "./providers/paystack.provider";
 import { canTransition, isAlreadyInState } from "./order-status";
+import { orderStatusAfterRefund } from "./refund-policy";
 
 export interface WebhookResult {
   handled: boolean;
@@ -198,7 +199,9 @@ export class PaymentsService {
           raw: event,
         });
       case "refund.completed":
-        return this.applyRefund("FLUTTERWAVE", orderNumber, event.data.flw_ref ?? reference);
+        return this.applyRefund("FLUTTERWAVE", orderNumber, event.data.flw_ref ?? reference, {
+          deltaCents: paidMinor,
+        });
       default:
         return { handled: false, reason: `unhandled event type ${eventType}` };
     }
@@ -247,7 +250,9 @@ export class PaymentsService {
         });
       case "PAYMENT.CAPTURE.REFUNDED":
       case "PAYMENT.CAPTURE.REVERSED":
-        return this.applyRefund("PAYPAL", orderNumber, providerRef);
+        return this.applyRefund("PAYPAL", orderNumber, providerRef, {
+          deltaCents: PayPalProvider.paidMinorUnitsFrom(event),
+        });
       default:
         return { handled: false, reason: `unhandled event type ${eventType}` };
     }
@@ -321,7 +326,9 @@ export class PaymentsService {
         const charge = event.data.object;
         const orderNumber = charge.metadata?.orderNumber;
         if (!orderNumber) return { handled: false, reason: "no order reference on charge" };
-        return this.applyRefund("STRIPE", orderNumber, charge.id);
+        return this.applyRefund("STRIPE", orderNumber, charge.id, {
+          cumulativeCents: charge.amount_refunded ?? null,
+        });
       }
       default:
         return { handled: false, reason: `unhandled event type ${event.type}` };
@@ -362,7 +369,9 @@ export class PaymentsService {
         });
       case "refund.processed":
       case "charge.refund.processed":
-        return this.applyRefund("PAYSTACK", orderNumber, reference);
+        return this.applyRefund("PAYSTACK", orderNumber, reference, {
+          deltaCents: event.data.amount ?? null,
+        });
       default:
         return { handled: false, reason: `unhandled event type ${event.event}` };
     }
@@ -485,20 +494,112 @@ export class PaymentsService {
     return { handled: true, reason: "order marked paid" };
   }
 
+  /**
+   * Records a refund a provider told us about.
+   *
+   * Two quite different things arrive here:
+   *
+   *   - **Our own refund, echoed back.** Every refund issued through
+   *     `RefundsService` also produces a webhook. Writing a second ledger row
+   *     for it would double-count the money, which would then wrongly block
+   *     further legitimate refunds and understate revenue. So an amount
+   *     already covered by recorded refunds is treated as an echo.
+   *   - **A refund issued elsewhere** — from the provider's dashboard, or a
+   *     chargeback. That one is real news and gets a ledger row with no
+   *     initiator, because no user of this system started it.
+   *
+   * The echo check is by amount rather than by refund id, because the four
+   * providers do not agree on where a refund's own id lives in the payload,
+   * and an amount we can read from all of them. That means two *identical*
+   * refunds, one ours and one from the dashboard, would be recorded as one.
+   * Recording too few is the safer error: it leaves money refundable rather
+   * than blocking a refund the customer is owed.
+   */
   private async applyRefund(
     provider: PaymentProvider,
     orderNumber: string,
     providerRef: string,
+    /**
+     * Providers disagree on what number they send. Paystack, Flutterwave and
+     * PayPal state the amount of *this* refund; Stripe's `amount_refunded` is
+     * the running total for the charge. Reading one as the other
+     * double-counts on a second partial refund, so the caller has to say
+     * which it has.
+     */
+    refunded: { deltaCents?: number | null; cumulativeCents?: number | null } = {},
   ): Promise<WebhookResult> {
     const order = await this.prisma.order.findFirst({ where: { orderNumber } });
     if (!order) return { handled: false, reason: "unknown order" };
 
-    const blocked = this.checkTransition(order.status, "REFUNDED", orderNumber);
+    const [paidAgg, recordedAgg, payment] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: { orderId: order.id, status: { in: ["SUCCEEDED", "REFUNDED"] } },
+        _sum: { amountCents: true },
+      }),
+      this.prisma.refund.aggregate({
+        where: { orderId: order.id, status: { in: ["PENDING", "SUCCEEDED"] } },
+        _sum: { amountCents: true },
+      }),
+      this.prisma.payment.findFirst({
+        where: { orderId: order.id, provider, status: { in: ["SUCCEEDED", "REFUNDED"] } },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const paidCents = paidAgg._sum.amountCents ?? 0;
+    const recordedCents = recordedAgg._sum.amountCents ?? 0;
+    // No stated amount means the provider is telling us the whole thing went
+    // back, which is how a full refund reads on every one of them.
+    const amountCents =
+      refunded.cumulativeCents != null
+        ? refunded.cumulativeCents - recordedCents
+        : (refunded.deltaCents ?? Math.max(0, paidCents - recordedCents));
+
+    if (amountCents <= 0 || recordedCents >= paidCents) {
+      return { handled: false, reason: "refund already recorded" };
+    }
+
+    const nextStatus = orderStatusAfterRefund({
+      paidCents,
+      settledRefundCents: recordedCents,
+      amountCents,
+    });
+
+    const blocked = this.checkTransition(order.status, nextStatus, orderNumber);
     if (blocked) return blocked;
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.order.update({ where: { id: order.id }, data: { status: "REFUNDED" } });
-      await tx.payment.updateMany({ where: { orderId: order.id, provider }, data: { status: "REFUNDED" } });
+      if (payment) {
+        await tx.refund.create({
+          data: {
+            orderId: order.id,
+            paymentId: payment.id,
+            provider,
+            status: "SUCCEEDED",
+            amountCents,
+            currency: order.currency,
+            reason: "Refund reported by provider",
+            // Namespaced so it cannot collide with a key an admin chose.
+            idempotencyKey: `webhook:${provider}:${providerRef}`,
+            providerRef,
+          },
+        });
+      }
+      await tx.order.update({ where: { id: order.id }, data: { status: nextStatus } });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          fromStatus: order.status,
+          toStatus: nextStatus,
+          note: `Refund of ${amountCents} ${order.currency} reported by ${provider}`,
+        },
+      });
+      if (nextStatus === "REFUNDED") {
+        await tx.payment.updateMany({
+          where: { orderId: order.id, provider },
+          data: { status: "REFUNDED" },
+        });
+      }
     });
 
     await this.auditLog.record({
@@ -506,10 +607,10 @@ export class PaymentsService {
       action: "payment.refunded",
       entity: "Order",
       entityId: order.id,
-      metadata: { provider, ref: providerRef },
+      metadata: { provider, ref: providerRef, amountCents, orderStatus: nextStatus },
     });
 
-    return { handled: true, reason: "order marked refunded" };
+    return { handled: true, reason: `order marked ${nextStatus.toLowerCase()}` };
   }
 
   /** Returns a WebhookResult when the transition must not proceed, else null. */

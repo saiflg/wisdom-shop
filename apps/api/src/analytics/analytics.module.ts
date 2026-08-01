@@ -15,7 +15,7 @@ export class AnalyticsController {
   @ApiOperation({
     summary: "Headline figures for the admin overview",
     description:
-      "Revenue counts only settled orders (PAID/PROCESSING/SHIPPED/DELIVERED) — pending orders aren't paid for and cancelled/refunded money went back.",
+      "Revenue counts only settled orders (PAID/PROCESSING/SHIPPED/DELIVERED/PARTIALLY_REFUNDED) — pending orders aren't paid for and cancelled/fully-refunded money went back. Gross and net are both reported: net subtracts settled refunds, so a partially refunded order counts for what was actually kept.",
   })
   summary(@Query() query: SummaryQueryDto) {
     return this.analytics.summary(query.days);
