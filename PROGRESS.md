@@ -94,11 +94,16 @@ commits. This was left alone deliberately — committing was never asked for.
 
 - **No local Node.js** — all JS tooling runs via
   `docker compose exec api pnpm ...` / `docker compose exec web pnpm ...`.
-- **Watch mode doesn't see host file edits.** Docker Desktop on Windows
-  doesn't forward inotify events across the bind mount, so `nest start
-  --watch` will not rebuild when you edit files from Windows. After
-  changing `apps/api`, run `docker compose restart api`. (`next dev` in
-  `apps/web` recompiles per-request, so it picks up changes fine.)
+- **Watch mode doesn't reliably see host file edits.** Docker Desktop on
+  Windows doesn't forward inotify events across the bind mount. This is
+  confirmed for `nest start --watch` (`apps/api`) and, despite an earlier
+  note here claiming otherwise, has now also been observed for `next dev`
+  (`apps/web`) — a homepage rewrite kept serving the pre-edit page across
+  several fresh navigations until the container was restarted. After
+  editing either app from the Windows side, run
+  `docker compose restart api` / `docker compose restart web` and confirm
+  the change actually shows up before trusting it — don't assume either
+  dev server recompiled on its own.
 - **Schema changes** — always
   `docker compose exec api pnpm exec prisma migrate dev --name <name>`;
   never hand-edit `apps/api/prisma/migrations/`.
