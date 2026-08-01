@@ -108,6 +108,20 @@ describe("HeroSlideshow", () => {
     expect(screen.getByRole("heading", { name: "Second slide title" })).toBeInTheDocument();
   });
 
+  it("falls back to the icon illustration when a slide has no photo", () => {
+    // Every slide is always in the DOM (only opacity toggles), so the check
+    // has to be scoped to this one slide's own group rather than the whole
+    // document — a photo on a different slide would otherwise mask a
+    // missing fallback here.
+    stubMatchMedia(false);
+    const slidesWithoutPhoto: HeroSlide[] = [{ ...SLIDES[0], imageUrl: undefined }, SLIDES[1]];
+    render(<HeroSlideshow slides={slidesWithoutPhoto} />);
+
+    const firstSlideGroup = screen.getByRole("group", { name: "1 of 2" });
+    expect(firstSlideGroup.querySelector("img")).not.toBeInTheDocument();
+    expect(firstSlideGroup.querySelector("svg")).toBeInTheDocument();
+  });
+
   it("does not auto-advance when the visitor prefers reduced motion", () => {
     stubMatchMedia(true);
     jest.useFakeTimers();

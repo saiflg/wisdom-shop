@@ -11,7 +11,8 @@ export interface HeroSlide {
   description: string;
   ctaLabel: string;
   ctaHref: string;
-  imageUrl: string;
+  /** Omit to render the icon-on-gradient fallback instead of a photo. */
+  imageUrl?: string;
 }
 
 const INTERVAL_MS = 6000;
@@ -60,14 +61,31 @@ export function HeroSlideshow({ slides }: { slides: HeroSlide[] }) {
               }`}
             >
               <div className="absolute inset-0 overflow-hidden">
-                <Image
-                  src={slide.imageUrl}
-                  alt=""
-                  fill
-                  priority={i === 0}
-                  sizes="100vw"
-                  className={`object-cover motion-reduce:animate-none ${active ? "animate-ken-burns" : ""}`}
-                />
+                {slide.imageUrl ? (
+                  <Image
+                    src={slide.imageUrl}
+                    alt=""
+                    fill
+                    priority={i === 0}
+                    sizes="100vw"
+                    className={`object-cover motion-reduce:animate-none ${active ? "animate-ken-burns" : ""}`}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-brand-gradient">
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className={`h-40 w-40 text-white/25 motion-reduce:animate-none sm:h-56 sm:w-56 ${active ? "animate-ken-burns" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1"
+                    >
+                      <rect x="2.5" y="4.5" width="19" height="12" rx="1.5" strokeLinejoin="round" />
+                      <path d="M8 20h8M12 16.5V20" strokeLinecap="round" />
+                      <path d="M6.5 8.5l2.5 2.5-2.5 2.5M12.5 13.5h3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/55 to-slate-950/25" />
 
