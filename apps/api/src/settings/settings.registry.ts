@@ -7,7 +7,7 @@
  * writable key is listed here, typed, and marked secret or not.
  */
 
-export type SettingType = "string" | "number" | "email" | "boolean";
+export type SettingType = "string" | "number" | "email" | "boolean" | "url";
 
 export interface SettingDefinition {
   key: string;
@@ -21,7 +21,7 @@ export interface SettingDefinition {
   placeholder?: string;
 }
 
-export type SettingGroup = "payments" | "email" | "store";
+export type SettingGroup = "payments" | "email" | "store" | "social";
 
 export const SETTING_GROUPS: { id: SettingGroup; label: string; description: string }[] = [
   {
@@ -40,6 +40,12 @@ export const SETTING_GROUPS: { id: SettingGroup; label: string; description: str
     id: "store",
     label: "Store",
     description: "Details shown to customers across the storefront.",
+  },
+  {
+    id: "social",
+    label: "Social media",
+    description:
+      "Shown as icons in the storefront footer. These are public URLs, not credentials — leave a platform blank to hide its icon rather than showing a dead link.",
   },
 ];
 
@@ -142,6 +148,57 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
   { key: "STORE_NAME", group: "store", label: "Store name", type: "string", placeholder: "Wisdom Shop" },
   { key: "STORE_SUPPORT_EMAIL", group: "store", label: "Support email", type: "email" },
   { key: "STORE_SUPPORT_PHONE", group: "store", label: "Support phone", type: "string" },
+  // --- Social media -----------------------------------------------------------
+  {
+    key: "SOCIAL_FACEBOOK_URL",
+    group: "social",
+    label: "Facebook",
+    type: "url",
+    placeholder: "https://facebook.com/yourpage",
+  },
+  {
+    key: "SOCIAL_INSTAGRAM_URL",
+    group: "social",
+    label: "Instagram",
+    type: "url",
+    placeholder: "https://instagram.com/yourhandle",
+  },
+  {
+    key: "SOCIAL_X_URL",
+    group: "social",
+    label: "X (Twitter)",
+    type: "url",
+    placeholder: "https://x.com/yourhandle",
+  },
+  {
+    key: "SOCIAL_YOUTUBE_URL",
+    group: "social",
+    label: "YouTube",
+    type: "url",
+    placeholder: "https://youtube.com/@yourchannel",
+  },
+  {
+    key: "SOCIAL_LINKEDIN_URL",
+    group: "social",
+    label: "LinkedIn",
+    type: "url",
+    placeholder: "https://linkedin.com/company/yourcompany",
+  },
+  {
+    key: "SOCIAL_TIKTOK_URL",
+    group: "social",
+    label: "TikTok",
+    type: "url",
+    placeholder: "https://tiktok.com/@yourhandle",
+  },
+  {
+    key: "SOCIAL_WHATSAPP_URL",
+    group: "social",
+    label: "WhatsApp",
+    help: "Full wa.me link, e.g. https://wa.me/15551234567",
+    type: "url",
+    placeholder: "https://wa.me/15551234567",
+  },
 ];
 
 const BY_KEY = new Map(SETTING_DEFINITIONS.map((d) => [d.key, d]));

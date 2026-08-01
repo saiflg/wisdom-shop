@@ -9,7 +9,7 @@ export interface SettingEntry {
   group: string;
   label: string;
   help?: string;
-  type: "string" | "number" | "email" | "boolean";
+  type: "string" | "number" | "email" | "boolean" | "url";
   secret: boolean;
   placeholder?: string;
   configured: boolean;
@@ -77,6 +77,15 @@ export function useTestEmail() {
         method: "POST",
         headers: authHeaders(accessToken),
       }),
+  });
+}
+
+/** Public — no auth, no admin gate. Missing keys mean "hide that icon". */
+export function useSocialLinks() {
+  return useQuery({
+    queryKey: ["social-links"],
+    queryFn: () => apiFetch<Record<string, string>>("/v1/settings/social"),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

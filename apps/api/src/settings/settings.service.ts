@@ -163,6 +163,9 @@ export class SettingsService {
       if (definition.type === "email" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(raw)) {
         throw new BadRequestException(`${definition.label} must be a valid email address`);
       }
+      if (definition.type === "url" && !/^https:\/\/.+/i.test(raw)) {
+        throw new BadRequestException(`${definition.label} must be a full https:// URL`);
+      }
 
       const secret = isSecretKey(key);
       const value = secret ? this.encryption.encrypt(raw) : raw;

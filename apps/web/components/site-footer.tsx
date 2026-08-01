@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SocialLinks } from "./social-links";
 
 const COLUMNS = [
   {
@@ -82,13 +83,17 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col items-center gap-3 border-t border-slate-200 pt-6 text-center dark:border-slate-800 sm:flex-row sm:justify-between sm:text-left">
-          <Link href="/" className="text-base font-semibold tracking-tight">
-            Wisdom <span className="text-brand-500">Shop</span>
-          </Link>
-          <p className="text-xs text-slate-500 dark:text-slate-500">
-            © {year} Wisdom Shop. Educational books, courses, software and equipment.
-          </p>
+        <div className="mt-10 flex flex-col items-center gap-4 border-t border-slate-200 pt-6 dark:border-slate-800">
+          <SocialLinks />
+
+          <div className="flex flex-col items-center gap-3 text-center sm:w-full sm:flex-row sm:justify-between sm:text-left">
+            <Link href="/" className="text-base font-semibold tracking-tight">
+              Wisdom <span className="text-brand-500">Shop</span>
+            </Link>
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              © {year} Wisdom Shop. Educational books, courses, software and equipment.
+            </p>
+          </div>
         </div>
       </div>
     </footer>

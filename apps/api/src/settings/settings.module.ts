@@ -3,8 +3,9 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { IsObject } from "class-validator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Public } from "../auth/decorators/public.decorator";
 import { SettingsService } from "./settings.service";
-import { SETTING_GROUPS } from "./settings.registry";
+import { SETTING_DEFINITIONS, SETTING_GROUPS } from "./settings.registry";
 import { MailerService } from "../common/mailer/mailer.service";
 
 export class UpdateSettingsDto {
@@ -58,13 +59,36 @@ export class SettingsController {
   }
 }
 
+const SOCIAL_KEYS = SETTING_DEFINITIONS.filter((d) => d.group === "social").map((d) => d.key);
+
+/**
+ * Unauthenticated: the storefront footer renders for every visitor, logged
+ * in or not. Only the social group is exposed here — everything else in the
+ * registry is either secret or has no reason to leave the admin screen.
+ */
+@ApiTags("settings")
+@Controller("settings")
+export class PublicSettingsController {
+  constructor(private readonly settings: SettingsService) {}
+
+  @Public()
+  @Get("social")
+  @ApiOperation({ summary: "Configured social media links, for the storefront footer" })
+  async social(): Promise<Record<string, string>> {
+    const entries = await Promise.all(
+      SOCIAL_KEYS.map(async (key) => [key, await this.settings.get(key)] as const),
+    );
+    return Object.fromEntries(entries.filter((entry): entry is [string, string] => entry[1] !== undefined));
+  }
+}
+
 /**
  * Global because payments and the mailer both need it, and threading it
  * through their modules' imports adds nothing.
  */
 @Global()
 @Module({
-  controllers: [SettingsController],
+  controllers: [SettingsController, PublicSettingsController],
   providers: [SettingsService],
   exports: [SettingsService],
 })

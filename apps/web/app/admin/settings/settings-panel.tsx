@@ -135,7 +135,15 @@ export function SettingsPanel() {
 
                   <input
                     id={entry.key}
-                    type={entry.secret ? "password" : entry.type === "number" ? "number" : "text"}
+                    type={
+                      entry.secret
+                        ? "password"
+                        : entry.type === "number"
+                          ? "number"
+                          : entry.type === "url"
+                            ? "url"
+                            : "text"
+                    }
                     autoComplete="off"
                     className={`mt-1.5 ${inputClass}`}
                     // A secret is never sent to the browser, so the field shows
