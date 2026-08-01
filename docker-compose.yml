@@ -81,6 +81,7 @@ services:
     restart: unless-stopped
     environment:
       API_URL: http://api:4000
+      NEXT_PUBLIC_EMS_URL: ${EMS_URL:-http://localhost:3001}
     ports:
       - "3000:3000"
     depends_on:
@@ -88,3 +89,16 @@ services:
     volumes:
       - ./apps/web:/workspace/apps/web
       - /workspace/apps/web/node_modules
+
+  ems:
+    build:
+      context: .
+      dockerfile: apps/ems/Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_SHOP_URL: ${APP_URL:-http://localhost:3000}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./apps/ems:/workspace/apps/ems
+      - /workspace/apps/ems/node_modules

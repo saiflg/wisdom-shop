@@ -16,7 +16,13 @@ const CATEGORY_LINKS = [
   { label: "Books", href: "/products?type=DIGITAL" },
   { label: "Courses", href: "/products?type=COURSE" },
   { label: "Software", href: "/products?type=SOFTWARE" },
-  { label: "School Management Software", href: "/products?category=educational-software" },
+  {
+    label: "School Management Software",
+    // A separate app (apps/ems), not a shop category — it's still in
+    // development, so this points at its own "coming soon" page rather than
+    // the catalogue of management-software *products*.
+    href: process.env.NEXT_PUBLIC_EMS_URL ?? "http://localhost:3001",
+  },
   { label: "Licences", href: "/products?type=LICENSE" },
   { label: "Equipment", href: "/products?type=PHYSICAL" },
   { label: "Subscriptions", href: "/products?type=SUBSCRIPTION" },

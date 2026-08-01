@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /workspace
+
+RUN corepack enable
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/ems/package.json ./apps/ems/package.json
+
+RUN pnpm install --frozen-lockfile=false
+
+COPY apps/ems ./apps/ems
+
+WORKDIR /workspace/apps/ems
+
+EXPOSE 3001
+
+CMD ["pnpm", "dev"]

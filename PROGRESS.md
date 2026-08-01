@@ -87,8 +87,38 @@ written to be correct, but the first deploy will be the first time it meets
 a real hostname, a real certificate and a real proxy. `docs/DEPLOYMENT.md`
 lists what must change before that.
 
-**Nothing has been committed.** 200+ files are staged in a repo with no
-commits. This was left alone deliberately — committing was never asked for.
+**This section is stale.** It described the repo before commits started;
+`git log` is now the authoritative source for what's actually landed —
+refunds (Phase 6d), coupons, search indexing, and more have shipped and been
+committed since this was written.
+
+## apps/ems — "Wisdom Campus" (new, 2026-08-01)
+
+A second app in this monorepo, separate from the shop: an AI-powered
+multi-tenant school management and learning platform (school admin,
+curriculum engine, an AI Teacher, per-school branding). The scope the owner
+described for it is genuinely enterprise-scale — comparable to PowerSchool
+plus an AI tutoring engine — not something any single session builds in
+full, so this is being taken in phases like the shop was.
+
+**Phase 1 (done):** the app is scaffolded (Next 14, own Docker service on
+port 3001, own `package.json`/tests/lint/typecheck, all passing) and serves
+a real "coming soon" page — no fake buttons or features that go nowhere.
+The shop's nav ("School Management Software") links to it at
+`NEXT_PUBLIC_EMS_URL`; the coming-soon page links back via
+`NEXT_PUBLIC_SHOP_URL`. Both default to the right localhost port in dev.
+
+**Not yet connected:** the shop already has a signed handoff mechanism for
+this exact purpose — `createHandoffToken`/`verifyHandoffToken` in
+`apps/api/src/licenses/edu-handoff.ts`, used when a customer completes a
+"School Setup" purchase (see Phase 9 above). `EDU_SETUP_REDIRECT_URL`
+currently points at a placeholder external domain, not at this app. Wiring
+that up — an `/onboarding` route in `apps/ems` that verifies the token with
+the shared `EDU_SETUP_SIGNING_SECRET` — is the natural next phase once
+apps/ems has anything for a verified purchaser to land on.
+
+**Owner has AI provider API keys ready** for when the AI Teacher phase
+starts; not yet added to `.env`.
 
 ## Working notes for this machine
 
