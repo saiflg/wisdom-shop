@@ -1,0 +1,63 @@
+import { Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { validateEnv, type EnvConfig } from "./config/env.validation";
+import { ControlPrismaModule } from "./control-db/control-prisma.module";
+import { TenancyModule } from "./tenancy/tenancy.module";
+import { TenantContextInterceptor } from "./tenancy/tenant-context.interceptor";
+import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
+import { RolesGuard } from "./auth/guards/roles.guard";
+import { HealthModule } from "./health/health.module";
+import { PlatformAuthModule } from "./platform-auth/platform-auth.module";
+import { SchoolsModule } from "./schools/schools.module";
+import { AuthModule } from "./auth/auth.module";
+import { ClassesModule } from "./classes/classes.module";
+import { StudentsModule } from "./students/students.module";
+import { TeachersModule } from "./teachers/teachers.module";
+import { GuardiansModule } from "./guardians/guardians.module";
+import { EnrollmentsModule } from "./enrollments/enrollments.module";
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+      envFilePath: [".env"],
+    }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<EnvConfig, true>) => [
+        {
+          name: "default",
+          ttl: config.get("RATE_LIMIT_TTL_MS", { infer: true }),
+          limit: config.get("RATE_LIMIT_LIMIT", { infer: true }),
+        },
+      ],
+    }),
+    ControlPrismaModule,
+    TenancyModule,
+    HealthModule,
+    // Platform routes are @Public() (opt out of the tenant JwtAuthGuard
+    // below) and carry their own guards — see PlatformAuthModule/SchoolsModule.
+    PlatformAuthModule,
+    SchoolsModule,
+    AuthModule,
+    ClassesModule,
+    StudentsModule,
+    TeachersModule,
+    GuardiansModule,
+    EnrollmentsModule,
+  ],
+  providers: [
+    // Order matters: throttling first, then auth (populates req.user), then
+    // role checks (reads req.user) — same reasoning as the shop's app.module.ts.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    // Runs after guards (interceptor stage), so req.user is already set —
+    // see TenantContextInterceptor's own comment for why this matters.
+    { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
+  ],
+})
+export class AppModule {}

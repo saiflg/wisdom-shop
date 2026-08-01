@@ -1,0 +1,158 @@
+// Tenant schema: applied to EVERY school's own database
+// (wisdom_ems_school_<slug>) via `prisma migrate deploy` at onboarding
+// time — see ProvisioningService. Never applied to the control database.
+//
+// DATABASE_URL here is only read directly by the Prisma CLI when running
+// migrations (`prisma migrate dev/deploy --schema=prisma/tenant/schema.prisma`
+// against a specific school's connection string). At runtime the app never
+// reads it directly — TenancyService builds each school's own connection
+// string and hands it to a PrismaClient constructed with an explicit
+// `datasources` override. See tenancy/connection-string.ts.
+
+generator client {
+  provider = "prisma-client-js"
+  // See prisma/control/schema.prisma for why this is under node_modules
+  // rather than src/generated.
+  output = "../../node_modules/ems-tenant-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  SCHOOL_ADMIN
+  TEACHER
+  STUDENT
+  GUARDIAN
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+}
+
+model User {
+  id           String  @id @default(cuid())
+  /// Unique but nullable: Postgres treats NULLs as distinct in a unique
+  /// index, so any number of email-less student Users can coexist. A
+  /// student without portal access has both email and passwordHash null;
+  /// enforced at the service layer (staff-role Users must have both), not
+  /// as a DB constraint — a CHECK across a role array is awkward in
+  /// Postgres and the invariant reads better as code (see role-policy.ts
+  /// in apps/api/src/users for the pattern this follows).
+  email        String? @unique
+  passwordHash String?
+  firstName    String
+  lastName     String
+  roles        RoleName[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  refreshTokens  RefreshToken[]
+  studentProfile StudentProfile?
+  guardianLinks  GuardianLink[]
+  homeroomFor    Class[]        @relation("HomeroomTeacher")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Class {
+  id                String  @id @default(cuid())
+  name              String
+  gradeLevel        String?
+  /// Plain string for this phase (e.g. "2026-2027") — a full AcademicYear/
+  /// Term entity is a later-phase concern once curriculum scheduling needs it.
+  academicYear      String
+  homeroomTeacherId String?
+  homeroomTeacher   User?   @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  enrollments Enrollment[]
+
+  @@index([academicYear])
+  @@map("classes")
+}
+
+model StudentProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// School-issued admission/roll number — optional since not every school
+  /// assigns one at creation time.
+  studentCode String?   @unique
+  dateOfBirth DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  enrollments   Enrollment[]
+  guardianLinks GuardianLink[]
+
+  @@map("student_profiles")
+}
+
+model Enrollment {
+  id               String           @id @default(cuid())
+  studentProfileId String
+  studentProfile   StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  classId          String
+  class            Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  status           EnrollmentStatus @default(ACTIVE)
+  startDate        DateTime         @default(now())
+  endDate          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Deliberately NOT a compound @@unique on (studentProfileId, classId): a
+  /// student can withdraw and re-enrol later. Prisma's schema DSL has no
+  /// partial-unique-index support to express "unique only while ACTIVE", so
+  /// EnrollmentsService enforces "no second ACTIVE row for the same pair" at
+  /// the service layer instead.
+  @@index([studentProfileId])
+  @@index([classId])
+  @@map("enrollments")
+}
+
+model GuardianLink {
+  id               String         @id @default(cuid())
+  guardianUserId   String
+  guardianUser     User           @relation(fields: [guardianUserId], references: [id], onDelete: Cascade)
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  /// Free text ("Mother", "Legal Guardian", …) — an enum would just churn.
+  relationship     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guardianUserId, studentProfileId])
+  @@index([studentProfileId])
+  @@map("guardian_links")
+}

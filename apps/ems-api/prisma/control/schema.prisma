@@ -1,0 +1,100 @@
+// Control-plane schema: the School registry and platform operators.
+// Conventions match apps/api/prisma/schema.prisma: cuid() PKs, createdAt/
+// updatedAt on every table, @@map to snake_case. This schema is applied to
+// exactly one database (CONTROL_DATABASE_URL) — never to a school's own.
+
+generator client {
+  provider = "prisma-client-js"
+  // Under node_modules, not src/generated: `tsc` only copies files it
+  // compiles from src into dist, so a plain-JS client under src/generated
+  // would exist at dev time (ts-node/nest watch) but be missing from the
+  // compiled dist/ output entirely. node_modules resolves the same way
+  // regardless of how deep the requiring file sits under src or dist.
+  output = "../../node_modules/ems-control-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("CONTROL_DATABASE_URL")
+}
+
+enum SchoolStatus {
+  PROVISIONING
+  ACTIVE
+  SUSPENDED
+  FAILED
+}
+
+enum PlatformRoleName {
+  PLATFORM_ADMIN
+  PLATFORM_SUPPORT
+}
+
+model School {
+  id           String       @id @default(cuid())
+  name         String
+  /// Used both as the onboarding-time database-name seed and as the
+  /// explicit tenant selector at school-user login (no subdomain routing
+  /// yet — see PROGRESS.md).
+  slug         String       @unique
+  databaseName String       @unique
+  status       SchoolStatus @default(PROVISIONING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  provisioningAttempts ProvisioningAttempt[]
+
+  @@index([status])
+  @@map("schools")
+}
+
+/// Forensic trail for onboarding: the concrete answer to "what happened
+/// when provisioning failed partway", queryable without grepping logs.
+model ProvisioningAttempt {
+  id           String   @id @default(cuid())
+  schoolId     String
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  /// "create_database" | "migrate_deploy" | "seed_admin"
+  step         String
+  success      Boolean
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+
+  @@index([schoolId])
+  @@map("provisioning_attempts")
+}
+
+model PlatformUser {
+  id           String             @id @default(cuid())
+  email        String             @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  roles        PlatformRoleName[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens PlatformRefreshToken[]
+
+  @@map("platform_users")
+}
+
+model PlatformRefreshToken {
+  id             String       @id @default(cuid())
+  platformUserId String
+  platformUser   PlatformUser @relation(fields: [platformUserId], references: [id], onDelete: Cascade)
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  userAgent      String?
+  ipAddress      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([platformUserId])
+  @@map("platform_refresh_tokens")
+}

@@ -12,6 +12,7 @@
     "dev:web": "pnpm --filter @wisdom-shop/web run dev",
     "dev:api": "pnpm --filter @wisdom-shop/api run dev",
     "dev:ems": "pnpm --filter @wisdom-shop/ems run dev",
+    "dev:ems-api": "pnpm --filter @wisdom-shop/ems-api run dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",

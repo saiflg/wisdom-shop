@@ -12,6 +12,10 @@ services:
       - "5432:5432"
     volumes:
       - ./.docker-data/postgres:/var/lib/postgresql/data
+      # Only runs against a brand-new (empty) data directory — on this
+      # project's existing dev volume it's a no-op; wisdom_ems_control was
+      # created manually once instead. Kept for fresh installs and CI.
+      - ./docker/initdb:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U wisdom -d wisdom_shop"]
       interval: 5s
@@ -97,8 +101,48 @@ services:
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_SHOP_URL: ${APP_URL:-http://localhost:3000}
+      EMS_API_URL: http://ems-api:4001
     ports:
       - "3001:3001"
+    depends_on:
+      - ems-api
     volumes:
       - ./apps/ems:/workspace/apps/ems
       - /workspace/apps/ems/node_modules
+
+  ems-api:
+    build:
+      context: .
+      dockerfile: apps/ems-api/Dockerfile.dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Override, not inherit from the shared .env: that file's APP_URL is
+      # the shop's own origin (localhost:3000). ems-api's CORS must trust
+      # apps/ems's origin instead.
+      APP_URL: http://localhost:3001
+      # The tenant Prisma schema reads DATABASE_URL directly when its
+      # migrations are run by hand (ordinary app code never touches it —
+      # see tenancy/connection-string.ts). The shared .env's DATABASE_URL is
+      # the SHOP'S OWN database; without this override it would be silently
+      # inherited here too, and a `prisma migrate dev --schema=prisma/
+      # tenant/schema.prisma` run without an explicit -e DATABASE_URL=...
+      # override would target wisdom_shop instead of failing loudly. This
+      # bogus value makes that mistake fail fast (DNS error) instead.
+      DATABASE_URL: postgresql://unset:unset@unset-host:5432/tenant_schema_requires_explicit_database_url
+      CONTROL_DATABASE_URL: postgresql://wisdom:wisdom@postgres:5432/wisdom_ems_control?schema=public
+      POSTGRES_ADMIN_URL: postgresql://wisdom:wisdom@postgres:5432/postgres
+      TENANT_DB_HOST: postgres
+      TENANT_DB_PORT: "5432"
+      TENANT_DB_USER: wisdom
+      TENANT_DB_PASSWORD: wisdom
+      PORT: 4001
+    ports:
+      - "4001:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./apps/ems-api:/workspace/apps/ems-api
+      - /workspace/apps/ems-api/node_modules
