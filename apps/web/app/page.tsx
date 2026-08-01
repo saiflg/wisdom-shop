@@ -32,7 +32,7 @@ const SLIDES: HeroSlide[] = [
     description: "Stream lessons, download materials, and pick up your license instantly after checkout.",
     ctaLabel: "Explore courses",
     ctaHref: "/products?category=courses-lectures",
-    imageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1600",
+    imageUrl: "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=1600",
   },
   {
     id: "school-software",
@@ -41,9 +41,10 @@ const SLIDES: HeroSlide[] = [
     description: "Buy a license here and finish setup straight into your school's own admin portal.",
     ctaLabel: "See school software",
     ctaHref: "/products?category=educational-software",
-    // No stock photo here on purpose: every candidate reused from the seed
-    // catalogue turned out to have a person in frame. The icon fallback
-    // guarantees that can't happen.
+    // A code editor on a laptop screen — checked by hand against the actual
+    // downloaded image, not guessed, specifically because the previous
+    // photo here turned out to have a person in it.
+    imageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1600",
   },
   {
     id: "equipment",
@@ -52,7 +53,7 @@ const SLIDES: HeroSlide[] = [
     description: "From lab kits to learning aids, shipped and tracked from order to delivery.",
     ctaLabel: "Shop equipment",
     ctaHref: "/products?category=educational-equipment",
-    imageUrl: "https://images.unsplash.com/photo-1508962914676-134849a727f0?w=1600",
+    imageUrl: "https://images.unsplash.com/photo-1587145820266-a5951ee6f620?w=1600",
   },
   {
     id: "sell-with-us",
@@ -61,7 +62,7 @@ const SLIDES: HeroSlide[] = [
     description: "Apply as a vendor, list your products, and track commission-based earnings in your own dashboard.",
     ctaLabel: "Become a vendor",
     ctaHref: "/vendor",
-    imageUrl: "https://images.unsplash.com/photo-1587145820266-a5951ee6f620?w=1600",
+    imageUrl: "https://images.unsplash.com/photo-1508962914676-134849a727f0?w=1600",
   },
 ];
 

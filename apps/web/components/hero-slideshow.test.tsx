@@ -114,7 +114,7 @@ describe("HeroSlideshow", () => {
     // document — a photo on a different slide would otherwise mask a
     // missing fallback here.
     stubMatchMedia(false);
-    const slidesWithoutPhoto: HeroSlide[] = [{ ...SLIDES[0], imageUrl: undefined }, SLIDES[1]];
+    const slidesWithoutPhoto: HeroSlide[] = [{ ...SLIDES[0]!, imageUrl: undefined }, SLIDES[1]!];
     render(<HeroSlideshow slides={slidesWithoutPhoto} />);
 
     const firstSlideGroup = screen.getByRole("group", { name: "1 of 2" });
