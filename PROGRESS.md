@@ -353,6 +353,47 @@ tests, **6/6 e2e suites (28/28 tests)**.
   apart, and the scheme-of-work page links to the filtered list rather than
   to a single quiz.
 
+**Architecture correction, part A (done): enterprise ERP shell.** The owner
+reviewed the app and directed a refactor into a true enterprise ERP layout
+before any further features. Part A covers the shell; per-school
+communication/payment gateway settings (part B) and a separated Super Admin
+portal (part C) are still outstanding.
+
+- **Module navigation moved to a left sidebar; the top header now holds
+  global controls only** (search, notifications, AI assistant, language,
+  theme, school name, profile, sign out). `dashboard-nav.tsx` is gone.
+- **`lib/navigation.ts` is the whole module tree as data** — nine groups,
+  ~100 leaves, matching the owner's spec. A leaf with an `href` is a real
+  route; a leaf without one is rendered **visibly disabled with a "Soon"
+  badge, never as a link that 404s**. That was a deliberate deviation raised
+  with the owner up front: ~90 of the specified items have no backend yet,
+  and this repo's standing rule is that a control which looks real but does
+  nothing is worse than no control. Giving a module an `href` is the single
+  edit that turns it on.
+- Sidebar does rail collapse, independent per-group expand, nav search,
+  favorites, recently-used, role-based visibility and active highlight,
+  persisted to localStorage. Hydration happens in an effect, not the store
+  initializer, so server and first client render agree.
+- **i18n is dependency-free and typed**: English is the source of truth,
+  `TranslationKey` is `keyof typeof en`, and `Dictionary` widens values to
+  `string`. That last part matters — leaving `as const` on the values made
+  every English string its own literal type, so a translated locale could
+  only ever repeat the English text verbatim (39 type errors on the first
+  French file). Other locales are `Partial<Dictionary>` and fall back to
+  English per key rather than rendering blank; the language selector marks
+  incomplete locales "(partial)". French ships as a shell-only locale to
+  prove the fallback path works end to end.
+- Locale resolution is currently user-override -> default. The intended
+  final order is user-override -> school default -> default, and the school
+  default lands with school profile settings in part B.
+- Post-login now lands on a real `/dashboard` overview whose widgets are all
+  driven by data that actually exists — no placeholder charts.
+- Two real bugs found and fixed during the walkthrough: `?? []` outside a
+  `useMemo` dependency rebuilt the array every render and defeated the memo;
+  and nav search rendered the owning group name only for live links, so
+  searching "atten" gave two identical "Attendance" rows with no way to tell
+  Students from Staff.
+
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
 per-country curriculum-standard databases, subdomain-based tenant routing,

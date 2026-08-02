@@ -91,7 +91,7 @@ export function OnboardingForm() {
       }
 
       setSession(result.accessToken, result.user);
-      router.push("/classes");
+      router.push("/dashboard");
       router.refresh();
     } catch (error) {
       setFormError(
