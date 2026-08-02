@@ -21,6 +21,7 @@ import { OnboardingModule } from "./onboarding/onboarding.module";
 import { CurriculumSettingsModule } from "./curriculum-settings/curriculum-settings.module";
 import { SubjectsModule } from "./subjects/subjects.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
+import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
     CurriculumSettingsModule,
     SubjectsModule,
     SchemesOfWorkModule,
+    LessonPlansModule,
   ],
   providers: [
     // Order matters: throttling first, then auth (populates req.user), then

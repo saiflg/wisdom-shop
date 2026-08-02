@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/teachers", label: "Teachers" },
   { href: "/subjects", label: "Subjects" },
   { href: "/schemes-of-work", label: "Schemes of work" },
+  { href: "/lesson-plans", label: "Lesson plans" },
   { href: "/curriculum-settings", label: "Curriculum settings" },
 ];
 

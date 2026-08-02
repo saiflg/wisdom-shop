@@ -58,6 +58,7 @@ model User {
   guardianLinks        GuardianLink[]
   homeroomFor          Class[]        @relation("HomeroomTeacher")
   createdSchemesOfWork SchemeOfWork[]
+  createdLessonPlans   LessonPlan[]
 
   @@map("users")
 }
@@ -234,6 +235,44 @@ model SchemeOfWork {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  lessonPlans LessonPlan[]
+
   @@unique([subjectId, academicYear, term])
   @@map("schemes_of_work")
+}
+
+// ── AI Curriculum Engine — Phase 4: lesson plans ──
+// Repeats the exact same shape as schemes of work: mode-gated AI generate,
+// manual create/edit/publish always available, PUBLISHED-only read scoping
+// for STUDENT/GUARDIAN. See PROGRESS.md.
+
+enum LessonPlanStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model LessonPlan {
+  id             String           @id @default(cuid())
+  schemeOfWorkId String
+  schemeOfWork   SchemeOfWork     @relation(fields: [schemeOfWorkId], references: [id], onDelete: Cascade)
+  /// Which week of the parent scheme of work this lesson plan expands into
+  /// a full daily lesson — one lesson plan per week, same "one week = one
+  /// lesson" simplification SchemeOfWork.content itself already makes.
+  weekNumber     Int
+  status         LessonPlanStatus @default(DRAFT)
+  source         ContentSource
+  /// `{ objectives: string[], materials: string[], introduction: string,
+  /// developmentSteps: string[], conclusion: string, assessment: string,
+  /// homework: string }` — built from the parent week's topic/objectives/
+  /// activities when generated, editable afterward same as schemes of work.
+  content     Json
+  generatedAt DateTime?
+  createdById String?
+  createdBy   User?     @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([schemeOfWorkId, weekNumber])
+  @@map("lesson_plans")
 }

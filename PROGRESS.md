@@ -278,14 +278,58 @@ set.
   visible after switching to the manual form. Fixed by clearing the error
   whenever the mode toggle buttons are clicked.
 
-**Explicitly deferred, still not part of any phase so far:** lesson plans,
-daily lesson notes, quizzes/exams/worksheets/marking guides, PDF/Word/Excel
-export, per-country curriculum-standard databases, subdomain-based tenant
-routing, custom domains, per-school branding, the AI Teacher / live
-classroom, 2FA/lockout/real CSRF double-submit, payment gateways for
-schools, messaging, automated backups, and a platform-admin onboarding UI
-(schools are provisioned via API/script only — the edu-handoff flow above is
-the one exception, and it's self-service by design, not an admin UI).
+**Phase 4 (done): AI curriculum engine, phase 2 — lesson plans.** The first
+test of Phase 3's claim that later content types are "a repeat of an
+already-working shape, not a new architecture" — and it held: `LessonPlan`
+reuses the same mode-gated generate / manual-create / edit / publish /
+PUBLISHED-only-read-scoping shape, reusing `canGenerateWithAi` and
+`GeminiService` unchanged. No new architecture, no changes to the Phase 3
+modules. Verified: `typecheck`/`lint`/unit tests pass in both apps, **5/5
+e2e suites (21/21 tests)** pass including the new `lesson-plans.e2e-spec.ts`.
+
+- **A lesson plan expands one week of a scheme of work**, keyed
+  `@@unique([schemeOfWorkId, weekNumber])`. The AI prompt is built from that
+  specific week's topic/objectives/activities (see `lesson-plan-prompt.ts`),
+  so generation is grounded in the scheme the school already wrote rather
+  than starting from the subject name alone. `weekNumber` is validated
+  against the parent scheme's actual `content.weeks` — asking for week 99 of
+  a 2-week scheme is a 404, not a silently-created orphan.
+- Content shape is `{ objectives, materials, introduction, developmentSteps,
+  conclusion, assessment, homework }` — flat, one level deep, well inside
+  Gemini's reliable nesting depth.
+- The scheme-of-work detail page now links per week to either the existing
+  lesson plan or a prefilled create form
+  (`/lesson-plans?schemeOfWorkId=…&weekNumber=N`), which is the main way
+  teachers will actually reach this feature.
+- **Real bug found in the manual walkthrough, present in Phase 3's code too:**
+  prefilling a `<select>` via React Hook Form's `defaultValue` silently loses
+  the value when the option list is still loading — the browser falls back to
+  the first option, so arriving from a "create a lesson plan for week 1" link
+  would quietly attach the plan to *the wrong scheme of work*. Fixed in both
+  `lesson-plans/page.tsx` and `schemes-of-work/page.tsx` with a `useEffect`
+  that calls `setValue` once the list resolves. Worth remembering for every
+  future `<select>` prefilled from query params against async-loaded options.
+  **The fix is typechecked and linted but was not re-confirmed in a browser** —
+  Docker Desktop went down again mid-verification (see the Phase 3 note about
+  that recurring failure). Re-walk the "create a lesson plan for week N" link
+  and check the scheme dropdown actually shows the linked scheme before
+  trusting it.
+- **Watch mode bit again, in a way tests can't catch**: the running `ems-api`
+  dev server had not picked up `LessonPlansModule`, so the browser got
+  `Cannot GET /v1/lesson-plans` while the e2e suite passed happily — e2e
+  builds its own in-process `AppModule` and never touches the dev server.
+  A route 404ing in the browser right after adding a module is this, not a
+  routing bug; `docker compose restart ems-api` and wait for the new routes
+  to appear in the logs before concluding anything.
+
+**Explicitly deferred, still not part of any phase so far:** daily lesson
+notes, quizzes/exams/worksheets/marking guides, PDF/Word/Excel export,
+per-country curriculum-standard databases, subdomain-based tenant routing,
+custom domains, per-school branding, the AI Teacher / live classroom,
+2FA/lockout/real CSRF double-submit, payment gateways for schools,
+messaging, automated backups, and a platform-admin onboarding UI (schools
+are provisioned via API/script only — the edu-handoff flow above is the one
+exception, and it's self-service by design, not an admin UI).
 
 **Working notes specific to apps/ems-api:**
 - Two Prisma schemas in one package (`prisma/control/schema.prisma`,

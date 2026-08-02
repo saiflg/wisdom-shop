@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useForm, useFieldArray } from "react-hook-form";
 import { ApiError } from "@/lib/api";
 import { useSchemeOfWork, useUpdateSchemeOfWork, usePublishSchemeOfWork } from "@/lib/use-schemes-of-work";
+import { useLessonPlans } from "@/lib/use-lesson-plans";
 
 interface WeekFormValues {
   topic: string;
@@ -28,6 +30,7 @@ const EMPTY_WEEK: WeekFormValues = { topic: "", objectivesText: "", activitiesTe
 export default function SchemeOfWorkDetailPage() {
   const params = useParams<{ id: string }>();
   const { data: sow, isLoading, error } = useSchemeOfWork(params.id);
+  const { data: lessonPlans } = useLessonPlans(params.id);
   const update = useUpdateSchemeOfWork(params.id);
   const publish = usePublishSchemeOfWork(params.id);
   const [formError, setFormError] = useState<string | null>(null);
@@ -168,6 +171,25 @@ export default function SchemeOfWorkDetailPage() {
                 className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900"
               />
             </div>
+
+            {(() => {
+              const existingPlan = lessonPlans?.find((plan) => plan.weekNumber === index + 1);
+              return existingPlan ? (
+                <Link
+                  href={`/lesson-plans/${existingPlan.id}`}
+                  className="inline-block text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+                >
+                  View lesson plan ({existingPlan.status.toLowerCase()}) →
+                </Link>
+              ) : (
+                <Link
+                  href={`/lesson-plans?schemeOfWorkId=${sow.id}&weekNumber=${index + 1}`}
+                  className="inline-block text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+                >
+                  Create a lesson plan for this week →
+                </Link>
+              );
+            })()}
           </div>
         ))}
 
