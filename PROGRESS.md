@@ -207,16 +207,85 @@ its dashboard — no more placeholder external domain.
   this file) — a route that 404s despite the files visibly existing in the
   container is that, not a real routing bug.
 
-**Explicitly deferred, still not part of any phase so far:** subdomain-
-based tenant routing, custom domains, per-school branding, the AI
-curriculum engine, the AI Teacher / live classroom, 2FA/lockout/real CSRF
-double-submit, payment gateways for schools, messaging, automated backups,
-and a platform-admin onboarding UI (schools are provisioned via API/script
-only — the edu-handoff flow above is the one exception, and it's
-self-service by design, not an admin UI).
+**Phase 3 (done): AI curriculum engine, phase 1 — settings, subjects, and
+AI-generated schemes of work.** The owner's full vision is 12+ AI-generated
+content types across 3 modes; this phase proves the pattern end-to-end for
+**one** content type (Schemes of Work) so every later type is a repeat of an
+already-working shape, not a new architecture. Verified: `typecheck`/`lint`/
+unit tests pass in both apps, **4/4 e2e suites (16/16 tests)** pass including
+the new `schemes-of-work.e2e-spec.ts`, and the full flow was walked manually
+in a real browser — set mode to Hybrid, create a subject, manually create a
+scheme of work, add a second week, publish it, and confirm the AI-generate
+button surfaces a clear "not configured" message with no `GEMINI_API_KEY`
+set.
 
-**Owner has AI provider API keys ready** for when the AI Teacher phase
-starts; not yet added to `.env`.
+- **AI provider: Google Gemini** (`@google/genai`), not the owner's original
+  provider assumption — confirmed with the owner mid-phase. `src/ai/
+  gemini.service.ts` follows the exact same "disabled until configured"
+  posture as the shop's own payment providers: `GeminiService.isConfigured`
+  is checked before any network call, and `generateJson<T>()` throws a 503
+  immediately if `GEMINI_API_KEY` isn't set. No key is in `.env` yet — the
+  owner does not have one ready (an earlier note in this file claiming
+  otherwise was wrong and has been corrected).
+- **Curriculum mode gates only AI generation, never manual editing.** A
+  `MANUAL`-mode school gets a 403 from `POST /v1/schemes-of-work/generate`;
+  manual create/edit/publish always work regardless of mode. `HYBRID` means
+  both paths are offered. See `can-generate-with-ai.ts` for the one-line
+  pure function this gate reduces to.
+- **`CurriculumSettings` is a real singleton row per school**, seeded at
+  provisioning time (`ProvisioningService.seedSchoolAdmin`) via a
+  count-then-create check in the same tenant-client session already open
+  there — not lazily created on first read. A school that predates this
+  migration (`demo-academy`) needed a one-time manual SQL backfill to
+  restore that invariant; any future new-tenant-table migration should ask
+  "does an existing school need a backfill?" before assuming provisioning
+  alone covers it.
+- Gemini's structured-output mechanism (`config.responseSchema`) is an
+  OpenAPI 3.0 **subset** — no `$ref`/`oneOf`/`patternProperties`, and
+  `propertyOrdering` is required to pin field order since JS object key
+  order isn't guaranteed in the model's response. See
+  `scheme-of-work-prompt.ts` for the schema actually used.
+- Generation is synchronous within the HTTP request (one LLM call), same
+  simplification already used for school provisioning — revisit with a
+  queue only if a later phase adds bulk "generate the whole term" jobs.
+- **E2e test hook timeouts, not a real bug**: `schemes-of-work.e2e-spec.ts`'s
+  `beforeAll`/`afterAll` need an explicit `120000`ms timeout (Jest's default
+  is 60s) — a cold `ts-jest` compile of the whole `AppModule` graph plus a
+  real school-provisioning cycle routinely exceeds the default on this
+  machine, same reasoning as `tenant-isolation.e2e-spec.ts`'s two-provision
+  test.
+- **A genuinely confusing false alarm this phase**: the new e2e suite
+  failed with a 401 on a freshly-provisioned school's own admin login —
+  looked exactly like a real auth/provisioning bug. Root cause was Docker
+  Desktop itself destabilizing mid-test-run (confirmed separately by `docker
+  info` hanging and Postgres needing a slow fsync-recovery restart
+  afterward) — rerunning the identical test once the stack was healthy
+  passed cleanly. If a login fails right after provisioning with no other
+  code changes nearby, check `docker compose ps`/Postgres health before
+  assuming the new code is wrong.
+- **Browser-automation click delivery is not reliable after resizing the
+  viewport mid-session** in this environment — `resize_window` on a tab
+  desynced coordinate mapping so real clicks (and even `dispatchEvent`)
+  silently stopped reaching React's handlers, while `form_input` and direct
+  `onClick` invocation via `__reactProps` kept working. A brand-new tab that
+  never had `resize_window` called on it clicked normally. Not an app bug —
+  confirmed by reproducing the same silent failure on the pre-existing,
+  unmodified Classes page's "New class" button.
+- One real (minor) app bug found and fixed during the manual walkthrough:
+  the schemes-of-work list page (`apps/ems/app/(dashboard)/schemes-of-work/
+  page.tsx`) shared one `formError` state between the "Create manually" and
+  "Generate with AI" forms, so a 503 from a failed generate attempt stayed
+  visible after switching to the manual form. Fixed by clearing the error
+  whenever the mode toggle buttons are clicked.
+
+**Explicitly deferred, still not part of any phase so far:** lesson plans,
+daily lesson notes, quizzes/exams/worksheets/marking guides, PDF/Word/Excel
+export, per-country curriculum-standard databases, subdomain-based tenant
+routing, custom domains, per-school branding, the AI Teacher / live
+classroom, 2FA/lockout/real CSRF double-submit, payment gateways for
+schools, messaging, automated backups, and a platform-admin onboarding UI
+(schools are provisioned via API/script only — the edu-handoff flow above is
+the one exception, and it's self-service by design, not an admin UI).
 
 **Working notes specific to apps/ems-api:**
 - Two Prisma schemas in one package (`prisma/control/schema.prisma`,

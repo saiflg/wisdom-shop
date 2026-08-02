@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+/**
+ * An empty-string env var (as `.env.example`'s placeholder
+ * `GEMINI_API_KEY=` would be, once copied to `.env`) means "not set", not
+ * "set to the empty string" — same helper as the shop's own
+ * env.validation.ts, for the same reason.
+ */
+const optionalSecret = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().optional(),
+);
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4001),
@@ -63,6 +74,13 @@ export const envSchema = z.object({
   SWAGGER_ENABLED: z
     .preprocess((value) => value === "true" || value === true, z.boolean())
     .default(false),
+
+  // AI curriculum generation (Gemini). Optional so the app boots and every
+  // other feature works without it — generation returns 503 until this is
+  // set, same as the shop's payment providers. Model name is configurable
+  // since the Gemini 2.x/3.x lineup is still shifting; see ai/gemini.service.ts.
+  GEMINI_API_KEY: optionalSecret,
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

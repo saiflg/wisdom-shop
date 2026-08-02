@@ -53,10 +53,11 @@ model User {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  refreshTokens  RefreshToken[]
-  studentProfile StudentProfile?
-  guardianLinks  GuardianLink[]
-  homeroomFor    Class[]        @relation("HomeroomTeacher")
+  refreshTokens        RefreshToken[]
+  studentProfile       StudentProfile?
+  guardianLinks        GuardianLink[]
+  homeroomFor          Class[]        @relation("HomeroomTeacher")
+  createdSchemesOfWork SchemeOfWork[]
 
   @@map("users")
 }
@@ -155,4 +156,84 @@ model GuardianLink {
   @@unique([guardianUserId, studentProfileId])
   @@index([studentProfileId])
   @@map("guardian_links")
+}
+
+// ── AI Curriculum Engine — Phase 1: settings, subjects, schemes of work ──
+// See PROGRESS.md for the phased scope: lesson plans, quizzes, exams,
+// worksheets, and exports all follow this same shape in later phases.
+
+enum CurriculumMode {
+  MANUAL
+  AI_AUTOMATIC
+  HYBRID
+}
+
+/// Real singleton, one row per school — seeded at provisioning time
+/// (ProvisioningService.seedSchoolAdmin), never lazily created. Mode gates
+/// only whether the AI-generate endpoint is offered; manual create/edit is
+/// always available regardless of mode (see PROGRESS.md for why).
+model CurriculumSettings {
+  id                 String         @id @default(cuid())
+  mode               CurriculumMode @default(MANUAL)
+  /// Free text fed straight into the AI prompt (e.g. "Nigeria", "United
+  /// States") — relying on the model's own knowledge of that country's
+  /// standards rather than a maintained standards database, which is its
+  /// own later-phase concern if it's ever needed.
+  country            String?
+  curriculumStandard String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("curriculum_settings")
+}
+
+model Subject {
+  id         String  @id @default(cuid())
+  name       String
+  /// Free text, same convention as Class.gradeLevel.
+  gradeLevel String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  schemesOfWork SchemeOfWork[]
+
+  @@unique([name, gradeLevel])
+  @@map("subjects")
+}
+
+enum SchemeOfWorkStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ContentSource {
+  MANUAL
+  AI_GENERATED
+}
+
+model SchemeOfWork {
+  id           String             @id @default(cuid())
+  subjectId    String
+  subject      Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  academicYear String
+  /// Free text ("Term 1", "Semester 1"...) — schools vary in how they divide the year.
+  term         String
+  status       SchemeOfWorkStatus @default(DRAFT)
+  source       ContentSource
+  /// `{ weeks: [{ weekNumber, topic, objectives: string[], activities: string[] }] }`
+  /// — the same shape whether hand-written or AI-generated; validated at
+  /// the service layer against the Gemini responseSchema, not a DB constraint.
+  content      Json
+  generatedAt  DateTime?
+  createdById  String?
+  createdBy    User?              @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subjectId, academicYear, term])
+  @@map("schemes_of_work")
 }

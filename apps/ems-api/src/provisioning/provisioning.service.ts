@@ -139,6 +139,11 @@ export class ProvisioningService {
           roles: ["SCHOOL_ADMIN"],
         },
       });
+
+      const settingsCount = await tenantClient.curriculumSettings.count();
+      if (settingsCount === 0) {
+        await tenantClient.curriculumSettings.create({ data: {} });
+      }
     } finally {
       await tenantClient.$disconnect();
     }

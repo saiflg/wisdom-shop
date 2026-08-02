@@ -8,6 +8,9 @@ const LINKS = [
   { href: "/classes", label: "Classes" },
   { href: "/students", label: "Students" },
   { href: "/teachers", label: "Teachers" },
+  { href: "/subjects", label: "Subjects" },
+  { href: "/schemes-of-work", label: "Schemes of work" },
+  { href: "/curriculum-settings", label: "Curriculum settings" },
 ];
 
 export function DashboardNav() {

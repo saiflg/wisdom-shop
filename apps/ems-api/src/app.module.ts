@@ -18,6 +18,9 @@ import { TeachersModule } from "./teachers/teachers.module";
 import { GuardiansModule } from "./guardians/guardians.module";
 import { EnrollmentsModule } from "./enrollments/enrollments.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
+import { CurriculumSettingsModule } from "./curriculum-settings/curriculum-settings.module";
+import { SubjectsModule } from "./subjects/subjects.module";
+import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 
 @Module({
   imports: [
@@ -50,6 +53,9 @@ import { OnboardingModule } from "./onboarding/onboarding.module";
     GuardiansModule,
     EnrollmentsModule,
     OnboardingModule,
+    CurriculumSettingsModule,
+    SubjectsModule,
+    SchemesOfWorkModule,
   ],
   providers: [
     // Order matters: throttling first, then auth (populates req.user), then
