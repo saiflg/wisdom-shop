@@ -59,6 +59,7 @@ model User {
   homeroomFor          Class[]        @relation("HomeroomTeacher")
   createdSchemesOfWork SchemeOfWork[]
   createdLessonPlans   LessonPlan[]
+  createdQuizzes       Quiz[]
 
   @@map("users")
 }
@@ -236,6 +237,7 @@ model SchemeOfWork {
   updatedAt DateTime @updatedAt
 
   lessonPlans LessonPlan[]
+  quizzes     Quiz[]
 
   @@unique([subjectId, academicYear, term])
   @@map("schemes_of_work")
@@ -275,4 +277,44 @@ model LessonPlan {
 
   @@unique([schemeOfWorkId, weekNumber])
   @@map("lesson_plans")
+}
+
+// ── AI Curriculum Engine — Phase 5: quizzes ──
+// Same mode-gated generate / manual edit / publish shape as lesson plans,
+// plus one thing no earlier content type had: the stored content contains
+// answers that STUDENT/GUARDIAN viewers must never receive. That stripping
+// happens at the service layer (see strip-answers.ts) — the DB deliberately
+// keeps one source of truth rather than splitting the answer key into its
+// own table, which would just drift.
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Quiz {
+  id             String       @id @default(cuid())
+  schemeOfWorkId String
+  schemeOfWork   SchemeOfWork @relation(fields: [schemeOfWorkId], references: [id], onDelete: Cascade)
+  /// Which week of the parent scheme this quiz assesses. Deliberately NOT
+  /// unique with schemeOfWorkId: unlike a lesson plan, a week can have more
+  /// than one quiz (a retest, an extension paper), so quizzes carry a title
+  /// to tell them apart.
+  weekNumber     Int
+  title          String
+  status         QuizStatus    @default(DRAFT)
+  source         ContentSource
+  /// `{ questions: [{ questionNumber, prompt, type, options: string[],
+  /// correctAnswer, marks }] }`. `correctAnswer` is stripped before the
+  /// response ever reaches a STUDENT or GUARDIAN — see QuizzesService.
+  content     Json
+  generatedAt DateTime?
+  createdById String?
+  createdBy   User?     @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([schemeOfWorkId])
+  @@map("quizzes")
 }

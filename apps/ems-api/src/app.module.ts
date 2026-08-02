@@ -22,6 +22,7 @@ import { CurriculumSettingsModule } from "./curriculum-settings/curriculum-setti
 import { SubjectsModule } from "./subjects/subjects.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
+import { QuizzesModule } from "./quizzes/quizzes.module";
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
     SubjectsModule,
     SchemesOfWorkModule,
     LessonPlansModule,
+    QuizzesModule,
   ],
   providers: [
     // Order matters: throttling first, then auth (populates req.user), then

@@ -329,8 +329,32 @@ e2e suites (21/21 tests)** pass including the new `lesson-plans.e2e-spec.ts`.
   `docker compose exec ems-api pnpm install` inside the container, then
   restart. Recreating (not just restarting) `ems-api` will need this again.
 
+**Phase 5 (done): AI curriculum engine, phase 3 — quizzes.** Chosen over a
+third prose-block content type because quizzes introduce something the
+earlier types didn't have: stored content that contains answers a student
+must never receive. Verified: typecheck/lint clean in both apps, 23 unit
+tests, **6/6 e2e suites (28/28 tests)**.
+
+- **The answer key is stripped at the service layer**, not split into a
+  separate table — one source of truth that can't drift. `strip-answers.ts`
+  is a pure function with its own unit tests, and it *fails closed*:
+  anything it can't parse as a question list becomes an empty question set
+  rather than passing an unrecognised field through. It rebuilds each
+  question rather than `delete`-ing, so it can't corrupt the object a
+  staff-facing caller is holding.
+- The e2e suite asserts the invariant from the outside as well as the unit
+  level: a student fetching a PUBLISHED quiz gets the prompts and options
+  but no `correctAnswer` on either list or detail, the answer *text* appears
+  nowhere in the serialised payload, and staff still get the answers. One
+  unit test deliberately checks the serialised form, because
+  `toHaveProperty` still passes for `{ correctAnswer: undefined }`.
+- **Quizzes are deliberately not unique per week**, unlike lesson plans — a
+  week can have a quiz and a retest — so they carry a title to tell them
+  apart, and the scheme-of-work page links to the filtered list rather than
+  to a single quiz.
+
 **Explicitly deferred, still not part of any phase so far:** daily lesson
-notes, quizzes/exams/worksheets/marking guides, PDF/Word/Excel export,
+notes, exams/worksheets/marking guides, PDF/Word/Excel export,
 per-country curriculum-standard databases, subdomain-based tenant routing,
 custom domains, per-school branding, the AI Teacher / live classroom,
 2FA/lockout/real CSRF double-submit, payment gateways for schools,

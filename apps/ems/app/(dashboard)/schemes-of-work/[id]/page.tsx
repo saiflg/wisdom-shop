@@ -7,6 +7,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { ApiError } from "@/lib/api";
 import { useSchemeOfWork, useUpdateSchemeOfWork, usePublishSchemeOfWork } from "@/lib/use-schemes-of-work";
 import { useLessonPlans } from "@/lib/use-lesson-plans";
+import { useQuizzes } from "@/lib/use-quizzes";
 
 interface WeekFormValues {
   topic: string;
@@ -31,6 +32,7 @@ export default function SchemeOfWorkDetailPage() {
   const params = useParams<{ id: string }>();
   const { data: sow, isLoading, error } = useSchemeOfWork(params.id);
   const { data: lessonPlans } = useLessonPlans(params.id);
+  const { data: quizzes } = useQuizzes(params.id);
   const update = useUpdateSchemeOfWork(params.id);
   const publish = usePublishSchemeOfWork(params.id);
   const [formError, setFormError] = useState<string | null>(null);
@@ -172,24 +174,47 @@ export default function SchemeOfWorkDetailPage() {
               />
             </div>
 
-            {(() => {
-              const existingPlan = lessonPlans?.find((plan) => plan.weekNumber === index + 1);
-              return existingPlan ? (
-                <Link
-                  href={`/lesson-plans/${existingPlan.id}`}
-                  className="inline-block text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
-                >
-                  View lesson plan ({existingPlan.status.toLowerCase()}) →
-                </Link>
-              ) : (
-                <Link
-                  href={`/lesson-plans?schemeOfWorkId=${sow.id}&weekNumber=${index + 1}`}
-                  className="inline-block text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
-                >
-                  Create a lesson plan for this week →
-                </Link>
-              );
-            })()}
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {(() => {
+                const existingPlan = lessonPlans?.find((plan) => plan.weekNumber === index + 1);
+                return existingPlan ? (
+                  <Link
+                    href={`/lesson-plans/${existingPlan.id}`}
+                    className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+                  >
+                    View lesson plan ({existingPlan.status.toLowerCase()}) →
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/lesson-plans?schemeOfWorkId=${sow.id}&weekNumber=${index + 1}`}
+                    className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+                  >
+                    Create a lesson plan for this week →
+                  </Link>
+                );
+              })()}
+
+              {(() => {
+                // A week can have several quizzes, so link to the filtered
+                // list rather than to one quiz the way lesson plans do.
+                const weekQuizzes = quizzes?.filter((quiz) => quiz.weekNumber === index + 1) ?? [];
+                return weekQuizzes.length > 0 ? (
+                  <Link
+                    href={`/quizzes?schemeOfWorkId=${sow.id}`}
+                    className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+                  >
+                    View {weekQuizzes.length} quiz{weekQuizzes.length === 1 ? "" : "zes"} →
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/quizzes?schemeOfWorkId=${sow.id}&weekNumber=${index + 1}`}
+                    className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+                  >
+                    Create a quiz for this week →
+                  </Link>
+                );
+              })()}
+            </div>
           </div>
         ))}
 
