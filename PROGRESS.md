@@ -309,11 +309,10 @@ e2e suites (21/21 tests)** pass including the new `lesson-plans.e2e-spec.ts`.
   `lesson-plans/page.tsx` and `schemes-of-work/page.tsx` with a `useEffect`
   that calls `setValue` once the list resolves. Worth remembering for every
   future `<select>` prefilled from query params against async-loaded options.
-  **The fix is typechecked and linted but was not re-confirmed in a browser** —
-  Docker Desktop went down again mid-verification (see the Phase 3 note about
-  that recurring failure). Re-walk the "create a lesson plan for week N" link
-  and check the scheme dropdown actually shows the linked scheme before
-  trusting it.
+  Confirmed fixed in a real browser afterwards: following "create a lesson
+  plan for week 1" from the English Language scheme now preselects English
+  Language (it previously fell back to Mathematics), and the created plan
+  attaches to the right scheme.
 - **Watch mode bit again, in a way tests can't catch**: the running `ems-api`
   dev server had not picked up `LessonPlansModule`, so the browser got
   `Cannot GET /v1/lesson-plans` while the e2e suite passed happily — e2e
@@ -321,6 +320,14 @@ e2e suites (21/21 tests)** pass including the new `lesson-plans.e2e-spec.ts`.
   A route 404ing in the browser right after adding a module is this, not a
   routing bug; `docker compose restart ems-api` and wait for the new routes
   to appear in the logs before concluding anything.
+- **`docker compose up -d ems-api` (recreate) resets the container's
+  `node_modules` to the image's state**, which predates `@google/genai` —
+  the `@google/genai` symlink survives but dangles into the workspace-root
+  pnpm store, so `tsc` fails with "Cannot find module '@google/genai'" while
+  `ls node_modules/@google` still shows it. Same dangling-symlink class as
+  the note further down, and the fix is the same:
+  `docker compose exec ems-api pnpm install` inside the container, then
+  restart. Recreating (not just restarting) `ems-api` will need this again.
 
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, quizzes/exams/worksheets/marking guides, PDF/Word/Excel export,
