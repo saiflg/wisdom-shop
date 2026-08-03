@@ -1,14 +1,30 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { InvoiceStatus, Prisma } from "ems-control-client";
 import { ControlPrismaService } from "@/control-db/control-prisma.service";
-import { computeInvoiceTotals, formatInvoiceNumber, periodFor, type InvoiceLineInput } from "./billing-math";
+import { addInterval, computeInvoiceTotals, formatInvoiceNumber, periodFor, type InvoiceLineInput } from "./billing-math";
 import { explainInvoiceRefusal, explainSubscriptionRefusal } from "./billing-status";
+import { selectCycleWork } from "./billing-cycle";
 import type { CreatePlanDto, GenerateInvoiceDto, SubscribeSchoolDto, UpdatePlanDto } from "./dto/billing.dto";
 
 const DEFAULT_DUE_DAYS = 14;
 
+/** Prisma's unique-constraint violation. */
+const UNIQUE_VIOLATION = "P2002";
+
+export interface BillingCycleResult {
+  ranAt: string;
+  trialsActivated: number;
+  renewed: number;
+  cancelled: number;
+  invoicesCreated: string[];
+  /** Renewals whose invoice already existed — the idempotency guard firing. */
+  duplicatesSkipped: number;
+}
+
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
+
   constructor(private readonly controlPrisma: ControlPrismaService) {}
 
   // ── Plans ────────────────────────────────────────────────────────────
@@ -188,6 +204,9 @@ export class BillingService {
           schoolId,
           subscriptionId: subscription?.id ?? null,
           status: "DRAFT",
+          // Operator-raised: intentionally exempt from the one-per-period
+          // guard so ad-hoc charges inside a period are possible.
+          origin: "MANUAL",
           currency,
           subtotalCents: totals.subtotalCents,
           totalCents: totals.totalCents,
@@ -216,6 +235,136 @@ export class BillingService {
         ...(to === "VOID" ? { voidedAt: now } : {}),
       },
       include: { lines: true, school: { select: { name: true, slug: true } } },
+    });
+  }
+
+  // ── Billing cycle ────────────────────────────────────────────────────
+
+  /**
+   * Advances every subscription whose period has ended, converts expired
+   * trials, applies scheduled cancellations, and invoices each renewal.
+   *
+   * Safe to run repeatedly and concurrently. Correctness does not depend on
+   * the scheduler firing exactly once — it depends on the unique index on
+   * (subscriptionId, periodStart). A second run for the same period loses
+   * the race at the database and is counted as a skip rather than becoming
+   * a second charge. That is deliberate: "the timer fired twice" is a
+   * normal event in any deployment with more than one instance, a restart,
+   * or a manual trigger, and it must never cost a customer money.
+   */
+  async runBillingCycle(now = new Date()): Promise<BillingCycleResult> {
+    const subscriptions = await this.controlPrisma.subscription.findMany({
+      where: { status: { not: "CANCELED" } },
+      include: { plan: true },
+    });
+
+    const work = selectCycleWork(
+      subscriptions.map((s) => ({
+        id: s.id,
+        schoolId: s.schoolId,
+        status: s.status,
+        currentPeriodEnd: s.currentPeriodEnd,
+        trialEndsAt: s.trialEndsAt,
+        cancelAtPeriodEnd: s.cancelAtPeriodEnd,
+      })),
+      now,
+    );
+
+    const invoicesCreated: string[] = [];
+    let duplicatesSkipped = 0;
+
+    for (const trial of work.trialsToActivate) {
+      await this.controlPrisma.subscription.update({
+        where: { id: trial.id },
+        data: { status: "ACTIVE" },
+      });
+    }
+
+    for (const cancellation of work.toCancel) {
+      await this.controlPrisma.subscription.update({
+        where: { id: cancellation.id },
+        data: { status: "CANCELED", canceledAt: now },
+      });
+    }
+
+    for (const due of work.toRenew) {
+      const subscription = subscriptions.find((s) => s.id === due.id);
+      if (!subscription) continue;
+
+      // Periods are contiguous: the next one starts where the last ended,
+      // not at "now", so a late cycle run cannot lose billable days.
+      const periodStart = subscription.currentPeriodEnd;
+      const periodEnd = addInterval(periodStart, subscription.interval);
+
+      try {
+        const invoice = await this.createPeriodInvoice(subscription, periodStart, periodEnd, now);
+        invoicesCreated.push(invoice.number);
+      } catch (error) {
+        if ((error as { code?: string }).code === UNIQUE_VIOLATION) {
+          // Already invoiced for this exact period by another run.
+          duplicatesSkipped += 1;
+          continue;
+        }
+        throw error;
+      }
+
+      await this.controlPrisma.subscription.update({
+        where: { id: subscription.id },
+        data: { currentPeriodStart: periodStart, currentPeriodEnd: periodEnd },
+      });
+    }
+
+    const result: BillingCycleResult = {
+      ranAt: now.toISOString(),
+      trialsActivated: work.trialsToActivate.length,
+      renewed: invoicesCreated.length,
+      cancelled: work.toCancel.length,
+      invoicesCreated,
+      duplicatesSkipped,
+    };
+
+    if (result.renewed || result.trialsActivated || result.cancelled || result.duplicatesSkipped) {
+      this.logger.log(`Billing cycle: ${JSON.stringify(result)}`);
+    }
+    return result;
+  }
+
+  private createPeriodInvoice(
+    subscription: { id: string; schoolId: string; priceCents: number; currency: string; plan: { name: string } },
+    periodStart: Date,
+    periodEnd: Date,
+    now: Date,
+  ) {
+    const totals = computeInvoiceTotals([
+      { description: `${subscription.plan.name} subscription`, quantity: 1, unitPriceCents: subscription.priceCents },
+    ]);
+
+    return this.controlPrisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const counter = await tx.invoiceCounter.upsert({
+        where: { id: 1 },
+        create: { id: 1, lastUsed: 1 },
+        update: { lastUsed: { increment: 1 } },
+      });
+
+      return tx.invoice.create({
+        data: {
+          number: formatInvoiceNumber(counter.lastUsed),
+          schoolId: subscription.schoolId,
+          subscriptionId: subscription.id,
+          status: "DRAFT",
+          // The guarded path: the partial unique index makes a second
+          // invoice for this period impossible.
+          origin: "CYCLE",
+          currency: subscription.currency,
+          subtotalCents: totals.subtotalCents,
+          totalCents: totals.totalCents,
+          periodStart,
+          periodEnd,
+          dueAt: new Date(now.getTime() + DEFAULT_DUE_DAYS * 24 * 60 * 60 * 1000),
+          lines: { create: totals.lines },
+        },
+        include: { lines: true },
+      });
     });
   }
 

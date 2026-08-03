@@ -520,9 +520,7 @@ since revenue reporting has to aggregate across tenants.
   "revenue" number — invoiced is not received, and merging them flatters
   the dashboard.
 - Not modelled yet, deliberately: mid-period proration on plan change
-  (changes take effect from the next period), tax, credit notes, and any
-  automatic renewal job — there is no scheduler in this app, so periods
-  advance when an invoice is generated rather than on a cron.
+  (changes take effect from the next period), tax and credit notes.
 - Walked in a browser afterwards: a plan created through the console at
   `45000.50` stored exactly `4500050` minor units and rendered back as
   `NGN 45,000.50` with no drift; subscribing Demo Academy snapshotted that
@@ -530,6 +528,43 @@ since revenue reporting has to aggregate across tenants.
   `INV-000011` whose single line summed to the total; and once paid the
   invoice showed **no action controls at all**, which is the terminal-state
   rule surfacing in the UI rather than only in the API.
+
+**Part C, recurring billing cycle (done).** Subscription periods now
+advance on their own instead of only when a human clicks.
+
+- **The double-billing guard is a database constraint, not scheduler
+  bookkeeping**: a *partial* unique index on
+  `(subscriptionId, periodStart) WHERE origin = 'CYCLE'`. Correctness
+  therefore does not depend on the timer firing exactly once — a second
+  instance, a restart mid-run, or an operator hitting the manual trigger
+  all lose the race at the database and are counted as skips. "The timer
+  fired twice" is normal in any real deployment and must never cost a
+  customer money.
+- **A plain unique index was wrong and the full e2e run caught it.** The
+  first version constrained every invoice, which also blocked an operator
+  raising a legitimate second ad-hoc invoice inside the same period — two
+  previously-passing billing tests failed. Narrowing it to `origin =
+  'CYCLE'` keeps the guard exactly where it matters. Prisma's DSL can't
+  express a partial index, so it lives in migration SQL only; Prisma still
+  reports the violation as P2002.
+- **Deliberately no queue.** BullMQ would add retry, backoff and per-job
+  visibility, but not correctness — the constraint already provides that,
+  and adding a dependency here means a lockfile regen plus a container
+  rebuild, which is this environment's least reliable operation. A plain
+  `setInterval` (unref'd, skipping overlapping ticks) does the job; a queue
+  is the natural upgrade when operational visibility matters more.
+- **Off by default** (`BILLING_CYCLE_ENABLED=false`). An accidental cycle
+  charges real customers, so opting in is explicit; tests and local runs
+  can never produce surprise invoices.
+- Periods are **contiguous**: the next period starts where the last ended,
+  not at "now", so a cycle that runs late cannot lose billable days.
+  Expired trials convert to ACTIVE **without** being invoiced, and a
+  scheduled `cancelAtPeriodEnd` cancels instead of renewing.
+- Verified against the live system as well as by tests: forcing the demo
+  school's period into the past produced exactly one invoice
+  (`INV-000029`), an immediate re-run did nothing, and two manual invoices
+  in that same period were both accepted — confirming the partial index is
+  scoped correctly rather than merely absent.
 
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,

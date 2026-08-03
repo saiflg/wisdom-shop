@@ -121,6 +121,17 @@ export class BillingController {
     return this.billing.setInvoiceStatus(number, "UNCOLLECTIBLE");
   }
 
+  @Post("cycle/run")
+  @ApiOperation({
+    summary: "Run the billing cycle now",
+    description:
+      "Advances due periods, converts expired trials, applies scheduled cancellations and invoices renewals. " +
+      "Safe to call repeatedly: a period already invoiced is skipped rather than billed again.",
+  })
+  runCycle() {
+    return this.billing.runBillingCycle();
+  }
+
   @Get("revenue")
   @ApiOperation({
     summary: "Revenue summary",

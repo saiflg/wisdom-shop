@@ -90,6 +90,14 @@ export const envSchema = z.object({
   // since the Gemini 2.x/3.x lineup is still shifting; see ai/gemini.service.ts.
   GEMINI_API_KEY: optionalSecret,
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+
+  // Recurring billing. Off by default so tests, CI and local runs never
+  // generate surprise invoices — an accidental cycle costs a customer
+  // money, so opting in has to be explicit. See billing-scheduler.service.ts.
+  BILLING_CYCLE_ENABLED: z
+    .preprocess((value) => value === "true" || value === true, z.boolean())
+    .default(false),
+  BILLING_CYCLE_INTERVAL_MS: z.coerce.number().int().min(60_000).default(3_600_000),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

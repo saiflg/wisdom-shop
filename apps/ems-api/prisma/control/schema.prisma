@@ -161,6 +161,15 @@ enum InvoiceStatus {
   UNCOLLECTIBLE
 }
 
+/// Who raised the invoice. This is what the double-billing guard keys on:
+/// the automated cycle may produce at most one invoice per subscription
+/// period, but an operator can raise as many ad-hoc invoices as a school
+/// genuinely needs (extra seats mid-period, a one-off charge).
+enum InvoiceOrigin {
+  CYCLE
+  MANUAL
+}
+
 /// The sellable catalogue. Retired plans keep `isActive = false` rather
 /// than being deleted, because subscriptions and issued invoices still
 /// reference them and history must stay readable.
@@ -229,6 +238,7 @@ model Invoice {
   subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   status   InvoiceStatus @default(DRAFT)
+  origin   InvoiceOrigin @default(MANUAL)
   currency String
 
   /// Denormalised from the lines, and asserted to match them in tests.
@@ -247,6 +257,15 @@ model Invoice {
 
   lines InvoiceLine[]
 
+  /// The double-billing guard is a PARTIAL unique index on
+  /// (subscriptionId, periodStart) WHERE origin = 'CYCLE'. Prisma's schema
+  /// DSL cannot express a partial index, so it lives in the migration SQL
+  /// only — see 20260803153000_cycle_invoices_unique_per_period. Prisma
+  /// still surfaces the violation as P2002, which runBillingCycle catches.
+  ///
+  /// It is deliberately not a plain @@unique: that also blocked an
+  /// operator raising a legitimate second ad-hoc invoice inside the same
+  /// period, which the full e2e run caught.
   @@index([schoolId])
   @@index([status])
   @@map("invoices")
