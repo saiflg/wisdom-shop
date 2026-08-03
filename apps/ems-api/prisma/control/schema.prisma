@@ -50,9 +50,37 @@ model School {
   updatedAt DateTime @updatedAt
 
   provisioningAttempts ProvisioningAttempt[]
+  lifecycleEvents      SchoolLifecycleEvent[]
 
   @@index([status])
   @@map("schools")
+}
+
+/// Audit trail for operator-driven status changes (suspend/reactivate).
+/// Separate from ProvisioningAttempt, which records what the automated
+/// onboarding pipeline did — this records what a human decided and why.
+/// The first piece of the platform-wide audit log.
+model SchoolLifecycleEvent {
+  id       String @id @default(cuid())
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  fromStatus SchoolStatus
+  toStatus   SchoolStatus
+  /// Why the operator did it. Required for suspension in particular: "this
+  /// school is locked out" is useless to whoever picks it up next without it.
+  reason     String
+
+  /// Deliberately NOT a foreign key to PlatformUser: this record has to
+  /// outlive the operator's account. Deleting a departed admin must not
+  /// cascade away the history of the suspensions they issued.
+  actorPlatformUserId String
+  actorEmail          String
+
+  createdAt DateTime @default(now())
+
+  @@index([schoolId])
+  @@map("school_lifecycle_events")
 }
 
 /// Forensic trail for onboarding: the concrete answer to "what happened

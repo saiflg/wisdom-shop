@@ -110,6 +110,24 @@ services:
       - ./apps/ems:/workspace/apps/ems
       - /workspace/apps/ems/node_modules
 
+  # Super Admin console. A separate app on its own origin, not a route group
+  # inside `ems`, so a school user's browser never receives platform-console
+  # code and a platform token is unreachable from the school portal's origin.
+  platform:
+    build:
+      context: .
+      dockerfile: apps/platform/Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      EMS_API_URL: http://ems-api:4001
+    ports:
+      - "3002:3002"
+    depends_on:
+      - ems-api
+    volumes:
+      - ./apps/platform:/workspace/apps/platform
+      - /workspace/apps/platform/node_modules
+
   ems-api:
     build:
       context: .

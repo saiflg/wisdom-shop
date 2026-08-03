@@ -446,6 +446,45 @@ designed.
   appears anywhere in the page, and a second save with the password box left
   blank changed the sender name while keeping the stored password.
 
+**Architecture correction, part C (in progress): Super Admin portal,
+starting with tenant lifecycle.** The backend is done and tested; the
+console app itself is new and its browser walkthrough is the outstanding
+piece.
+
+- **`apps/platform` is a separate Next app on port 3002**, not a route group
+  inside `apps/ems`. Two reasons: a school user's browser never receives
+  platform-console code, and a platform token is unreachable from the school
+  portal's origin. The two token families were already signed with different
+  secrets server-side; this closes the browser side of the same boundary.
+- **Only ACTIVE <-> SUSPENDED is a permitted transition.** PROVISIONING and
+  FAILED belong to the provisioning pipeline: a school mid-provision has a
+  half-built database, and "reactivating" a FAILED school would flag it
+  ACTIVE without the database whose absence caused the failure. Those are
+  recovered through retry-provisioning, which re-runs the idempotent steps.
+  `school-lifecycle.ts` encodes this and its test asserts the whole
+  4x4 status matrix, so adding a new `SchoolStatus` without deciding its
+  transitions breaks the build rather than silently permitting everything.
+- **`TenancyService.invalidateSchool` had zero callers before this phase.**
+  Without wiring it into the transition, a suspended school would have kept
+  serving requests for up to the 60s school-cache TTL. The e2e test proves
+  the fix by warming the cache first, then suspending, then reusing the
+  *same* token — which is refused with no wait. Known limit, deliberately
+  left: that only clears the current process's cache, so other API instances
+  still lag by the TTL; making it instant fleet-wide needs a shared
+  invalidation channel and is a non-goal while this runs single-node.
+- **`SchoolLifecycleEvent`** records who changed a school's status and why,
+  with the reason required rather than optional — "this school is locked
+  out" is useless to whoever picks it up next without it. The actor is
+  stored by value (id + email), deliberately *not* as a foreign key, so
+  deleting a departed operator's account can't cascade away the history of
+  the suspensions they issued. First slice of the platform-wide audit log.
+- The console has **no session refresh**: a reload returns the operator to
+  login. That is a deliberate trade for an operator console — short-lived,
+  non-persisted platform tokens — not an oversight.
+- Subscriptions, billing/revenue, module marketplace, platform analytics,
+  monitoring and resellers are all still absent, and are intentionally not
+  shown in the console's nav rather than stubbed as dead links.
+
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
 per-country curriculum-standard databases, subdomain-based tenant routing,
