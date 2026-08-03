@@ -39,6 +39,15 @@ export const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
 
+  // Encrypts per-school gateway credentials (SMTP passwords, provider API
+  // secrets) at rest. Rotating it makes every stored secret undecryptable —
+  // settings pages then report the gateway as unconfigured and admins must
+  // re-enter it, which is why decryption failure is handled rather than
+  // thrown (see TenantSecretsService.tryDecrypt).
+  EMS_SETTINGS_ENCRYPTION_KEY: z
+    .string()
+    .min(32, "EMS_SETTINGS_ENCRYPTION_KEY must be at least 32 characters"),
+
   // Platform-operator JWTs.
   PLATFORM_JWT_ACCESS_SECRET: z
     .string()

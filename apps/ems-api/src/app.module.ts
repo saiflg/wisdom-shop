@@ -23,6 +23,8 @@ import { SubjectsModule } from "./subjects/subjects.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
+import { TenantSecretsModule } from "./common/crypto/tenant-secrets.module";
+import { SettingsModule } from "./settings/settings.module";
 
 @Module({
   imports: [
@@ -60,6 +62,8 @@ import { QuizzesModule } from "./quizzes/quizzes.module";
     SchemesOfWorkModule,
     LessonPlansModule,
     QuizzesModule,
+    TenantSecretsModule,
+    SettingsModule,
   ],
   providers: [
     // Order matters: throttling first, then auth (populates req.user), then

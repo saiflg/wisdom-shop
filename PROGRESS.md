@@ -394,6 +394,45 @@ portal (part C) are still outstanding.
   searching "atten" gave two identical "Attendance" rows with no way to tell
   Students from Staff.
 
+**Architecture correction, part B (backend done, UI outstanding):
+per-school communication and payment gateways.** Every school owns and
+configures its own email/SMS/WhatsApp/push and Paystack/Flutterwave/Stripe
+credentials; nothing is shared platform-wide. The API and its tests are
+done — **the settings pages are not built yet, so the corresponding sidebar
+entries are still disabled.**
+
+- **Credentials are encrypted at rest** with AES-256-GCM
+  (`TenantSecretsService`), keyed by `EMS_SETTINGS_ENCRYPTION_KEY`. That is
+  a deliberate reimplementation of the shop's own `EncryptionService` rather
+  than shared code — the apps are independent, and separate keys mean a leak
+  of one can't decrypt the other's data. GCM over CBC because it
+  authenticates: tampered ciphertext throws instead of yielding plausible
+  garbage.
+- **Secrets never leave the server, in any form.** Reads return a masked
+  hint (`sk_••••4b7d`) via a `view` mapper; the raw `*Encrypted` columns are
+  never selected into a response, since ciphertext is still material for an
+  offline attack. Values of 8 characters or fewer are masked entirely —
+  showing 3 of 6 characters of a weak key gives away more than it helps.
+- **Blank means "leave unchanged", not "erase".** Because the form only ever
+  received a mask, a save of an unrelated field sends back an empty secret;
+  treating that as a write would destroy a working gateway on every edit.
+  `secret-update.ts` encodes the rule (omitted/empty = keep, explicit
+  `null` = clear, non-empty = replace) as a tested pure function, and the
+  e2e suite asserts the round-trip.
+- Rotating `EMS_SETTINGS_ENCRYPTION_KEY` makes stored secrets undecryptable.
+  `tryDecrypt` returns null rather than throwing, so the settings page then
+  reports the gateway as unconfigured and asks for re-entry instead of
+  500-ing.
+- **All settings routes are SCHOOL_ADMIN only** — a teacher has no reason to
+  read even a masked hint of a payment key.
+- **"Test payment" verifies credentials without moving money**, hitting a
+  read-only authenticated endpoint per provider. A settings button that
+  actually charged a card would be unacceptable.
+- SMS is **provider-agnostic** by request: the school supplies base URL and
+  credentials and the call posts a conventional payload, rather than
+  hardcoding one vendor. Vendors expecting a different request shape will
+  need a per-provider adapter — a known follow-up.
+
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
 per-country curriculum-standard databases, subdomain-based tenant routing,

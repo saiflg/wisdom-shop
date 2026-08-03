@@ -318,3 +318,103 @@ model Quiz {
   @@index([schemeOfWorkId])
   @@map("quizzes")
 }
+
+// ── Per-school gateway settings ──
+// Every school owns and configures its own communication and payment
+// services; nothing here is shared platform-wide. Columns ending in
+// `Encrypted` hold AES-256-GCM ciphertext produced by TenantSecretsService
+// and must never be selected into an API response — the services return a
+// masked hint instead. See PROGRESS.md.
+
+enum SmtpEncryption {
+  NONE
+  TLS
+  SSL
+}
+
+/// Singleton per school. Lazily created on first save, unlike
+/// CurriculumSettings — a school with no email gateway is a normal state,
+/// so there is nothing meaningful to seed at provisioning time.
+model EmailGatewaySettings {
+  id                String         @id @default(cuid())
+  host              String?
+  port              Int?
+  username          String?
+  passwordEncrypted String?
+  encryption        SmtpEncryption @default(TLS)
+  senderName        String?
+  senderEmail       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_gateway_settings")
+}
+
+/// Provider-agnostic by design: schools pick their own SMS vendor, so the
+/// vendor is free text and the call is driven by baseUrl + credentials
+/// rather than a hardcoded per-provider integration.
+model SmsGatewaySettings {
+  id                 String  @id @default(cuid())
+  providerName       String?
+  baseUrl            String?
+  apiKeyEncrypted    String?
+  apiSecretEncrypted String?
+  senderId           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sms_gateway_settings")
+}
+
+model WhatsAppGatewaySettings {
+  id                            String  @id @default(cuid())
+  accessTokenEncrypted          String?
+  phoneNumberId                 String?
+  businessAccountId             String?
+  webhookUrl                    String?
+  webhookVerifyTokenEncrypted   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("whatsapp_gateway_settings")
+}
+
+/// `credentialsEncrypted` holds a provider-specific JSON blob (an FCM
+/// service-account key, a VAPID pair, …) because the shape differs per
+/// provider and pinning columns to one vendor would defeat the point.
+model PushGatewaySettings {
+  id                   String  @id @default(cuid())
+  providerName         String?
+  credentialsEncrypted String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("push_gateway_settings")
+}
+
+enum PaymentProvider {
+  PAYSTACK
+  FLUTTERWAVE
+  STRIPE
+}
+
+/// One row per provider per school, so a school can configure several and
+/// enable whichever it wants.
+model PaymentGatewaySettings {
+  id                     String          @id @default(cuid())
+  provider               PaymentProvider @unique
+  publicKey              String?
+  secretKeyEncrypted     String?
+  webhookSecretEncrypted String?
+  currency               String?
+  enabled                Boolean         @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_gateway_settings")
+}
