@@ -6,7 +6,11 @@ import clsx from "clsx";
 import { RequirePlatformAuth } from "@/components/require-platform-auth";
 import { usePlatformAuthStore } from "@/store/platform-auth-store";
 
-const LINKS = [{ href: "/schools", label: "Tenants" }];
+const LINKS = [
+  { href: "/schools", label: "Tenants" },
+  { href: "/plans", label: "Plans" },
+  { href: "/billing", label: "Billing" },
+];
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";

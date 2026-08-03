@@ -481,9 +481,48 @@ piece.
 - The console has **no session refresh**: a reload returns the operator to
   login. That is a deliberate trade for an operator console — short-lived,
   non-persisted platform tokens — not an oversight.
-- Subscriptions, billing/revenue, module marketplace, platform analytics,
-  monitoring and resellers are all still absent, and are intentionally not
-  shown in the console's nav rather than stubbed as dead links.
+- Module marketplace, platform analytics, monitoring, support and resellers
+  are still absent, and are intentionally not shown in the console's nav
+  rather than stubbed as dead links.
+
+**Part C, subscriptions and billing (done).** Plans, per-school
+subscriptions, invoicing and a revenue summary, all in the control plane
+since revenue reporting has to aggregate across tenants.
+
+- **Money is integer minor units end to end** (`*Cents`, matching the
+  shop's convention) — never a float, never converted to one on the way to
+  the screen. The only conversion is at the plan form's input boundary, and
+  it is `Math.round(major * 100)` because `45.10 * 100` is `4509.999…`.
+- **`addInterval` clamps to month end.** This is the real trap in billing
+  date maths: naive `setMonth` on 31 January gives **3 March**, so a school
+  billed on the 31st would skip February entirely and be charged early.
+  Clamping gives 28 (or 29) February. Tested across every month, leap years
+  and the 1900/2000 century rules, and all period maths is UTC so a server
+  timezone change can't shift a boundary by a day.
+- **Invoice numbers are allocated inside the same transaction as the
+  insert.** The counter row is incremented in that transaction, so a second
+  concurrent generation blocks until the first commits. The obvious
+  alternative — `count() + 1` outside the transaction — hands two
+  simultaneous requests the same number. The e2e fires 8 concurrent
+  generations and asserts all 8 numbers are distinct.
+- **Subscription price is snapshotted at subscribe time.** Repricing a plan
+  must never silently change what an existing customer pays; the e2e
+  reprices a plan and asserts the existing subscription is untouched.
+- **PAID and VOID invoices are terminal**, and only DRAFT is editable — a
+  settled financial record is corrected with a credit note, not an edit.
+  CANCELED subscriptions are terminal too, so resubscribing creates a new
+  one and the cancellation stays on the record.
+- **Billing state never suspends a school on its own.** A PAST_DUE
+  subscription is recorded but access is unaffected; cutting a customer off
+  remains an explicit operator action with a reason. Automating that link
+  is a policy decision the owner should make deliberately, not a default.
+- Revenue reports **collected and outstanding separately** rather than one
+  "revenue" number — invoiced is not received, and merging them flatters
+  the dashboard.
+- Not modelled yet, deliberately: mid-period proration on plan change
+  (changes take effect from the next period), tax, credit notes, and any
+  automatic renewal job — there is no scheduler in this app, so periods
+  advance when an invoice is generated rather than on a cron.
 
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,

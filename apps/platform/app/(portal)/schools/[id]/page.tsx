@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { ApiError } from "@/lib/api";
 import { useChangeSchoolStatus, useSchool } from "@/lib/use-schools";
 import { StatusBadge } from "@/components/status-badge";
+import { SubscriptionPanel } from "@/components/subscription-panel";
 
 export default function SchoolDetailPage() {
   const params = useParams<{ id: string }>();
@@ -35,6 +36,8 @@ export default function SchoolDetailPage() {
           {school.slug} · {school.databaseName}
         </p>
       </div>
+
+      <SubscriptionPanel schoolId={school.id} />
 
       <LifecycleActions schoolId={school.id} status={school.status} />
 

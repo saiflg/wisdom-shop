@@ -51,6 +51,8 @@ model School {
 
   provisioningAttempts ProvisioningAttempt[]
   lifecycleEvents      SchoolLifecycleEvent[]
+  subscription         Subscription?
+  invoices             Invoice[]
 
   @@index([status])
   @@map("schools")
@@ -131,4 +133,150 @@ model PlatformRefreshToken {
 
   @@index([platformUserId])
   @@map("platform_refresh_tokens")
+}
+
+// ── Subscriptions and billing ────────────────────────────────────────
+// All monetary amounts are integer minor units (kobo/cents) named
+// *Cents, matching apps/api/prisma/schema.prisma. Never floats: 0.1 + 0.2
+// is not 0.3 in IEEE-754, and money that fails to add up is not a
+// rounding curiosity, it is a wrong invoice.
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+/// The sellable catalogue. Retired plans keep `isActive = false` rather
+/// than being deleted, because subscriptions and issued invoices still
+/// reference them and history must stay readable.
+model SubscriptionPlan {
+  id         String          @id @default(cuid())
+  code       String          @unique
+  name       String
+  priceCents Int
+  currency   String          @default("NGN")
+  interval   BillingInterval
+  /// null means unlimited, which is different from 0.
+  maxStudents Int?
+  maxStaff    Int?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id       String @id @default(cuid())
+  schoolId String @unique
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  planId   String
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  status SubscriptionStatus @default(TRIALING)
+
+  /// Price snapshotted at subscribe time. Repricing a plan must never
+  /// silently change what an existing customer pays — the same reason the
+  /// shop snapshots unit prices onto order lines.
+  priceCents Int
+  currency   String
+  interval   BillingInterval
+
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialEndsAt        DateTime?
+  /// Cancellation is deferred by default: access continues to the end of
+  /// the paid period rather than being cut off the moment someone clicks.
+  cancelAtPeriodEnd  Boolean   @default(false)
+  canceledAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices Invoice[]
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Invoice {
+  /// Human-facing sequential identifier (INV-000001). Unique because a
+  /// duplicate or missing invoice number is an accounting problem, not a
+  /// display bug.
+  number String @id
+
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  status   InvoiceStatus @default(DRAFT)
+  currency String
+
+  /// Denormalised from the lines, and asserted to match them in tests.
+  subtotalCents Int
+  totalCents    Int
+
+  periodStart DateTime
+  periodEnd   DateTime
+  issuedAt    DateTime?
+  dueAt       DateTime?
+  paidAt      DateTime?
+  voidedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines InvoiceLine[]
+
+  @@index([schoolId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id            String  @id @default(cuid())
+  invoiceNumber String
+  invoice       Invoice @relation(fields: [invoiceNumber], references: [number], onDelete: Cascade)
+
+  description    String
+  quantity       Int
+  unitPriceCents Int
+  /// Always quantity * unitPriceCents; stored so a historic line stays
+  /// readable even if the arithmetic rules ever change.
+  amountCents    Int
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceNumber])
+  @@map("invoice_lines")
+}
+
+/// Single-row table backing sequential invoice numbering. A counter row
+/// updated inside the same transaction as the insert is what makes two
+/// concurrent invoice generations impossible to collide — see
+/// BillingService.generateInvoice.
+model InvoiceCounter {
+  id       Int @id @default(1)
+  lastUsed Int @default(0)
+
+  @@map("invoice_counter")
 }
