@@ -176,6 +176,61 @@ export const en = {
   "dashboard.modeManual": "Manual",
   "dashboard.modeAiAutomatic": "AI automatic",
   "dashboard.modeHybrid": "Hybrid",
+
+  // ── Gateway settings ───────────────────────────────────────────────
+  "settings.communicationTitle": "Communication gateways",
+  "settings.communicationIntro":
+    "Each school configures and owns its own communication services. These credentials are stored encrypted and are never shown again after saving.",
+  "settings.paymentsTitle": "Payment gateways",
+  "settings.paymentsIntro":
+    "Each school collects fees through its own merchant account. Secret keys are stored encrypted and are never shown again after saving.",
+
+  "settings.configured": "Configured",
+  "settings.notConfigured": "Not configured",
+  "settings.secretStored": "A value is stored ({mask}). Leave blank to keep it.",
+  "settings.secretNotSet": "No value stored yet.",
+  "settings.clearSecret": "Clear",
+  "settings.saveFailed": "Couldn't save these settings.",
+  "settings.testFailed": "The test failed.",
+  "settings.testSucceeded": "Test sent successfully.",
+  "settings.sendTest": "Send test",
+  "settings.runTest": "Test credentials",
+  "settings.testRecipient": "Send test to",
+
+  "settings.email": "Email (SMTP)",
+  "settings.emailHost": "SMTP host",
+  "settings.emailPort": "SMTP port",
+  "settings.emailUsername": "Username",
+  "settings.emailPassword": "Password",
+  "settings.emailEncryption": "Encryption",
+  "settings.emailSenderName": "Sender name",
+  "settings.emailSenderEmail": "Sender email",
+
+  "settings.sms": "SMS",
+  "settings.smsProvider": "Provider name",
+  "settings.smsBaseUrl": "Base URL",
+  "settings.smsApiKey": "API key",
+  "settings.smsApiSecret": "API secret",
+  "settings.smsSenderId": "Sender ID",
+  "settings.smsHint": "Provider-agnostic: supply your vendor's endpoint and credentials.",
+
+  "settings.whatsapp": "WhatsApp Business",
+  "settings.whatsappAccessToken": "Access token",
+  "settings.whatsappPhoneNumberId": "Phone number ID",
+  "settings.whatsappBusinessAccountId": "Business account ID",
+  "settings.whatsappWebhookUrl": "Webhook URL",
+  "settings.whatsappVerifyToken": "Webhook verify token",
+
+  "settings.push": "Push notifications",
+  "settings.pushProvider": "Provider name",
+  "settings.pushCredentials": "Credentials (JSON)",
+
+  "settings.paymentPublicKey": "Public key",
+  "settings.paymentSecretKey": "Secret key",
+  "settings.paymentWebhookSecret": "Webhook secret",
+  "settings.paymentCurrency": "Currency",
+  "settings.paymentEnabled": "Enabled",
+  "settings.paymentTestNote": "Verifies your credentials with the provider. No payment is created.",
 } as const;
 
 /**

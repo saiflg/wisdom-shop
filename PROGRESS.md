@@ -394,12 +394,14 @@ portal (part C) are still outstanding.
   searching "atten" gave two identical "Attendance" rows with no way to tell
   Students from Staff.
 
-**Architecture correction, part B (backend done, UI outstanding):
-per-school communication and payment gateways.** Every school owns and
-configures its own email/SMS/WhatsApp/push and Paystack/Flutterwave/Stripe
-credentials; nothing is shared platform-wide. The API and its tests are
-done — **the settings pages are not built yet, so the corresponding sidebar
-entries are still disabled.**
+**Architecture correction, part B (done): per-school communication and
+payment gateways.** Every school owns and configures its own
+email/SMS/WhatsApp/push and Paystack/Flutterwave/Stripe credentials;
+nothing is shared platform-wide. Backend, settings pages and tests are all
+in. `Settings → Communication gateways` and `Settings → Payment gateways`
+are the **first two of the ~90 disabled sidebar entries to be turned on** —
+adding an `href` in `navigation.ts` was the only nav change needed, as
+designed.
 
 - **Credentials are encrypted at rest** with AES-256-GCM
   (`TenantSecretsService`), keyed by `EMS_SETTINGS_ENCRYPTION_KEY`. That is
@@ -432,6 +434,17 @@ entries are still disabled.**
   credentials and the call posts a conventional payload, rather than
   hardcoding one vendor. Vendors expecting a different request shape will
   need a per-provider adapter — a known follow-up.
+- The settings forms are **uncontrolled on purpose**. A secret input must
+  start empty, because empty is the "keep what's stored" signal; seeding it
+  from server state would either show a mask as if it were the value or
+  overwrite the real secret with the mask on save. `SecretField` states the
+  rule in the UI ("A value is stored (sk_••••4b7d). Leave blank to keep
+  it.") and makes clearing a separate explicit action, since otherwise an
+  admin editing an unrelated field reasonably fears wiping their gateway.
+- Verified in a browser, not just by tests: saving a real SMTP password
+  flips the card to Configured and returns only a mask, the plaintext never
+  appears anywhere in the page, and a second save with the password box left
+  blank changed the sender name while keeping the stored password.
 
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
