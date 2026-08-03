@@ -60,6 +60,7 @@ model User {
   createdSchemesOfWork SchemeOfWork[]
   createdLessonPlans   LessonPlan[]
   createdQuizzes       Quiz[]
+  attendanceTaken      AttendanceRegister[] @relation("AttendanceTakenBy")
 
   @@map("users")
 }
@@ -95,7 +96,8 @@ model Class {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  enrollments Enrollment[]
+  enrollments         Enrollment[]
+  attendanceRegisters AttendanceRegister[]
 
   @@index([academicYear])
   @@map("classes")
@@ -114,8 +116,9 @@ model StudentProfile {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  enrollments   Enrollment[]
-  guardianLinks GuardianLink[]
+  enrollments       Enrollment[]
+  guardianLinks     GuardianLink[]
+  attendanceRecords AttendanceRecord[]
 
   @@map("student_profiles")
 }
@@ -317,6 +320,94 @@ model Quiz {
 
   @@index([schemeOfWorkId])
   @@map("quizzes")
+}
+
+// ── Attendance ───────────────────────────────────────────────────────
+// A register is taken per class per day, optionally per session so a
+// school running subject periods can mark more than once a day. Schools
+// that only mark once a day leave `session` null.
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model AttendanceRegister {
+  id      String @id @default(cuid())
+  classId String
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  /// Date only, normalised to UTC midnight by the service, so "the register
+  /// for 3 August" cannot become two registers because of a clock offset.
+  date    DateTime
+  /// Empty string for schools that mark once a day; a period label
+  /// otherwise. Deliberately NOT nullable: Postgres treats NULLs as
+  /// distinct in a unique index, so a nullable `session` would silently
+  /// defeat the @@unique below and allow two whole-day registers for the
+  /// same class and date. Caught by a type error, not by review.
+  session String @default("")
+
+  takenById String?
+  takenBy   User?    @relation("AttendanceTakenBy", fields: [takenById], references: [id])
+  takenAt   DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  records AttendanceRecord[]
+
+  /// One register per class, date and session. Two teachers opening the
+  /// register at once must not produce two conflicting sets of marks.
+  @@unique([classId, date, session])
+  @@index([classId])
+  @@map("attendance_registers")
+}
+
+model AttendanceRecord {
+  id               String             @id @default(cuid())
+  registerId       String
+  register         AttendanceRegister @relation(fields: [registerId], references: [id], onDelete: Cascade)
+  studentProfileId String
+  studentProfile   StudentProfile     @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  status AttendanceStatus
+  /// Free text for "left early", "medical appointment" and the like.
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  amendments AttendanceAmendment[]
+
+  @@unique([registerId, studentProfileId])
+  @@index([studentProfileId])
+  @@map("attendance_records")
+}
+
+/// Every change to an already-recorded mark. Attendance is a record of what
+/// happened and is routinely used to justify decisions about a child, so a
+/// mark must never be silently rewritten — corrections are legitimate, but
+/// they have to be visible, attributed and explained.
+model AttendanceAmendment {
+  id       String           @id @default(cuid())
+  recordId String
+  record   AttendanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  fromStatus AttendanceStatus
+  toStatus   AttendanceStatus
+  reason     String
+
+  /// Stored by value rather than as a foreign key, for the same reason as
+  /// SchoolLifecycleEvent: deleting a departed teacher's account must not
+  /// erase the history of the corrections they made.
+  actorUserId String
+  actorName   String
+
+  createdAt DateTime @default(now())
+
+  @@index([recordId])
+  @@map("attendance_amendments")
 }
 
 // ── Per-school gateway settings ──

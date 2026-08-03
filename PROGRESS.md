@@ -566,6 +566,44 @@ advance on their own instead of only when a human clicks.
   in that same period were both accepted — confirming the partial index is
   scoped correctly rather than merely absent.
 
+**Attendance (done).** The first school-facing daily-operations feature:
+registers per class and date, guardian/student-scoped reads, and corrections
+that leave a trail.
+
+- **`session` is `String @default("")`, deliberately not nullable.** Postgres
+  treats NULLs as *distinct* in a unique index, so a nullable `session` would
+  have silently defeated `@@unique([classId, date, session])` and let a class
+  accumulate two whole-day registers for the same date — the exact duplicate
+  the constraint exists to prevent. It was caught by a type error on the
+  compound-unique where clause, not by reading the schema, which is a good
+  argument for letting the database shape the types rather than the reverse.
+- **A mark is never silently rewritten.** Re-submitting a register only fills
+  in students who have no mark yet; changing an existing one goes through
+  `PATCH /v1/attendance/records/:id`, which *requires* a reason and writes an
+  `AttendanceAmendment` row in the same transaction as the update. Attendance
+  is routinely used to justify decisions about a child, so corrections are
+  legitimate but they have to be visible, attributed and explained.
+- **Amendments store the actor by value** (`actorUserId` *and* `actorName`),
+  the same call as `SchoolLifecycleEvent`: deleting a departed teacher's
+  account must not erase the history of the corrections they made.
+- **0/0 is `null`, not `NaN`.** `summariseAttendance` returns
+  `presentRate: null` for an empty set rather than dividing by zero, so an
+  unmarked student shows "—" instead of a nonsense percentage. LATE counts as
+  attended; ABSENT and EXCUSED do not.
+- **Guardians and students get 404, not 403**, for a child who isn't theirs —
+  "that student exists but isn't yours" is itself a leak. The e2e sets up two
+  unrelated families precisely so a scoping mistake has something real to
+  expose, and asserts an absence note from one family never appears in the
+  other's response.
+- Enrollment is validated on marking: a student not enrolled in that class is
+  rejected rather than quietly recorded.
+- Walked in a browser afterwards on Demo Academy: marking Aisha ABSENT saved,
+  the register history rendered "taken by Demo Admin", and correcting it to
+  EXCUSED with a reason produced exactly one `attendance_amendments` row —
+  `ABSENT -> EXCUSED | Mother phoned: medical appointment | by Demo Admin` —
+  with the register itself stored as `session=[]`, the empty-string default
+  doing its job.
+
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
 per-country curriculum-standard databases, subdomain-based tenant routing,
@@ -607,7 +645,14 @@ exception, and it's self-service by design, not an admin UI).
   editing either app from the Windows side, run
   `docker compose restart api` / `docker compose restart web` and confirm
   the change actually shows up before trusting it — don't assume either
-  dev server recompiled on its own.
+  dev server recompiled on its own. Now confirmed for `apps/ems` and
+  `apps/ems-api` as well, and it is worst for **newly created directories**:
+  a brand-new route folder 404s and a brand-new Nest module simply doesn't
+  appear in the `RoutesResolver` log, which reads exactly like "the code is
+  wrong" when the code is fine. Both were fixed by a container restart while
+  the e2e suite — which compiles from source — had been passing all along.
+  After a `next dev` restart the browser also holds stale chunks and throws
+  `ChunkLoadError`; a forced reload clears it.
 - **Schema changes** — always
   `docker compose exec api pnpm exec prisma migrate dev --name <name>`;
   never hand-edit `apps/api/prisma/migrations/`.

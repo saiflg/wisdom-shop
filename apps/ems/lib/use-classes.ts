@@ -13,7 +13,8 @@ export interface SchoolClass {
   homeroomTeacher: { id: string; firstName: string; lastName: string } | null;
   enrollments?: {
     id: string;
-    studentProfile: { user: { id: string; firstName: string; lastName: string } };
+    /** `id` is the StudentProfile id — the key attendance and enrollment both use. */
+    studentProfile: { id: string; user: { id: string; firstName: string; lastName: string } };
   }[];
 }
 

@@ -64,7 +64,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.students.bulkImport", roles: ADMIN_ONLY },
       { key: "nav.students.list", href: "/students" },
       { key: "nav.students.portal" },
-      { key: "nav.students.attendance" },
+      { key: "nav.students.attendance", href: "/attendance" },
       { key: "nav.students.academicRecords" },
       { key: "nav.students.behaviour" },
       { key: "nav.students.medical" },
