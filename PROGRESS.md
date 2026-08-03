@@ -523,6 +523,13 @@ since revenue reporting has to aggregate across tenants.
   (changes take effect from the next period), tax, credit notes, and any
   automatic renewal job — there is no scheduler in this app, so periods
   advance when an invoice is generated rather than on a cron.
+- Walked in a browser afterwards: a plan created through the console at
+  `45000.50` stored exactly `4500050` minor units and rendered back as
+  `NGN 45,000.50` with no drift; subscribing Demo Academy snapshotted that
+  price onto a correct one-month period; generating an invoice produced
+  `INV-000011` whose single line summed to the total; and once paid the
+  invoice showed **no action controls at all**, which is the terminal-state
+  rule surfacing in the UI rather than only in the API.
 
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
