@@ -659,7 +659,50 @@ charge.
   balance and payment count provably unchanged — the transaction rolled
   back rather than half-crediting.
 
-**A harness hole this phase exposed.** Adding a twelfth e2e suite made three
+**Examinations and grading (done).** Assessments, weighted marks, grade
+scales and published report cards — the third leg of the attendance/fees/
+grades triad.
+
+- **Grading policy is data, not code.** Grade scales are per-school rows with
+  editable bands, and weights live on each assessment. Nothing about A=70 or
+  CA=40/exam=60 is baked in, because that varies by country and by school and
+  hardcoding it would have made the module unusable outside one market. A
+  sensible default scale is seeded at provisioning so no school is blocked on
+  day one.
+- **ABSENT and EXCUSED are deliberately different, and this is the whole
+  point of the module.** ABSENT counts as zero — the student was assessed and
+  did not score. EXCUSED is removed and the *remaining weights are
+  renormalised*, so the student is judged only on what they actually sat.
+  Treating them alike would either punish a child with a documented medical
+  absence or hand a free pass to one who skipped. The e2e proves the
+  difference in money terms: the same student scores 50% excused and would
+  have scored 20% absent — a pass versus a fail.
+- **Publication snapshots every grade.** `SubjectResult` stores the band
+  label and remark *by value*. A school that later retunes its scale, fixes a
+  weight or corrects a mark does not silently rewrite a report card a family
+  already holds — the same rule as an invoice's line snapshot and a
+  subscription's price. The e2e retunes A from 70 to 90 after publishing and
+  asserts the issued card still reads A.
+- **Publication is refused while anything is missing**, and says how much: a
+  count of absent marks and the offending subject's weight total. An
+  incomplete report card is worse than a late one. Weights must total exactly
+  100 per subject — 90% would deflate every child in the class invisibly, and
+  130% would inflate them.
+- **Bands must tile 0–100 with no gap or overlap.** A scale of 70–100, 61–69,
+  0–59 leaves a mark of 60 with no grade at all, and a blank where a grade
+  should be is found by a parent, not by us. `validateBands` refuses it at
+  the door and again at publication, in case the scale was edited in between.
+- **Half marks are integers in hundredths**, and the band lookup **rounds
+  half up** so 69.5% earns the higher grade. Both are stated explicitly in
+  code rather than left to whatever the caller does, because rounding down at
+  a boundary silently costs a student a grade.
+- **Families see published results only** — a draft is working material, and
+  a parent reading a half-computed grade would be told something the school
+  has not decided. Marks behind published results are frozen until an
+  explicit unpublish. Guardians get 404, never 403, for another family's
+  child.
+
+**A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was
 not the new code: `onboarding` and `tenant-isolation` were still on Jest's

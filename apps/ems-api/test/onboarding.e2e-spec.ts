@@ -92,7 +92,11 @@ describe("Onboarding from a shop license (e2e)", () => {
     const school = await controlPrisma.school.findUniqueOrThrow({ where: { slug } });
     expect(school.status).toBe("ACTIVE");
     expect(school.licenseKey).toBe(licenseKey);
-  });
+    // Unlike every other suite, this one provisions inside the test body
+    // rather than in a hook, so it needs its own timeout — the config's
+    // 60s default is sized for ordinary API calls, and a school costs a
+    // CREATE DATABASE plus every tenant migration.
+  }, 180000);
 
   it("finds the existing school on a repeat call with the same license, rather than erroring or re-provisioning", async () => {
     const timestamp = Date.now();
@@ -138,7 +142,8 @@ describe("Onboarding from a shop license (e2e)", () => {
 
     const schoolCountAfter = await controlPrisma.school.count({ where: { licenseKey } });
     expect(schoolCountAfter).toBe(schoolCountBefore);
-  });
+    // Provisions in the test body too — see the note above.
+  }, 180000);
 
   it("rejects a token signed with the wrong secret", async () => {
     const token = mintToken(

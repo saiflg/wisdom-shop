@@ -152,6 +152,29 @@ export class ProvisioningService {
       if (financeCount === 0) {
         await tenantClient.financeSettings.create({ data: {} });
       }
+
+      // A default grade scale, for the same reason: a school should be able
+      // to record marks on day one. The bands tile 0-100 with no gap, which
+      // is the invariant grading-math enforces on any edited scale too.
+      const scaleCount = await tenantClient.gradeScale.count();
+      if (scaleCount === 0) {
+        await tenantClient.gradeScale.create({
+          data: {
+            name: "Default",
+            isDefault: true,
+            bands: {
+              create: [
+                { label: "A", minPercent: 70, maxPercent: 100, remark: "Excellent", gradePoint: 5 },
+                { label: "B", minPercent: 60, maxPercent: 69, remark: "Very good", gradePoint: 4 },
+                { label: "C", minPercent: 50, maxPercent: 59, remark: "Good", gradePoint: 3 },
+                { label: "D", minPercent: 45, maxPercent: 49, remark: "Pass", gradePoint: 2 },
+                { label: "E", minPercent: 40, maxPercent: 44, remark: "Weak pass", gradePoint: 1 },
+                { label: "F", minPercent: 0, maxPercent: 39, remark: "Fail", gradePoint: 0 },
+              ],
+            },
+          },
+        });
+      }
     } finally {
       await tenantClient.$disconnect();
     }

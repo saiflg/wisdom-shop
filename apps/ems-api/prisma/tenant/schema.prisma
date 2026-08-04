@@ -99,6 +99,8 @@ model Class {
   enrollments         Enrollment[]
   attendanceRegisters AttendanceRegister[]
   feeStructures       FeeStructure[]
+  assessments         Assessment[]
+  termResults         TermResult[]
 
   @@index([academicYear])
   @@map("classes")
@@ -121,6 +123,8 @@ model StudentProfile {
   guardianLinks     GuardianLink[]
   attendanceRecords AttendanceRecord[]
   feeInvoices       FeeInvoice[]
+  marks             Mark[]
+  termResults       TermResult[]
 
   @@map("student_profiles")
 }
@@ -206,6 +210,8 @@ model Subject {
   deletedAt DateTime?
 
   schemesOfWork SchemeOfWork[]
+  assessments   Assessment[]
+  subjectResults SubjectResult[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -487,6 +493,177 @@ model PushGatewaySettings {
   updatedAt DateTime @updatedAt
 
   @@map("push_gateway_settings")
+}
+
+/// A school's grading scale. Seeded at provisioning with a sensible default
+/// so no school is blocked from recording marks, but fully editable — grading
+/// policy varies by country and system and is data here, never hardcoded.
+model GradeScale {
+  id        String @id @default(cuid())
+  name      String
+  isDefault Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  bands       GradeBand[]
+  termResults TermResult[]
+
+  @@map("grade_scales")
+}
+
+/// One band of a scale, e.g. A = 70–100.
+///
+/// Boundaries are whole percentage points and inclusive at both ends. Bands
+/// must tile 0–100 with no gap and no overlap — a mark of 69.5 falling into
+/// no band at all is how a report card ends up with a blank grade, so the
+/// service validates coverage rather than trusting whoever typed the bands.
+model GradeBand {
+  id           String     @id @default(cuid())
+  gradeScaleId String
+  gradeScale   GradeScale @relation(fields: [gradeScaleId], references: [id], onDelete: Cascade)
+  label        String
+  minPercent   Int
+  maxPercent   Int
+  /// Optional: "Excellent", "Credit", "Fail" — printed on the report card.
+  remark String?
+  /// Optional grade point for schools that compute a GPA.
+  gradePoint Int?
+
+  @@index([gradeScaleId])
+  @@map("grade_bands")
+}
+
+/// A piece of assessed work for one subject in one class in one term.
+model Assessment {
+  id        String  @id @default(cuid())
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classId   String
+  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  name         String
+  academicYear String
+  term         String
+  /// Highest achievable raw score, in hundredths (see Mark.scoreHundredths).
+  maxScoreHundredths Int
+  /// Whole percentage points of the subject's term total. The weights of all
+  /// assessments for one subject/class/term must sum to exactly 100 before
+  /// results can be published — see grading-math.
+  weightPercent Int
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  marks Mark[]
+
+  @@unique([subjectId, classId, academicYear, term, name])
+  @@index([classId, academicYear, term])
+  @@map("assessments")
+}
+
+enum MarkStatus {
+  RECORDED
+  /// Sat the assessment and did not score — counts as zero.
+  ABSENT
+  /// Legitimately excused — excluded, and the remaining weights are
+  /// renormalised so the student is judged only on what they sat.
+  EXCUSED
+}
+
+model Mark {
+  id               String         @id @default(cuid())
+  assessmentId     String
+  assessment       Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Hundredths of a mark: 1750 is 17.50 out of, say, 2000 (20.00).
+  ///
+  /// Integers for the same reason money is — teachers really do award half
+  /// and quarter marks, and a term average assembled out of floats drifts.
+  /// Null only when the status is ABSENT or EXCUSED, which is a state a
+  /// score cannot express.
+  scoreHundredths Int?
+  status          MarkStatus @default(RECORDED)
+  comment         String?
+
+  recordedByUserId String?
+  recordedByName   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([assessmentId, studentProfileId])
+  @@index([studentProfileId])
+  @@map("marks")
+}
+
+enum TermResultStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// A student's results for one class and term.
+///
+/// Publishing **snapshots** every computed figure. A school that later
+/// retunes its grade scale, fixes a weight or corrects a mark must not
+/// silently rewrite a report card a family has already been given — the same
+/// rule as an invoice's line snapshot and a subscription's price.
+model TermResult {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  classId          String
+  class            Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  academicYear     String
+  term             String
+
+  status TermResultStatus @default(DRAFT)
+  /// Which scale produced the snapshotted grades, kept for provenance even
+  /// though the labels below are already frozen.
+  gradeScaleId String?
+  gradeScale   GradeScale? @relation(fields: [gradeScaleId], references: [id], onDelete: SetNull)
+
+  /// Overall percentage across subjects, in hundredths of a percent:
+  /// 8567 is 85.67%.
+  overallPercentHundredths Int?
+  publishedAt              DateTime?
+  publishedByUserId        String?
+  publishedByName          String?
+  comment                  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subjects SubjectResult[]
+
+  @@unique([studentProfileId, classId, academicYear, term])
+  @@index([classId, academicYear, term])
+  @@map("term_results")
+}
+
+model SubjectResult {
+  id           String     @id @default(cuid())
+  termResultId String
+  termResult   TermResult @relation(fields: [termResultId], references: [id], onDelete: Cascade)
+  subjectId    String
+  subject      Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  /// Hundredths of a percent, as above. Frozen at publication.
+  percentHundredths Int
+  /// The band label and remark as they read at publication — stored by value
+  /// so editing the scale afterwards cannot rewrite an issued report card.
+  gradeLabel  String
+  gradeRemark String?
+  gradePoint  Int?
+  comment     String?
+
+  @@unique([termResultId, subjectId])
+  @@index([subjectId])
+  @@map("subject_results")
 }
 
 /// Singleton per school, seeded at provisioning like CurriculumSettings.
