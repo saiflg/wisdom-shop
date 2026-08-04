@@ -138,6 +138,8 @@ export const en = {
   "nav.finance.expenses": "Expenses",
 
   // ── Navigation: Messaging ──────────────────────────────────────────
+  "nav.messaging.templates": "Notification templates",
+  "nav.messaging.outbox": "Outbox",
   "nav.messaging.internal": "Internal messages",
   "nav.messaging.email": "Email",
   "nav.messaging.sms": "SMS",
@@ -375,6 +377,45 @@ export const en = {
   "grading.reportCard.remark": "Remark",
   "grading.reportCard.score": "Score",
   "grading.reportCard.view": "View report card",
+
+  "messaging.templates.title": "Notification templates",
+  "messaging.templates.intro":
+    "What families are told, and when. A message that can't be filled in is never sent — it's recorded in the outbox instead.",
+  "messaging.templates.subject": "Subject",
+  "messaging.templates.body": "Message",
+  "messaging.templates.enabled": "Send this notification",
+  "messaging.templates.save": "Save",
+  "messaging.templates.saved": "Template saved.",
+  "messaging.templates.saveFailed": "Couldn't save the template.",
+  "messaging.templates.placeholders": "You can use",
+  "messaging.templates.unknown": "Not available for this event",
+  "messaging.templates.smsNoSubject": "Text messages have no subject line.",
+
+  "messaging.outbox.title": "Outbox",
+  "messaging.outbox.intro": "Every message the school has sent, and every one it hasn't.",
+  "messaging.outbox.none": "Nothing sent yet.",
+  "messaging.outbox.recipient": "To",
+  "messaging.outbox.about": "About",
+  "messaging.outbox.retry": "Try again",
+  "messaging.outbox.retried": "Retried.",
+  "messaging.outbox.retryFailed": "Couldn't retry that message.",
+  "messaging.outbox.all": "All",
+
+  "messaging.status.QUEUED": "Queued",
+  "messaging.status.SENT": "Sent",
+  "messaging.status.FAILED": "Failed",
+  "messaging.status.SKIPPED": "Not sent",
+
+  "messaging.event.ATTENDANCE_ABSENT": "Marked absent",
+  "messaging.event.FEE_INVOICE_ISSUED": "Fee invoice raised",
+  "messaging.event.FEE_INVOICE_OVERDUE": "Fee overdue",
+  "messaging.event.RESULTS_PUBLISHED": "Results published",
+  "messaging.event.MANUAL": "Manual message",
+
+  "messaging.channel.EMAIL": "Email",
+  "messaging.channel.SMS": "SMS",
+  "messaging.channel.WHATSAPP": "WhatsApp",
+  "messaging.channel.PUSH": "Push",
 } as const;
 
 /**

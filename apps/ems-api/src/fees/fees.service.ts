@@ -1,6 +1,10 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import type { FeeInvoiceStatus, RoleName } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
+import { MessagingService } from "@/messaging/messaging.service";
+// A generic minor-units formatter rather than billing policy — reused so
+// school fees and platform billing cannot drift apart on how money reads.
+import { formatMoney } from "@/billing/billing-math";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import {
   applyPayment,
@@ -44,7 +48,10 @@ const INVOICE_INCLUDE = {
 
 @Injectable()
 export class FeesService {
-  constructor(private readonly tenantPrisma: TenantPrismaService) {}
+  constructor(
+    private readonly tenantPrisma: TenantPrismaService,
+    private readonly messaging: MessagingService,
+  ) {}
 
   // ---------------------------------------------------------------- settings
 
@@ -222,6 +229,20 @@ export class FeesService {
           });
         });
         created.push(invoice.id);
+
+        // Only on a genuinely new invoice — the duplicate path below skips
+        // this, so re-running invoice generation cannot re-notify a family
+        // about a bill they were already told about.
+        await this.messaging.notify({
+          event: "FEE_INVOICE_ISSUED",
+          studentProfileId,
+          dedupeParts: [invoice.invoiceNumber],
+          context: {
+            invoiceNumber: invoice.invoiceNumber,
+            amount: formatMoney(total, settings.currency),
+            dueDate: dueDate ? dueDate.toISOString().slice(0, 10) : "—",
+          },
+        });
       } catch (error) {
         if ((error as { code?: string }).code === UNIQUE_VIOLATION) {
           duplicatesSkipped += 1;

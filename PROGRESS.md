@@ -702,6 +702,54 @@ grades triad.
   explicit unpublish. Guardians get 404, never 403, for another family's
   child.
 
+**Messaging that actually sends (done).** The communication gateways stored
+credentials and could send a test, but nothing in the product ever sent
+anything. Attendance, fees and grading now reach families.
+
+- **A message that cannot be filled in is never sent.** `renderTemplate`
+  refuses on a missing *or empty* placeholder rather than substituting a
+  blank, and the outbox records exactly what was missing. "Dear ," arriving
+  at a parent about their child is worse than a message that did not go —
+  the first is visibly broken software, the second is a gap the school can
+  see and fix. Empty counts as missing because an empty string renders the
+  identical broken sentence.
+- **Send-once is a unique index**, `(dedupeKey, channel, recipientAddress)`,
+  where `dedupeKey` encodes the event and its subject and deliberately never
+  a timestamp. Teachers re-save registers all morning as latecomers arrive;
+  invoices get re-raised; results get republished after a correction. All
+  three land on the key they landed on before and the database rejects the
+  duplicate. Application bookkeeping would race — two teachers saving the
+  same register at once both reach the insert, and exactly one wins.
+- **SKIPPED is not FAILED.** No gateway configured, no address on file, or a
+  template that could not render are all "there was nowhere to send", not
+  "sending went wrong". Collapsing them would have schools chasing phantom
+  errors on a system that is merely not set up yet. Every skip carries a
+  human-readable reason, shown in the outbox rather than buried in a log.
+- **Recipient resolution is pure and separately tested**, because it is the
+  function that decides whether one family learns something about another
+  family's child. Links for other students are never considered rather than
+  filtered afterwards, so passing the whole school's links — the realistic
+  careless call — is safe. Two tests assert the negative directly, including
+  that another family's guardian does not even appear in the *skipped* list,
+  since that is shown to staff too.
+- **Notifying never blocks the school's real work.** `notify()` cannot throw
+  at its caller: a mail server being down must not roll back a register, an
+  invoice run or a publication.
+- **Opt-out lives on the guardian link, not the guardian**, so a parent can
+  mute one child's routine notifications without going silent on another's —
+  the realistic case being a guardian who also works at the school.
+- Default templates are seeded at provisioning and live in
+  `default-templates.ts` as the single source, with a spec checking every one
+  against the placeholders its event supplies. Rendering fails closed, so a
+  typo in a seeded template would be a notification that can never send,
+  discovered the morning someone takes a register.
+- **A migration lesson worth keeping:** the `phone` column was first folded
+  into the already-applied messaging migration. Prisma checksums applied
+  migrations, so editing one in place leaves every database that ran the
+  original permanently out of step with the file — and the demo school
+  silently never got the column. Reverted and added as its own migration.
+  Never edit a migration that has been applied anywhere.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was

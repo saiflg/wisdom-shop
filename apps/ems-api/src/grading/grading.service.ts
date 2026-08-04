@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import type { RoleName } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
+import { MessagingService } from "@/messaging/messaging.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import {
   computeOverallPercent,
@@ -27,7 +28,10 @@ function isStaff(viewer: AuthenticatedUser): boolean {
 
 @Injectable()
 export class GradingService {
-  constructor(private readonly tenantPrisma: TenantPrismaService) {}
+  constructor(
+    private readonly tenantPrisma: TenantPrismaService,
+    private readonly messaging: MessagingService,
+  ) {}
 
   // ------------------------------------------------------------ grade scales
 
@@ -402,6 +406,15 @@ export class GradingService {
       }
 
       results.push(result.id);
+
+      // Deduped on the student, class, year and term — republishing after a
+      // correction must not tell the family twice that results are ready.
+      await this.messaging.notify({
+        event: "RESULTS_PUBLISHED",
+        studentProfileId,
+        dedupeParts: [studentProfileId, dto.classId, dto.academicYear, dto.term],
+        context: { term: dto.term, academicYear: dto.academicYear, className: klass.name },
+      });
     }
 
     return {

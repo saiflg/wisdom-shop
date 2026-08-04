@@ -47,6 +47,11 @@ model User {
   passwordHash String?
   firstName    String
   lastName     String
+  /// Free text and deliberately not unique — two parents legitimately share
+  /// a number, and a household landline is one address for a whole family.
+  /// Normalisation to E.164 is left to whatever the school's SMS vendor
+  /// accepts rather than guessed at here.
+  phone        String?
   roles        RoleName[]
 
   createdAt DateTime  @default(now())
@@ -61,6 +66,7 @@ model User {
   createdLessonPlans   LessonPlan[]
   createdQuizzes       Quiz[]
   attendanceTaken      AttendanceRegister[] @relation("AttendanceTakenBy")
+  messagesReceived     Message[]            @relation("MessageRecipient")
 
   @@map("users")
 }
@@ -125,6 +131,7 @@ model StudentProfile {
   feeInvoices       FeeInvoice[]
   marks             Mark[]
   termResults       TermResult[]
+  messages          Message[]
 
   @@map("student_profiles")
 }
@@ -160,6 +167,14 @@ model GuardianLink {
   studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
   /// Free text ("Mother", "Legal Guardian", …) — an enum would just churn.
   relationship     String
+
+  /// Per-family notification opt-out, defaulting to opted in.
+  ///
+  /// Held on the link rather than the guardian so a parent can mute one
+  /// child's routine notifications without going silent on another's — the
+  /// realistic case being a guardian who also works at the school.
+  notifyByEmail Boolean @default(true)
+  notifyBySms   Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -493,6 +508,113 @@ model PushGatewaySettings {
   updatedAt DateTime @updatedAt
 
   @@map("push_gateway_settings")
+}
+
+enum MessageChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
+}
+
+/// What happened that is worth telling a family about.
+///
+/// A closed set rather than free text: every event here has a template, a
+/// recipient rule and a de-duplication key, and an unrecognised event would
+/// have none of them.
+enum MessageEvent {
+  ATTENDANCE_ABSENT
+  FEE_INVOICE_ISSUED
+  FEE_INVOICE_OVERDUE
+  RESULTS_PUBLISHED
+  MANUAL
+}
+
+/// A school's wording for one event on one channel.
+///
+/// Bodies carry `{{placeholders}}` resolved against a typed context per
+/// event. Rendering fails closed on an unknown placeholder — see
+/// render-template.ts — because "Dear ," arriving at a parent is worse than
+/// a message that did not go out.
+model MessageTemplate {
+  id      String         @id @default(cuid())
+  event   MessageEvent
+  channel MessageChannel
+  /// Email only; ignored by SMS and WhatsApp.
+  subject String?
+  body    String
+  enabled Boolean        @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+
+  @@unique([event, channel])
+  @@map("message_templates")
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  FAILED
+  /// The channel has no gateway configured, or the recipient has no address
+  /// for it. Deliberately distinct from FAILED: nothing went wrong, there was
+  /// simply nowhere to send. Collapsing the two would have schools chasing
+  /// phantom errors.
+  SKIPPED
+}
+
+/// One rendered message aimed at one recipient.
+///
+/// `dedupeKey` is what makes notification send-once. It encodes the event and
+/// the thing it is about — "this student, this date, absent" — so re-saving a
+/// register, re-raising invoices or republishing results cannot notify a
+/// family twice. The unique index below is the guarantee; application
+/// bookkeeping would race.
+model Message {
+  id         String           @id @default(cuid())
+  event      MessageEvent
+  channel    MessageChannel
+  templateId String?
+  template   MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  /// The guardian or staff user this went to. Nullable so a message survives
+  /// the deletion of the account it was addressed to — the record of what a
+  /// school told a family must outlive the login.
+  recipientUserId String?
+  recipientUser   User?   @relation("MessageRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
+  /// Captured at send time, by value: an address that later changes must not
+  /// rewrite where a message actually went.
+  recipientName    String
+  recipientAddress String
+
+  /// Which child this concerns, for scoping and for the outbox view.
+  studentProfileId String?
+  studentProfile   StudentProfile? @relation(fields: [studentProfileId], references: [id], onDelete: SetNull)
+
+  subject String?
+  body    String
+
+  status        MessageStatus @default(QUEUED)
+  /// Why it was skipped or how it failed — shown to the school rather than
+  /// buried in a log they cannot reach.
+  statusReason String?
+  /// The gateway's own id for the send, for reconciling against the provider.
+  providerReference String?
+  attempts          Int       @default(0)
+  sentAt            DateTime?
+
+  dedupeKey String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dedupeKey, channel, recipientAddress])
+  @@index([status])
+  @@index([studentProfileId])
+  @@index([event, createdAt])
+  @@map("messages")
 }
 
 /// A school's grading scale. Seeded at provisioning with a sensible default

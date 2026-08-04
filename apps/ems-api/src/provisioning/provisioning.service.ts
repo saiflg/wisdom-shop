@@ -8,6 +8,7 @@ import type { School } from "ems-control-client";
 import type { EnvConfig } from "@/config/env.validation";
 import { buildDatabaseNameFromSlug, buildTenantConnectionString } from "@/tenancy/connection-string";
 import { isValidSchoolSlug } from "@/schools/dto/create-school.dto";
+import { DEFAULT_TEMPLATES } from "@/messaging/default-templates";
 import { MigrationRunner } from "./migration-runner";
 
 const POSTGRES_DATABASE_ALREADY_EXISTS = "42P04";
@@ -151,6 +152,16 @@ export class ProvisioningService {
       const financeCount = await tenantClient.financeSettings.count();
       if (financeCount === 0) {
         await tenantClient.financeSettings.create({ data: {} });
+      }
+
+      // Default message wording, so notifications are usable before anyone
+      // visits the template editor. DEFAULT_TEMPLATES is the single source —
+      // a spec checks every one of them against the placeholders its event
+      // can supply, because rendering fails closed and a typo here would be
+      // a notification that never sends.
+      const templateCount = await tenantClient.messageTemplate.count();
+      if (templateCount === 0) {
+        await tenantClient.messageTemplate.createMany({ data: DEFAULT_TEMPLATES });
       }
 
       // A default grade scale, for the same reason: a school should be able

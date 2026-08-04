@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import type { AttendanceStatus, RoleName } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
+import { MessagingService } from "@/messaging/messaging.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { summariseAttendance } from "./attendance-summary";
 import type { AmendAttendanceDto, TakeRegisterDto } from "./dto/attendance.dto";
@@ -38,7 +39,10 @@ const REGISTER_INCLUDE = {
 
 @Injectable()
 export class AttendanceService {
-  constructor(private readonly tenantPrisma: TenantPrismaService) {}
+  constructor(
+    private readonly tenantPrisma: TenantPrismaService,
+    private readonly messaging: MessagingService,
+  ) {}
 
   /**
    * Takes (or re-takes) a register. Marking is idempotent per student via
@@ -90,6 +94,18 @@ export class AttendanceService {
           note: mark.note,
         },
       });
+
+      // Tell the family, once. The dedupe key is the student and the date,
+      // so re-saving the register — which teachers do all morning as
+      // latecomers arrive — cannot send a second "your child is absent".
+      if (mark.status === "ABSENT") {
+        await this.messaging.notify({
+          event: "ATTENDANCE_ABSENT",
+          studentProfileId: mark.studentProfileId,
+          dedupeParts: [mark.studentProfileId, dto.date, dto.session ?? ""],
+          context: { className: klass.name, date: dto.date },
+        });
+      }
     }
 
     return this.getRegister(register.id, viewer);

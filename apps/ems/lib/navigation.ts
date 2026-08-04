@@ -163,6 +163,8 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "nav.messaging",
     icon: "messaging",
     items: [
+      { key: "nav.messaging.templates", href: "/messaging/templates", roles: ADMIN_ONLY },
+      { key: "nav.messaging.outbox", href: "/messaging/outbox", roles: ADMIN_ONLY },
       { key: "nav.messaging.internal" },
       { key: "nav.messaging.email", roles: ADMIN_ONLY },
       { key: "nav.messaging.sms", roles: ADMIN_ONLY },
