@@ -604,12 +604,88 @@ that leave a trail.
   with the register itself stored as `session=[]`, the empty-string default
   doing its job.
 
+**School fees (done).** Fee structures, per-student invoices and payments —
+the first module that gives the per-school payment gateways something to
+charge.
+
+- **Two unique constraints carry the correctness, and both lean on Postgres
+  NULL-distinctness on purpose.** `(studentProfileId, feeStructureId)` means
+  running "raise invoices for this class" twice cannot bill a family twice,
+  while ad-hoc invoices (null structure) stay unlimited. `(invoiceId,
+  reference)` means a replayed gateway webhook cannot credit twice, while
+  cash payments (null reference) stay unlimited. This is the same rule that
+  silently broke `AttendanceRegister.session`: distinct NULLs are a tool when
+  the null means "not part of this rule" and a trap when it means "no value
+  yet". Worth stating explicitly, because the two cases look identical in
+  the schema and behave in opposite ways.
+- **Duplicate generation is reported, not raised as an error.** Re-running
+  after adding a student returns `invoicesCreated: 1, duplicatesSkipped: 12`,
+  because "run it again" is a normal thing for a bursar to do.
+- **Overpayment is refused rather than absorbed.** Taking more than is owed
+  creates a credit the school now has to track, and credits are not modelled;
+  swallowing the excess would lose money that belongs to a family. The
+  balance is checked in `applyPayment`, which is pure and tested against
+  every boundary.
+- **Status is derived from the money**, never set by hand at a call site, so
+  the ledger and the badge cannot disagree — the classic finance bug is a
+  PAID invoice with a balance still on it. A zero-total invoice (full
+  scholarship, full waiver) settles as PAID immediately instead of sitting in
+  the arrears report forever chasing 0.00.
+- **Money is parsed from strings on the frontend too.**
+  `Math.round(parseFloat("4500.55") * 100)` is 450055 today and a support
+  ticket the day it isn't, so `parseMoneyToCents` is regex-validated and
+  returns null rather than guessing — the UI refuses instead of billing a
+  number nobody typed. Tested on both sides of the wire.
+- **The currency locks once any invoice exists.** Every stored amount is in
+  that currency's minor units, so switching would silently reinterpret the
+  whole ledger.
+- **Voiding is not deleting.** A family may already have been sent the
+  invoice, so it stays visible with its reason appended, and voiding is
+  refused outright once payments exist — that case is a refund, not an
+  erasure.
+- **Money handling is SCHOOL_ADMIN-only.** Teachers get no finance access at
+  all. There is no BURSAR role yet; `FINANCE_ROLES` in `fees.service.ts` is
+  the single place that changes when one is added.
+- Payments record the actor by value (`recordedByUserId` *and*
+  `recordedByName`), the same call as attendance amendments: deleting a
+  departed bursar's account must not erase who took the money.
+- Walked in a browser afterwards on Demo Academy: a structure typed as
+  `45000.55` + `7500.5` totalled `NGN 52,501.05` live and stored `5250105`
+  minor units whose lines sum exactly to the total — note `7500.5` read as
+  7,500.50 and not 7,500.05. Raising invoices reported "1 raised · 0 already
+  invoiced" and, on a second click, "0 raised · 1 already invoiced". An
+  attempted overpayment was refused with the API's own message, and
+  replaying a payment reference returned the duplicate error with the
+  balance and payment count provably unchanged — the transaction rolled
+  back rather than half-crediting.
+
+**A harness hole this phase exposed.** Adding a twelfth e2e suite made three
+suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
+which was every test in all three), while each passed alone. The cause was
+not the new code: `onboarding` and `tenant-isolation` were still on Jest's
+**default 60s hook timeout** while every suite added since carries an
+explicit 120–180s, and provisioning gets slower as a full run accumulates
+tenant databases on one Postgres. They had been sitting at 58.8s and 57.7s
+— under the line by a second. Worse, a timed-out `beforeAll` never reaches
+`app.close()`, so that suite's two Prisma pools leak into every suite after
+it, which is how the failure spread to `fees` despite `fees` already having
+its own 180s timeout. Both suites now carry explicit timeouts; the full run
+went from 3 failed / 880s to **12 suites, 101 tests, all passing, 407s**.
+The general rule: any e2e suite that provisions a school needs an explicit
+hook timeout, and a whole-suite failure with zero assertion failures is a
+hook problem, not a logic problem.
+
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
 per-country curriculum-standard databases, subdomain-based tenant routing,
 custom domains, per-school branding, the AI Teacher / live classroom,
-2FA/lockout/real CSRF double-submit, payment gateways for schools,
-messaging, automated backups, and a platform-admin onboarding UI (schools
+2FA/lockout/real CSRF double-submit, messaging, automated backups,
+**live charging through a school's payment gateway** (the keys are stored,
+encrypted and testable, but nothing is ever charged — a fee payment with
+method `GATEWAY` is still recorded by hand, and the webhook that would
+replace that is exactly what the `(invoiceId, reference)` constraint is
+already waiting for), fee discounts/scholarships as their own entities,
+credit notes and refunds, and a platform-admin onboarding UI (schools
 are provisioned via API/script only — the edu-handoff flow above is the one
 exception, and it's self-service by design, not an admin UI).
 

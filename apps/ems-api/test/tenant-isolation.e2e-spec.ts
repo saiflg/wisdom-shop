@@ -123,12 +123,15 @@ describe("Tenant isolation (e2e)", () => {
       .send({ firstName: "Beta", lastName: "Student" })
       .expect(201);
     studentIdB = studentB.body.id;
-  });
+    // Explicit, like every other suite that provisions a school — and this
+    // one provisions two. See the note in onboarding.e2e-spec.ts: the
+    // default 60s was marginal and failed only in a full run.
+  }, 180000);
 
   afterAll(async () => {
     if (controlPrisma) await purgeFixtures().catch(() => undefined);
     if (app) await app.close();
-  });
+  }, 180000);
 
   it("never lists another school's students", async () => {
     const listA = await request(app.getHttpServer())

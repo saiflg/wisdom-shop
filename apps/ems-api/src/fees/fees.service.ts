@@ -1,0 +1,433 @@
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import type { FeeInvoiceStatus, RoleName } from "ems-tenant-client";
+import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
+import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
+import {
+  applyPayment,
+  balanceOf,
+  computeFeeTotal,
+  deriveInvoiceStatus,
+  formatFeeInvoiceNumber,
+  summariseFees,
+} from "./fees-math";
+import type {
+  CreateFeeInvoiceDto,
+  CreateFeeStructureDto,
+  GenerateInvoicesDto,
+  RecordPaymentDto,
+  UpdateFeeStructureDto,
+  UpdateFinanceSettingsDto,
+  VoidInvoiceDto,
+} from "./dto/fees.dto";
+
+/**
+ * Money is SCHOOL_ADMIN-only for this phase — teachers get no finance access
+ * at all. There is no BURSAR role yet; adding one is the natural next step
+ * and this constant is the single place that changes when it arrives.
+ */
+const FINANCE_ROLES: RoleName[] = ["SCHOOL_ADMIN"];
+
+const UNIQUE_VIOLATION = "P2002";
+
+function isFinanceStaff(viewer: AuthenticatedUser): boolean {
+  return viewer.roles.some((role) => FINANCE_ROLES.includes(role));
+}
+
+const INVOICE_INCLUDE = {
+  lines: true,
+  payments: { orderBy: { receivedAt: "desc" as const } },
+  feeStructure: { select: { id: true, name: true } },
+  studentProfile: {
+    include: { user: { select: { id: true, firstName: true, lastName: true } } },
+  },
+};
+
+@Injectable()
+export class FeesService {
+  constructor(private readonly tenantPrisma: TenantPrismaService) {}
+
+  // ---------------------------------------------------------------- settings
+
+  async getSettings() {
+    const client = await this.tenantPrisma.getClient();
+    const settings = await client.financeSettings.findFirst();
+    // Seeded at provisioning, so its absence is a broken tenant rather than
+    // a first-use case to paper over.
+    if (!settings) throw new NotFoundException("This school has no finance settings");
+    return settings;
+  }
+
+  async updateSettings(dto: UpdateFinanceSettingsDto) {
+    const client = await this.tenantPrisma.getClient();
+    const settings = await this.getSettings();
+
+    if (dto.currency && dto.currency !== settings.currency) {
+      // Changing currency once invoices exist would silently reinterpret
+      // every stored amount — 25000000 kobo is not 25000000 cents.
+      const invoiced = await client.feeInvoice.count();
+      if (invoiced > 0) {
+        throw new ConflictException(
+          "The school currency cannot be changed once invoices exist, because every stored amount is in its minor units",
+        );
+      }
+    }
+
+    return client.financeSettings.update({
+      where: { id: settings.id },
+      data: { ...(dto.currency ? { currency: dto.currency.toUpperCase() } : {}) },
+    });
+  }
+
+  // -------------------------------------------------------------- structures
+
+  async createStructure(dto: CreateFeeStructureDto) {
+    const client = await this.tenantPrisma.getClient();
+    // Validates the amounts before anything is written.
+    computeFeeTotal(dto.items);
+
+    if (dto.classId) {
+      const klass = await client.class.findFirst({ where: { id: dto.classId, deletedAt: null } });
+      if (!klass) throw new NotFoundException("No class found with that id");
+    }
+
+    try {
+      return await client.feeStructure.create({
+        data: {
+          name: dto.name,
+          academicYear: dto.academicYear,
+          term: dto.term,
+          classId: dto.classId ?? null,
+          items: { create: dto.items.map((item) => ({ label: item.label, amountCents: item.amountCents })) },
+        },
+        include: { items: true, class: { select: { id: true, name: true } } },
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === UNIQUE_VIOLATION) {
+        throw new ConflictException("A fee structure with that name already exists for that year and term");
+      }
+      throw error;
+    }
+  }
+
+  async listStructures() {
+    const client = await this.tenantPrisma.getClient();
+    return client.feeStructure.findMany({
+      where: { deletedAt: null },
+      include: { items: true, class: { select: { id: true, name: true } }, _count: { select: { invoices: true } } },
+      orderBy: [{ academicYear: "desc" }, { term: "asc" }, { name: "asc" }],
+    });
+  }
+
+  async getStructure(id: string) {
+    const client = await this.tenantPrisma.getClient();
+    const structure = await client.feeStructure.findFirst({
+      where: { id, deletedAt: null },
+      include: { items: true, class: { select: { id: true, name: true } } },
+    });
+    if (!structure) throw new NotFoundException("No fee structure found with that id");
+    return structure;
+  }
+
+  async updateStructure(id: string, dto: UpdateFeeStructureDto) {
+    const client = await this.tenantPrisma.getClient();
+    await this.getStructure(id);
+
+    if (dto.items) {
+      computeFeeTotal(dto.items);
+      // Invoices already raised keep their own line snapshot, so repricing a
+      // structure never changes what an existing family has been told to pay
+      // — the same rule as platform subscription prices.
+      await client.$transaction([
+        client.feeItem.deleteMany({ where: { feeStructureId: id } }),
+        client.feeItem.createMany({
+          data: dto.items.map((item) => ({ feeStructureId: id, label: item.label, amountCents: item.amountCents })),
+        }),
+      ]);
+    }
+
+    if (dto.name) {
+      await client.feeStructure.update({ where: { id }, data: { name: dto.name } });
+    }
+
+    return this.getStructure(id);
+  }
+
+  async deleteStructure(id: string) {
+    const client = await this.tenantPrisma.getClient();
+    await this.getStructure(id);
+    await client.feeStructure.update({ where: { id }, data: { deletedAt: new Date() } });
+    return { id, deleted: true };
+  }
+
+  // ---------------------------------------------------------------- invoices
+
+  /**
+   * Raises one invoice per eligible student for a structure.
+   *
+   * Safe to run twice. The unique index on (studentProfileId, feeStructureId)
+   * is what guarantees that, not a pre-flight check: two operators clicking
+   * at the same moment both pass any check-then-insert, and the second one
+   * loses at the database instead of charging a family twice. Duplicates are
+   * counted and reported rather than raised as an error, because "run it
+   * again after adding a student" is a normal thing for a bursar to do.
+   */
+  async generateInvoices(structureId: string, dto: GenerateInvoicesDto) {
+    const client = await this.tenantPrisma.getClient();
+    const structure = await this.getStructure(structureId);
+    const settings = await this.getSettings();
+
+    const total = computeFeeTotal(structure.items);
+    const dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+
+    const enrollments = await client.enrollment.findMany({
+      where: {
+        status: "ACTIVE",
+        ...(structure.classId ? { classId: structure.classId } : {}),
+      },
+      select: { studentProfileId: true },
+    });
+
+    // A school-wide structure can reach the same student through two active
+    // enrollments; dedupe before writing rather than relying on the index.
+    const studentIds = [...new Set(enrollments.map((e) => e.studentProfileId))];
+
+    const created: string[] = [];
+    let duplicatesSkipped = 0;
+
+    for (const studentProfileId of studentIds) {
+      try {
+        const invoice = await client.$transaction(async (tx) => {
+          const counted = await tx.financeSettings.update({
+            where: { id: settings.id },
+            data: { invoiceCounter: { increment: 1 } },
+          });
+          return tx.feeInvoice.create({
+            data: {
+              invoiceNumber: formatFeeInvoiceNumber(counted.invoiceCounter),
+              studentProfileId,
+              feeStructureId: structure.id,
+              academicYear: structure.academicYear,
+              term: structure.term,
+              currency: settings.currency,
+              totalCents: total,
+              // Raised as ISSUED, not DRAFT: generating invoices for a class
+              // is the deliberate act of billing them.
+              status: deriveInvoiceStatus(total, 0, "ISSUED"),
+              issuedAt: new Date(),
+              dueDate,
+              lines: {
+                create: structure.items.map((item) => ({ label: item.label, amountCents: item.amountCents })),
+              },
+            },
+          });
+        });
+        created.push(invoice.id);
+      } catch (error) {
+        if ((error as { code?: string }).code === UNIQUE_VIOLATION) {
+          duplicatesSkipped += 1;
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    return {
+      structureId: structure.id,
+      eligibleStudents: studentIds.length,
+      invoicesCreated: created.length,
+      duplicatesSkipped,
+    };
+  }
+
+  /** A one-off invoice not tied to a structure — a trip, a replacement book. */
+  async createInvoice(dto: CreateFeeInvoiceDto) {
+    const client = await this.tenantPrisma.getClient();
+    const settings = await this.getSettings();
+    const total = computeFeeTotal(dto.lines);
+
+    const student = await client.studentProfile.findFirst({ where: { id: dto.studentProfileId, deletedAt: null } });
+    if (!student) throw new NotFoundException("No student found with that id");
+
+    return client.$transaction(async (tx) => {
+      const counted = await tx.financeSettings.update({
+        where: { id: settings.id },
+        data: { invoiceCounter: { increment: 1 } },
+      });
+      return tx.feeInvoice.create({
+        data: {
+          invoiceNumber: formatFeeInvoiceNumber(counted.invoiceCounter),
+          studentProfileId: dto.studentProfileId,
+          academicYear: dto.academicYear,
+          term: dto.term,
+          currency: settings.currency,
+          totalCents: total,
+          status: deriveInvoiceStatus(total, 0, "ISSUED"),
+          issuedAt: new Date(),
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+          note: dto.note,
+          lines: { create: dto.lines.map((line) => ({ label: line.label, amountCents: line.amountCents })) },
+        },
+        include: INVOICE_INCLUDE,
+      });
+    });
+  }
+
+  async listInvoices(viewer: AuthenticatedUser, studentProfileId?: string) {
+    const client = await this.tenantPrisma.getClient();
+
+    let where: { studentProfileId?: string | { in: string[] } } = {};
+    if (isFinanceStaff(viewer)) {
+      if (studentProfileId) where = { studentProfileId };
+    } else {
+      // A family sees its own invoices and nothing else. Narrowed to the
+      // intersection when they also ask for a specific student, so a filter
+      // can never widen what they are allowed to see.
+      const visible = await this.visibleStudentProfileIds(viewer);
+      const ids = studentProfileId
+        ? [...visible].filter((id) => id === studentProfileId)
+        : [...visible];
+      where = { studentProfileId: { in: ids } };
+    }
+
+    const invoices = await client.feeInvoice.findMany({
+      where,
+      include: INVOICE_INCLUDE,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      invoices: invoices.map((invoice) => ({
+        ...invoice,
+        balanceCents: balanceOf(invoice.totalCents, invoice.paidCents),
+      })),
+      summary: summariseFees(invoices),
+    };
+  }
+
+  async getInvoice(id: string, viewer: AuthenticatedUser) {
+    const client = await this.tenantPrisma.getClient();
+    const invoice = await client.feeInvoice.findFirst({ where: { id }, include: INVOICE_INCLUDE });
+    if (!invoice) throw new NotFoundException("No invoice found with that id");
+
+    if (!isFinanceStaff(viewer)) {
+      const visible = await this.visibleStudentProfileIds(viewer);
+      // 404 rather than 403: "that invoice exists but isn't yours" is itself
+      // a leak about another family.
+      if (!visible.has(invoice.studentProfileId)) throw new NotFoundException("No invoice found with that id");
+    }
+
+    return { ...invoice, balanceCents: balanceOf(invoice.totalCents, invoice.paidCents) };
+  }
+
+  // ---------------------------------------------------------------- payments
+
+  /**
+   * Records money received against an invoice.
+   *
+   * The payment row and the invoice's running total move in one transaction,
+   * so a receipt can never exist without the balance that reflects it. The
+   * amount is checked by `applyPayment`, which refuses overpayment outright.
+   */
+  async recordPayment(invoiceId: string, dto: RecordPaymentDto, viewer: AuthenticatedUser) {
+    const client = await this.tenantPrisma.getClient();
+
+    const invoice = await client.feeInvoice.findFirst({ where: { id: invoiceId } });
+    if (!invoice) throw new NotFoundException("No invoice found with that id");
+
+    let outcome: { paidCents: number; status: FeeInvoiceStatus };
+    try {
+      outcome = applyPayment(invoice.totalCents, invoice.paidCents, invoice.status, dto.amountCents);
+    } catch (error) {
+      throw new BadRequestException((error as Error).message);
+    }
+
+    const actor = await client.user.findUnique({
+      where: { id: viewer.id },
+      select: { firstName: true, lastName: true },
+    });
+    const recordedByName = actor ? `${actor.firstName} ${actor.lastName}` : viewer.id;
+
+    try {
+      await client.$transaction([
+        client.feePayment.create({
+          data: {
+            invoiceId,
+            amountCents: dto.amountCents,
+            method: dto.method,
+            reference: dto.reference ?? null,
+            receivedAt: dto.receivedAt ? new Date(dto.receivedAt) : new Date(),
+            note: dto.note,
+            recordedByUserId: viewer.id,
+            recordedByName,
+          },
+        }),
+        client.feeInvoice.update({
+          where: { id: invoiceId },
+          data: { paidCents: outcome.paidCents, status: outcome.status },
+        }),
+      ]);
+    } catch (error) {
+      if ((error as { code?: string }).code === UNIQUE_VIOLATION) {
+        // The reference has already been recorded against this invoice — a
+        // replayed webhook or a double-submitted form. Nothing was written.
+        throw new ConflictException("A payment with that reference has already been recorded against this invoice");
+      }
+      throw error;
+    }
+
+    return this.getInvoice(invoiceId, viewer);
+  }
+
+  /**
+   * Voids an invoice raised in error. Deliberately not a delete: a family
+   * may already have been sent it, so it has to remain visible and explained.
+   */
+  async voidInvoice(id: string, dto: VoidInvoiceDto, viewer: AuthenticatedUser) {
+    const client = await this.tenantPrisma.getClient();
+    const invoice = await client.feeInvoice.findFirst({ where: { id } });
+    if (!invoice) throw new NotFoundException("No invoice found with that id");
+
+    if (invoice.status === "VOID") throw new ConflictException("That invoice is already void");
+    if (invoice.paidCents > 0) {
+      throw new ConflictException(
+        "That invoice has payments against it and cannot be voided; refund and reconcile it instead",
+      );
+    }
+
+    await client.feeInvoice.update({
+      where: { id },
+      data: {
+        status: "VOID",
+        voidedAt: new Date(),
+        note: invoice.note ? `${invoice.note}\nVoided: ${dto.reason}` : `Voided: ${dto.reason}`,
+      },
+    });
+
+    return this.getInvoice(id, viewer);
+  }
+
+  async summary() {
+    const client = await this.tenantPrisma.getClient();
+    const invoices = await client.feeInvoice.findMany({
+      select: { totalCents: true, paidCents: true, status: true },
+    });
+    const settings = await this.getSettings();
+    return { currency: settings.currency, ...summariseFees(invoices) };
+  }
+
+  /** Student profiles this non-staff viewer is allowed to see. */
+  private async visibleStudentProfileIds(viewer: AuthenticatedUser): Promise<Set<string>> {
+    const client = await this.tenantPrisma.getClient();
+
+    if (viewer.roles.includes("GUARDIAN")) {
+      const links = await client.guardianLink.findMany({
+        where: { guardianUserId: viewer.id },
+        select: { studentProfileId: true },
+      });
+      return new Set(links.map((link) => link.studentProfileId));
+    }
+
+    const own = await client.studentProfile.findUnique({ where: { userId: viewer.id }, select: { id: true } });
+    return new Set(own ? [own.id] : []);
+  }
+}

@@ -144,6 +144,14 @@ export class ProvisioningService {
       if (settingsCount === 0) {
         await tenantClient.curriculumSettings.create({ data: {} });
       }
+
+      // Same singleton rule as above: seeded here rather than created lazily
+      // on first read, so the finance service can assume the row exists and
+      // the invoice counter has somewhere to live from day one.
+      const financeCount = await tenantClient.financeSettings.count();
+      if (financeCount === 0) {
+        await tenantClient.financeSettings.create({ data: {} });
+      }
     } finally {
       await tenantClient.$disconnect();
     }

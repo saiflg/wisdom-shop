@@ -54,12 +54,17 @@ describe("Onboarding from a shop license (e2e)", () => {
     await app.init();
     controlPrisma = app.get(ControlPrismaService);
     await purgeFixtures();
-  });
+    // Explicit, like every other suite that provisions a school. The default
+    // 60s was silently marginal: provisioning gets slower as a full run
+    // progresses and more tenant databases accumulate on the same Postgres,
+    // so this suite passed alone and failed at the hook in the full run —
+    // which reads like a code fault and isn't one.
+  }, 180000);
 
   afterAll(async () => {
     if (controlPrisma) await purgeFixtures().catch(() => undefined);
     if (app) await app.close();
-  });
+  }, 180000);
 
   it("provisions a school from a valid handoff token and logs the new admin straight in", async () => {
     const licenseKey = `${FIXTURE_PREFIX}license-${Date.now()}`;

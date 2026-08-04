@@ -149,8 +149,8 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: "finance",
     roles: [...ADMIN_ONLY, "GUARDIAN"],
     items: [
-      { key: "nav.finance.fees" },
-      { key: "nav.finance.invoices" },
+      { key: "nav.finance.fees", href: "/fee-structures", roles: ADMIN_ONLY },
+      { key: "nav.finance.invoices", href: "/invoices" },
       { key: "nav.finance.payments" },
       { key: "nav.finance.discounts", roles: ADMIN_ONLY },
       { key: "nav.finance.scholarships", roles: ADMIN_ONLY },

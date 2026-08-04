@@ -98,6 +98,7 @@ model Class {
 
   enrollments         Enrollment[]
   attendanceRegisters AttendanceRegister[]
+  feeStructures       FeeStructure[]
 
   @@index([academicYear])
   @@map("classes")
@@ -119,6 +120,7 @@ model StudentProfile {
   enrollments       Enrollment[]
   guardianLinks     GuardianLink[]
   attendanceRecords AttendanceRecord[]
+  feeInvoices       FeeInvoice[]
 
   @@map("student_profiles")
 }
@@ -485,6 +487,168 @@ model PushGatewaySettings {
   updatedAt DateTime @updatedAt
 
   @@map("push_gateway_settings")
+}
+
+/// Singleton per school, seeded at provisioning like CurriculumSettings.
+///
+/// `invoiceCounter` lives here rather than being derived from `count()` so a
+/// number can be claimed inside the same transaction as the insert that uses
+/// it. Counting rows outside the transaction hands two simultaneous requests
+/// the same invoice number — the lesson already paid for in platform billing.
+model FinanceSettings {
+  id String @id @default(cuid())
+  /// ISO 4217. Every amount in this school's finance tables is in this
+  /// currency's minor units; there is deliberately no per-invoice currency,
+  /// because mixed-currency arithmetic across a school's ledger is a
+  /// different feature, not a free one.
+  currency       String @default("NGN")
+  invoiceCounter Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("finance_settings")
+}
+
+/// What a term costs — the template invoices are generated from.
+model FeeStructure {
+  id           String  @id @default(cuid())
+  name         String
+  academicYear String
+  term         String
+  /// Null means school-wide. A structure tied to a class only invoices the
+  /// students enrolled in it.
+  classId String?
+  class   Class?  @relation(fields: [classId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  items    FeeItem[]
+  invoices FeeInvoice[]
+
+  @@unique([name, academicYear, term])
+  @@index([academicYear])
+  @@map("fee_structures")
+}
+
+model FeeItem {
+  id             String       @id @default(cuid())
+  feeStructureId String
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+  label          String
+  /// Integer minor units. Never a float: an invoice whose lines don't sum to
+  /// its total is a wrong invoice, not a rounding curiosity.
+  amountCents Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([feeStructureId])
+  @@map("fee_items")
+}
+
+enum FeeInvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+/// What one student owes.
+model FeeInvoice {
+  id               String         @id @default(cuid())
+  invoiceNumber    String         @unique
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  /// Null for a one-off invoice raised by hand (a replacement textbook, a
+  /// trip). See the unique constraint below — the null is load-bearing.
+  feeStructureId String?
+  feeStructure   FeeStructure? @relation(fields: [feeStructureId], references: [id], onDelete: SetNull)
+
+  academicYear String
+  term         String
+  currency     String
+  /// Both integer minor units. `paidCents` is maintained as payments land so
+  /// a balance never requires summing the payment table at read time.
+  totalCents Int
+  paidCents  Int              @default(0)
+  status     FeeInvoiceStatus @default(DRAFT)
+  dueDate    DateTime?
+  issuedAt   DateTime?
+  voidedAt   DateTime?
+  note       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines    FeeInvoiceLine[]
+  payments FeePayment[]
+
+  /// Generating a class's invoices twice must not charge a family twice.
+  ///
+  /// This relies on Postgres treating NULLs as *distinct* in a unique index,
+  /// and here that behaviour is exactly what's wanted: structure-generated
+  /// invoices are held to one per student per structure, while ad-hoc
+  /// invoices (feeStructureId null) stay unlimited. Note this is the same
+  /// rule that silently broke AttendanceRegister.session — distinct NULLs are
+  /// a tool when the nulls mean "not part of this rule" and a trap when they
+  /// mean "no value yet".
+  @@unique([studentProfileId, feeStructureId])
+  @@index([studentProfileId])
+  @@index([status])
+  @@map("fee_invoices")
+}
+
+model FeeInvoiceLine {
+  id          String     @id @default(cuid())
+  invoiceId   String
+  invoice     FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  label       String
+  amountCents Int
+
+  @@index([invoiceId])
+  @@map("fee_invoice_lines")
+}
+
+enum FeePaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD
+  MOBILE_MONEY
+  GATEWAY
+  OTHER
+}
+
+/// What actually came in. Append-only: a mistaken payment is reversed with a
+/// further record, never edited away, because this is the school's answer to
+/// "we already paid".
+model FeePayment {
+  id          String           @id @default(cuid())
+  invoiceId   String
+  invoice     FeeInvoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amountCents Int
+  method      FeePaymentMethod
+  /// Bank/gateway reference. Null for cash, which is why the unique index
+  /// below tolerates many nulls but only one of any given reference.
+  reference  String?
+  receivedAt DateTime @default(now())
+  note       String?
+
+  /// Stored by value rather than as a foreign key, for the same reason as
+  /// AttendanceAmendment and SchoolLifecycleEvent: deleting a departed
+  /// bursar's account must not erase who took the money.
+  recordedByUserId String
+  recordedByName   String
+
+  createdAt DateTime @default(now())
+
+  /// A replayed gateway webhook must never credit a family twice.
+  @@unique([invoiceId, reference])
+  @@index([invoiceId])
+  @@map("fee_payments")
 }
 
 enum PaymentProvider {
