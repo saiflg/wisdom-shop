@@ -914,6 +914,18 @@ exception, and it's self-service by design, not an admin UI).
   docker run --rm -v "/c/Users/User/Desktop/wisdom-shop:/repo" -w /repo \
     node:20-alpine sh -c "corepack enable && pnpm install --lockfile-only"
   ```
+  **The regenerated lockfile does not reach the running container on its
+  own.** Compose bind-mounts only `./apps/<name>`, never the repo root, so
+  `/workspace/pnpm-lock.yaml` is whatever was baked in at image build time.
+  The symptom is confusing: the container sees the *new* `package.json` and
+  the *old* lockfile, and `--frozen-lockfile` fails complaining they disagree.
+  Either rebuild the image or copy the file in:
+  ```
+  docker cp pnpm-lock.yaml "$(docker compose ps -q ems-api):/workspace/pnpm-lock.yaml"
+  docker compose exec -T ems-api pnpm install --frozen-lockfile
+  ```
+  Keep `--frozen-lockfile` rather than reaching for `--no-frozen-lockfile`:
+  a frozen install succeeding is the proof that CI will succeed too.
 
 ## Things intentionally deferred (not bugs, just not built yet)
 
