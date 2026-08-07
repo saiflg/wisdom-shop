@@ -832,6 +832,55 @@ to hang a staff number or the bank details payroll needs.
   lone salary field would suggest payroll is half-done when none of the
   decisions behind it have been made.
 
+**Spreadsheet import and export (done).** Students, staff, parents, subjects
+and classes move in and out as `.xlsx` or `.csv`, with a blank template, a
+full export, and an upload that is checked and shown before anything is
+written.
+
+- **Import never writes on the first call.** Upload returns a per-row account
+  — creates, updates, and problems reported against *the spreadsheet's own
+  row numbers* — and committing is a separate request. A file that quietly
+  creates four hundred students or overwrites the ones already there is not
+  undoable in any way a school would recognise. The person fixing the file is
+  looking at the file, which is why row numbers count the header.
+- **A matching key is an update, not a second copy of the same person.** This
+  is what `studentCode` and `staffNumber` are for, and it is what makes
+  "export, fix it in Excel, upload again" safe rather than a way to double
+  the roster.
+- **Structural faults are all-or-nothing; bad rows are not.** A missing
+  required column means this is the wrong file, and importing the readable
+  half of the wrong file is worse than importing none of it. A single typo,
+  though, must not block four hundred correct rows — so bad rows are skipped
+  and listed.
+- **Everything is read and written as text.** `"007"` is not seven and
+  `"0123456789"` is not `123456789`. Excel dropping a leading zero silently
+  mis-identifies a child or misdirects a salary.
+- **Staff exports carry masked account numbers only** — this file is built to
+  be emailed around. Staff *import* has no account-number column and no
+  branch that writes one: bank details change one person at a time through a
+  route that validates them, not in bulk from a file that has been
+  round-tripped through email.
+- **A parent row naming an unknown child is an error, not an invitation to
+  create one.** The admission number is far likelier to be a typo than the
+  child to be missing.
+- Two real defects the tests caught. **exceljs coerces csv cells by default**,
+  so `"007"` came back as the number `7` and dates as `Date` objects — a csv
+  exported from here would not have survived being re-imported; fixed with an
+  explicit identity mapper. And **`Date.parse("2026-02-31")` does not fail**
+  in JavaScript, it rolls over to 3 March, which would have moved a child's
+  date of birth by two days with no error shown; dates now round-trip through
+  their parts.
+- One cast was kept deliberately: exceljs declares `Buffer` against the
+  pre-generic type while `@types/node` now models it as
+  `Buffer<ArrayBufferLike>`. Same object at runtime — a disagreement between
+  two type packages — so the conversion lives in one named helper rather than
+  spread across call sites.
+- Frontend notes: downloads go through `fetch` because a plain `<a href>`
+  sends no `Authorization` header, and the object URL is revoked afterwards
+  so a full roster is not held in memory for the tab's lifetime. The upload
+  deliberately sets no `Content-Type` — the browser must set it along with
+  the multipart boundary, and overriding it makes the body unparseable.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was
