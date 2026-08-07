@@ -446,6 +446,12 @@ export const en = {
   "timetable.cancel": "Cancel",
   "timetable.breakSlot": "Break",
 
+  "data.barTitle": "Many at once",
+  "data.sample": "Sample file",
+  "data.sampleHint": "An empty file with the right column headings — fill it in and upload it back.",
+  "data.uploadMany": "Upload a file",
+  "data.cancelUpload": "Close",
+
   "data.title": "Import and export",
   "data.intro":
     "Move records in and out as spreadsheets. Uploads are checked and shown to you before anything is saved.",

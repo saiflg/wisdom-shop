@@ -8,6 +8,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api";
 import { useClasses, useCreateClass } from "@/lib/use-classes";
 import { FormField } from "@/components/form-field";
+import { DataExchangeBar } from "@/components/data-exchange-bar";
 
 const createClassSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -48,6 +49,8 @@ export default function ClassesPage() {
           {showForm ? "Cancel" : "New class"}
         </button>
       </div>
+
+      <DataExchangeBar entity="classes" />
 
       {showForm && (
         <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">

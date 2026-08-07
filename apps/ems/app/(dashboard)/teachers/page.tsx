@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api";
 import { useTeachers, useCreateTeacher } from "@/lib/use-teachers";
 import { FormField } from "@/components/form-field";
+import { DataExchangeBar } from "@/components/data-exchange-bar";
 
 const createTeacherSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -51,6 +52,8 @@ export default function TeachersPage() {
           {showForm ? "Cancel" : "New teacher"}
         </button>
       </div>
+
+      <DataExchangeBar entity="staff" />
 
       {showForm && (
         <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
