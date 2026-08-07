@@ -790,6 +790,48 @@ make a timetable possible rather than merely stored.
   check meaningful — a passing `tsc` proves nothing about code that has been
   cast out of the type system.
 
+**Staff records and bank details (done).** The first step of the
+import/export and payroll work: teachers were bare `User` rows with nowhere
+to hang a staff number or the bank details payroll needs.
+
+- **`StaffProfile` is separate from `User`** because a login and an
+  employment record have different lifetimes: an account can be disabled
+  while the employment record must survive for payroll history.
+- **`staffNumber` is the natural key that makes staff import idempotent.**
+  Re-uploading a spreadsheet must update the same person rather than create a
+  second one. Unique with NULLs distinct — the third deliberate use of that
+  Postgres behaviour in this codebase — so any number of staff may have no
+  number assigned yet, which is the normal state before a school does its
+  first import. `StudentProfile.studentCode` already served this purpose, so
+  students needed nothing new.
+- **A staff bank account number is the one field here that can be used to
+  defraud someone directly.** It is encrypted with AES-256-GCM like the
+  gateway secrets, and *masked by default everywhere*. There is deliberately
+  no flag on the list or read routes to unmask it: the full value has its own
+  endpoint, so seeing it is a decision someone makes rather than a default
+  they inherit.
+- **The mask is fixed-width**, not one bullet per hidden digit. The length of
+  an account number narrows down the country and bank, and there is no reason
+  to give that away. A number of four digits or fewer masks completely —
+  "the last four" of a four-digit number is the whole number.
+- **`toMaskedBankDetails` returns a shape with no field capable of carrying
+  the full value**, so a route that forgets to mask cannot leak: there is
+  nowhere for the plaintext to go.
+- **Revealing a full number requires a reason and is logged before the value
+  is returned.** If writing the log fails, the caller does not get the
+  number — an unlogged disclosure is worse than a failed payroll run, because
+  only one of the two is recoverable. Actor and subject are stored by value,
+  like attendance amendments, so deleting an account cannot erase the record.
+- **Omitting `accountNumber` leaves it alone; sending an empty string clears
+  it.** Without that distinction, editing a job title would silently wipe
+  someone's bank details, or there would be no way to remove them at all.
+- The e2e checks the **actual database column**, not the API response — the
+  first version of that test only proved the API hides the number, which is
+  not the same as proving a database dump would not reveal it.
+- Deliberately **not** built yet: salary, pay periods, deductions and tax. A
+  lone salary field would suggest payroll is half-done when none of the
+  decisions behind it have been made.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was

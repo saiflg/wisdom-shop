@@ -28,6 +28,7 @@ import { AttendanceModule } from "./attendance/attendance.module";
 import { FeesModule } from "./fees/fees.module";
 import { GradingModule } from "./grading/grading.module";
 import { TimetableModule } from "./timetable/timetable.module";
+import { StaffModule } from "./staff/staff.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { TenantSecretsModule } from "./common/crypto/tenant-secrets.module";
 import { SettingsModule } from "./settings/settings.module";
@@ -75,6 +76,7 @@ import { SettingsModule } from "./settings/settings.module";
     FeesModule,
     GradingModule,
     TimetableModule,
+    StaffModule,
     MessagingModule,
   ],
   providers: [

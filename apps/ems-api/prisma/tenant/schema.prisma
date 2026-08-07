@@ -68,6 +68,7 @@ model User {
   attendanceTaken      AttendanceRegister[] @relation("AttendanceTakenBy")
   messagesReceived     Message[]            @relation("MessageRecipient")
   timetableEntries     TimetableEntry[]     @relation("TimetableTeacher")
+  staffProfile         StaffProfile?
 
   @@map("users")
 }
@@ -511,6 +512,86 @@ model PushGatewaySettings {
   updatedAt DateTime @updatedAt
 
   @@map("push_gateway_settings")
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  VOLUNTEER
+}
+
+/// The employment record behind a staff member's login.
+///
+/// Teachers were previously bare `User` rows, which left nowhere to record a
+/// staff number, a job title or the bank details payroll needs. Separated
+/// from `User` rather than bolted onto it because a login and an employment
+/// record have different lifetimes: an account can be disabled while the
+/// employment record must survive for payroll history.
+model StaffProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// School-issued staff number. Optional, like `StudentProfile.studentCode`,
+  /// since not every school assigns one — but it is the natural key that lets
+  /// a staff spreadsheet be re-imported as an update rather than creating
+  /// duplicate people. Unique with NULLs distinct, so any number of staff may
+  /// have none.
+  staffNumber String? @unique
+
+  jobTitle       String?
+  employmentType EmploymentType?
+  startDate      DateTime?
+  endDate        DateTime?
+
+  bankName    String?
+  /// Sort code, routing number, or the local equivalent. Not secret on its
+  /// own — it identifies a bank, not an account.
+  bankCode    String?
+  accountName String?
+  /// AES-256-GCM, same as the gateway secrets.
+  ///
+  /// Encrypted because a staff bank account number is the one field here that
+  /// can be used to defraud someone directly, and masked everywhere by
+  /// default: the API returns the last four digits unless an administrator
+  /// explicitly asks for the full value. A payroll run needs the real number,
+  /// so it can be retrieved — but that is a deliberate act, not a side effect
+  /// of listing staff.
+  accountNumberEncrypted String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("staff_profiles")
+}
+
+/// A record that someone looked at a staff member's full bank account
+/// number.
+///
+/// Masked reads are not logged — they happen constantly and reveal nothing.
+/// Only the deliberate act of unmasking is, because that is the act worth
+/// being able to account for afterwards. Actor and subject are stored by
+/// value for the same reason as attendance amendments: deleting an account
+/// must not erase the record of what its owner did.
+model BankDetailAccess {
+  id String @id @default(cuid())
+
+  staffProfileId String
+  staffName      String
+
+  actorUserId String
+  actorName   String
+  /// "payroll run", "bank rejected the payment", … supplied by the caller so
+  /// the log says why, not merely that.
+  reason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([staffProfileId])
+  @@index([createdAt])
+  @@map("bank_detail_access")
 }
 
 /// A slot in the school's day: "Period 1", "Break", "Period 2"…
