@@ -30,6 +30,7 @@ import { GradingModule } from "./grading/grading.module";
 import { TimetableModule } from "./timetable/timetable.module";
 import { StaffModule } from "./staff/staff.module";
 import { DataExchangeModule } from "./data-exchange/data-exchange.module";
+import { PdfModule } from "./pdf/pdf.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { TenantSecretsModule } from "./common/crypto/tenant-secrets.module";
 import { SettingsModule } from "./settings/settings.module";
@@ -79,6 +80,7 @@ import { SettingsModule } from "./settings/settings.module";
     TimetableModule,
     StaffModule,
     DataExchangeModule,
+    PdfModule,
     MessagingModule,
   ],
   providers: [

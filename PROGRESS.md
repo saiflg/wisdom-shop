@@ -881,6 +881,41 @@ written.
   deliberately sets no `Content-Type` — the browser must set it along with
   the multipart boundary, and overriding it makes the body unparseable.
 
+**PDF documents (done).** Report cards, class lists, fee invoices and class
+timetables, as the printable sheets a school actually hands out.
+
+- **pdfkit, not headless Chrome.** Rendering HTML to PDF properly means
+  running Chromium, which on a 3.6 GB Docker VM is this environment's worst
+  behaved operation. A pure-JS generator produces the four documents a school
+  needs without a browser anywhere near it.
+- **Pagination is a tested pure function, because silent truncation is the
+  failure mode.** A class list that quietly stops at the bottom of page one,
+  or a report card missing its last two subjects, looks entirely correct —
+  nobody notices until a parent asks why their child's best subject is
+  absent. `paginate` returns explicit row ranges per page and a test asserts,
+  across a dozen list lengths, that every row lands somewhere and no page
+  overlaps another. The first page holds fewer rows because it carries the
+  title, and getting that off by one is exactly how the last entry vanishes.
+- **Truncated text is always marked.** A name silently cut from
+  "Oluwaseun Adebayo-Williams" to "Oluwaseun Adebayo" is a different person
+  to whoever reads the sheet, so `fitText` measures in the real font and
+  appends an ellipsis.
+- **An empty list still produces a page** saying so. A zero-byte file reads
+  as a broken export, and a school will not trust the feature again.
+- **Every document reads its data through the service that already enforces
+  who may see it** — `GradingService.reportCard`, and so on. If the scoping
+  is right in JSON it is right on paper, because it is the same code.
+- **But reuse is only safe when the question is the same, and once it wasn't.**
+  The class list first borrowed `TimetableService`'s class check. That
+  service answers "may this viewer see this class's timetable", and a
+  guardian legitimately may — it is their child's week. A class *list* is a
+  different question: it is every other family's children's names and
+  admission numbers on one sheet. The e2e caught it; the class list is now
+  explicitly staff-only. Reusing a scoping rule is right when the questions
+  match and a quiet disclosure when they don't.
+- Served `inline` rather than `attachment`, so a parent checking a report
+  card on a phone gets it opened rather than dropped in a downloads folder.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import { useStudents } from "@/lib/use-students";
+import { PdfButton } from "@/components/pdf-button";
 import { formatPercent, useReportCard } from "@/lib/use-grading";
 
 const INPUT =
@@ -113,6 +114,17 @@ export default function ReportCardsPage() {
               {card.publishedAt && ` · ${new Date(card.publishedAt).toLocaleDateString()}`}
             </p>
           )}
+
+          <div className="mt-4">
+            <PdfButton
+              variant="solid"
+              label={t("pdf.reportCard")}
+              path={`/v1/pdf/report-cards/${studentProfileId}?academicYear=${encodeURIComponent(
+                academicYear,
+              )}&term=${encodeURIComponent(term)}`}
+              filename={`report-card-${term}.pdf`}
+            />
+          </div>
         </section>
       )}
     </div>

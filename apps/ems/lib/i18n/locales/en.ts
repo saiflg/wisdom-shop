@@ -446,6 +446,14 @@ export const en = {
   "timetable.cancel": "Cancel",
   "timetable.breakSlot": "Break",
 
+  "pdf.download": "PDF",
+  "pdf.preparing": "Preparing…",
+  "pdf.failed": "Couldn't produce that document.",
+  "pdf.reportCard": "Print report card",
+  "pdf.classList": "Class list PDF",
+  "pdf.timetable": "Timetable PDF",
+  "pdf.invoice": "Invoice PDF",
+
   "data.barTitle": "Many at once",
   "data.sample": "Sample file",
   "data.sampleHint": "An empty file with the right column headings — fill it in and upload it back.",

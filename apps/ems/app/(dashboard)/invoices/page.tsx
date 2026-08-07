@@ -4,6 +4,7 @@ import { useState } from "react";
 import clsx from "clsx";
 import { ApiError } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { PdfButton } from "@/components/pdf-button";
 import type { TranslationKey } from "@/lib/i18n";
 import {
   FEE_PAYMENT_METHODS,
@@ -119,7 +120,18 @@ function InvoiceCard({ invoice, open, onToggle }: { invoice: FeeInvoice; open: b
         </div>
       </button>
 
-      {open && <InvoiceDetail invoice={invoice} />}
+      {open && (
+        <>
+          <div className="mt-3">
+            <PdfButton
+              label={t("pdf.invoice")}
+              path={`/v1/pdf/invoices/${invoice.id}`}
+              filename={`invoice-${invoice.invoiceNumber}.pdf`}
+            />
+          </div>
+          <InvoiceDetail invoice={invoice} />
+        </>
+      )}
     </section>
   );
 }

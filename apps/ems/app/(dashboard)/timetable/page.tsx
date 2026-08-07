@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
 import { useClasses } from "@/lib/use-classes";
+import { PdfButton } from "@/components/pdf-button";
 import { useSubjects } from "@/lib/use-subjects";
 import { useTeachers } from "@/lib/use-teachers";
 import {
@@ -70,6 +71,21 @@ export default function TimetablePage() {
           ))}
         </select>
       </section>
+
+      {classId && (
+        <div className="flex flex-wrap gap-2">
+          <PdfButton
+            label={t("pdf.timetable")}
+            path={`/v1/pdf/classes/${classId}/timetable`}
+            filename="timetable.pdf"
+          />
+          <PdfButton
+            label={t("pdf.classList")}
+            path={`/v1/pdf/classes/${classId}/list`}
+            filename="class-list.pdf"
+          />
+        </div>
+      )}
 
       {(periods?.length ?? 0) === 0 && (
         <p className="text-sm text-slate-600 dark:text-slate-400">{t("timetable.noPeriods")}</p>
