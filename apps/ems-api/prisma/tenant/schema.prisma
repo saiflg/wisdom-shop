@@ -67,6 +67,7 @@ model User {
   createdQuizzes       Quiz[]
   attendanceTaken      AttendanceRegister[] @relation("AttendanceTakenBy")
   messagesReceived     Message[]            @relation("MessageRecipient")
+  timetableEntries     TimetableEntry[]     @relation("TimetableTeacher")
 
   @@map("users")
 }
@@ -107,6 +108,7 @@ model Class {
   feeStructures       FeeStructure[]
   assessments         Assessment[]
   termResults         TermResult[]
+  timetableEntries    TimetableEntry[]
 
   @@index([academicYear])
   @@map("classes")
@@ -227,6 +229,7 @@ model Subject {
   schemesOfWork SchemeOfWork[]
   assessments   Assessment[]
   subjectResults SubjectResult[]
+  timetableEntries TimetableEntry[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -508,6 +511,80 @@ model PushGatewaySettings {
   updatedAt DateTime @updatedAt
 
   @@map("push_gateway_settings")
+}
+
+/// A slot in the school's day: "Period 1", "Break", "Period 2"…
+///
+/// Times are minutes since midnight rather than DateTime. A period is a
+/// time-of-day that recurs, not an instant — storing it as a DateTime would
+/// drag in a date nobody means and a timezone nobody set, and 08:30 would
+/// start shifting when the clocks change.
+model TimetablePeriod {
+  id        String @id @default(cuid())
+  label     String
+  startMinute Int
+  endMinute   Int
+  /// Break and lunch occupy the day but hold no lesson.
+  isTeaching Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  entries TimetableEntry[]
+
+  @@map("timetable_periods")
+}
+
+/// Monday is 1, matching ISO-8601. Schools that teach on Saturday exist, so
+/// the week is not assumed to be five days.
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+/// One lesson: this class, this subject, this teacher, this slot.
+///
+/// Two unique constraints carry the scheduling invariants:
+///
+///   (classId, weekday, periodId)   — a class cannot be in two lessons at once
+///   (teacherUserId, weekday, periodId) — a teacher cannot be in two rooms at once
+///
+/// The second relies on Postgres treating NULLs as distinct, and here that is
+/// exactly right rather than a trap: an unassigned lesson has a null teacher,
+/// and any number of classes may have an unstaffed slot at the same time.
+/// The same NULL semantics that silently broke AttendanceRegister.session are
+/// the reason this constraint can be written at all.
+model TimetableEntry {
+  id      String  @id @default(cuid())
+  classId String
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  teacherUserId String?
+  teacher       User?   @relation("TimetableTeacher", fields: [teacherUserId], references: [id], onDelete: SetNull)
+
+  weekday  Weekday
+  periodId String
+  period   TimetablePeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  /// Free text: schools label rooms in their own way, and an enum would churn.
+  room String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([classId, weekday, periodId])
+  @@unique([teacherUserId, weekday, periodId])
+  @@index([teacherUserId])
+  @@index([periodId])
+  @@map("timetable_entries")
 }
 
 enum MessageChannel {

@@ -124,7 +124,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.academics.lessonNotes" },
       { key: "nav.academics.aiTeaching" },
       { key: "nav.academics.liveClassroom" },
-      { key: "nav.academics.timetable" },
+      { key: "nav.academics.timetable", href: "/timetable" },
       { key: "nav.academics.homework" },
       { key: "nav.academics.assignments" },
     ],

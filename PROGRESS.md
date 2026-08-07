@@ -750,6 +750,46 @@ anything. Attendance, fees and grading now reach families.
   silently never got the column. Reverted and added as its own migration.
   Never edit a migration that has been applied anywhere.
 
+**Timetable and scheduling (done).** Periods, lessons, and the two rules that
+make a timetable possible rather than merely stored.
+
+- **A class cannot be in two lessons at once; a teacher cannot be in two
+  rooms at once.** Both are checked by a pure function that names what is in
+  the way ("Mathematics with Grade 5A"), and enforced again by unique
+  indexes, which is what actually holds when two schedulers save in the same
+  second. The P2002 catch is that race arriving; rare, but a double-booked
+  teacher is the one outcome that must never happen.
+- **Postgres NULL-distinctness is used deliberately here, and it is the same
+  behaviour that silently broke `AttendanceRegister.session`.** The unique
+  index on `(teacherUserId, weekday, periodId)` only constrains real
+  teachers: a lesson with nobody assigned has a null teacher, and any number
+  of classes may sit unstaffed in the same slot — which is exactly what a
+  half-planned term looks like. Distinct NULLs are a tool when the null means
+  "this rule doesn't apply to me" and a trap when it means "no value yet".
+- **Periods are minutes since midnight, not DateTime.** A period is a
+  time-of-day that recurs, not an instant. A DateTime would drag in a date
+  nobody means and a timezone nobody set, and 08:30 would start drifting when
+  the clocks change.
+- **Touching periods are allowed, overlapping ones are not.** 09:00–09:40
+  followed by 09:40–10:20 is a school day; the comparison is strict for that
+  reason. An actual overlap makes "which lesson is this class in right now"
+  unanswerable and quietly voids the per-slot uniqueness everything else
+  relies on.
+- **The whole day is saved in one call**, because "no two periods overlap" is
+  a property of the set, not of any row. Editing one at a time would mean
+  either rejecting a legitimate intermediate state or letting the day be
+  briefly incoherent. Periods sent back with their id keep the lessons
+  already scheduled against them — renaming a period must not wipe a week.
+- An entry being edited does not clash with itself, or saving a lesson
+  without moving it would be refused.
+- Families read the timetable of a class their child is actually in and get a
+  404 for any other; the teacher staffing view is staff-only.
+- **A type cast nearly hid a real defect.** `useReplacePeriods` had a
+  malformed parameter type that typechecked only because the call site said
+  `as never`. Removing the cast and naming the type properly is what made the
+  check meaningful — a passing `tsc` proves nothing about code that has been
+  cast out of the type system.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was
