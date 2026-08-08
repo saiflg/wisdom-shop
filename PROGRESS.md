@@ -1094,6 +1094,54 @@ time, with diagrams, and it can be put down and picked back up.
   advancing a lesson costs the same as asking something and nobody types
   anything to do it.
 
+**Accessibility for students with disabilities (done).** A student who cannot
+read small text, cannot see a diagram, or needs an idea broken into smaller
+pieces should not have to ask for that every time — they should be taught
+that way by default.
+
+- **One line governs the whole area: the profile changes *how* a lesson is
+  taught, and never says *why*.** A school may record that a student uses a
+  screen reader or carries a diagnosis; that stays in the tenant database.
+  What reaches the AI provider is the accommodation alone — "use short
+  sentences, define new terms" — with no hint of who needs it or what
+  prompted it. Sending "this student is dyslexic" to an external API would be
+  disclosing a child's health data to a processor nobody consented to, logged
+  on someone else's infrastructure. There is a unit test asserting the note
+  never appears in the instructions, and an e2e asserting it never appears in
+  a real prompt.
+- **The note is staff-only in both directions.** A student reading a clinical
+  note about themselves in a settings screen is a harm; a guardian reading
+  one written for staff is a different harm. The column is simply never
+  selected for anyone else rather than filtered afterwards, and a student
+  sending `notes` to their own route has it dropped.
+- **Students set their own preferences.** Needing larger text should not mean
+  asking a teacher and waiting. Saved on change rather than behind a Save
+  button, because hunting for a button in text you are struggling to read is
+  the problem restated.
+- **Display preferences are applied at the layout, not per page.** Attributes
+  on `<html>` plus attribute selectors in globals.css, so larger text reaches
+  the timetable and the results page and every page not written yet.
+  Confirmed in a browser: 16px to 20px root, surviving a full page load and
+  a navigation.
+- **A diagram now carries its own words.** SVG already has `<title>` and
+  `<desc>`, both already on the sanitiser's allowlist; they are lifted into
+  `diagramAlt` and used as the figure's accessible name *and* shown as a
+  caption. A picture with no text alternative is simply absent for a student
+  using a screen reader.
+- **Read aloud uses the browser's own speech synthesiser** — no API, no cost,
+  no audio leaving the device, works offline, and hidden entirely where
+  unsupported rather than offered as a button that does nothing.
+- **An uncaptioned demonstration is withheld** from a student who needs
+  captions, rather than offered. `hasCaptions` defaults to false because the
+  honest default for "we have not checked" is not to offer it. Offering a
+  video a student cannot follow presents a choice that is not theirs to make.
+- Plus the ordinary things that are easy to skip: a skip-to-content link,
+  a focus ring on every interactive element, `role="log" aria-live="polite"`
+  on the transcript so a new lesson is announced at a natural pause rather
+  than cutting the reader off, `prefers-reduced-motion` honoured alongside
+  the student's own saved choice, and status messages announced rather than
+  only shown.
+
 Two things this cost that are worth not re-learning. `z.coerce.number()` on
 an untouched optional number input receives `""`, coerces it to `0`, and then
 fails `.min(1)` — so an optional field rejects being left alone.

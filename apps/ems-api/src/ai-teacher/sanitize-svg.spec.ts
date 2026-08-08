@@ -1,4 +1,4 @@
-import { sanitizeSvg, splitReplyAndDiagram } from "./sanitize-svg";
+import { describeSvg, sanitizeSvg, splitReplyAndDiagram } from "./sanitize-svg";
 
 const SAFE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40"><rect x="0" y="0" width="50" height="20" fill="#4f46e5"/><text x="10" y="35" font-size="8" fill="#111">1/2</text></svg>`;
 
@@ -112,6 +112,7 @@ describe("splitReplyAndDiagram", () => {
     expect(splitReplyAndDiagram("A denominator is the number underneath.")).toEqual({
       text: "A denominator is the number underneath.",
       diagram: null,
+      diagramAlt: null,
     });
   });
 
@@ -146,5 +147,44 @@ describe("splitReplyAndDiagram", () => {
     const result = splitReplyAndDiagram("Here is a half. <svg viewBox=\"0 0 1 1\">");
     expect(result.diagram).toBeNull();
     expect(result.text).toContain("Here is a half.");
+  });
+
+  it("lifts the diagram's own words out as its description", () => {
+    const described = `<svg viewBox="0 0 100 20"><title>One half</title><desc>A bar split in two with the left part shaded</desc><rect x="0" y="0" width="50" height="20" fill="#4f46e5"/></svg>`;
+    const result = splitReplyAndDiagram(`Here you go.\n${described}`);
+    expect(result.diagramAlt).toBe("One half. A bar split in two with the left part shaded");
+  });
+
+  it("has no description when the diagram has no words", () => {
+    // Which is the point: a picture with nothing to read is absent for a
+    // student using a screen reader, and this makes that visible.
+    expect(splitReplyAndDiagram(`x\n${SAFE}`).diagramAlt).toBeNull();
+  });
+
+  it("has no description when there is no diagram", () => {
+    expect(splitReplyAndDiagram("Just words.").diagramAlt).toBeNull();
+  });
+});
+
+describe("describeSvg", () => {
+  it("reads a title on its own", () => {
+    expect(describeSvg(`<svg viewBox="0 0 1 1"><title>A number line</title></svg>`)).toBe("A number line");
+  });
+
+  it("reads a desc on its own", () => {
+    expect(describeSvg(`<svg viewBox="0 0 1 1"><desc>Ten equal steps</desc></svg>`)).toBe("Ten equal steps");
+  });
+
+  it("does not repeat itself when title and desc are the same", () => {
+    expect(describeSvg(`<svg viewBox="0 0 1 1"><title>Halves</title><desc>Halves</desc></svg>`)).toBe("Halves");
+  });
+
+  it("collapses whitespace a model spread across lines", () => {
+    expect(describeSvg(`<svg viewBox="0 0 1 1"><title>\n  A  number\n  line\n</title></svg>`)).toBe("A number line");
+  });
+
+  it("returns null when there is nothing to read", () => {
+    expect(describeSvg(`<svg viewBox="0 0 1 1"><rect x="0"/></svg>`)).toBeNull();
+    expect(describeSvg(`<svg viewBox="0 0 1 1"><title>   </title></svg>`)).toBeNull();
   });
 });

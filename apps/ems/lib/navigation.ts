@@ -52,6 +52,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.dashboard.overview", href: "/dashboard" },
       { key: "nav.dashboard.analytics" },
       { key: "nav.dashboard.notifications" },
+      // Here rather than under Settings, which is admin-only: a student who
+      // needs larger text must be able to reach this themselves, and every
+      // role sees this group.
+      { key: "nav.dashboard.accessibility", href: "/accessibility" },
     ],
   },
   {

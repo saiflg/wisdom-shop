@@ -9,3 +9,87 @@
 body {
   @apply bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100;
 }
+
+/* ── Accessibility preferences ──────────────────────────────────────────
+   Applied by components/accessibility-preferences.tsx, which sets these
+   attributes on <html> from the signed-in student's saved profile. Written
+   as attribute selectors on the root rather than classes on components so
+   they reach every page, including ones not written yet. */
+
+/* Scaling rem rather than setting sizes individually: everything in this
+   app is sized in rem, so one number moves the whole interface and nothing
+   goes out of proportion. */
+html[data-large-text] {
+  font-size: 125%;
+}
+
+/* A typeface with more distinguishable letterforms. No web font is
+   downloaded — asking a student on a slow connection to fetch a font before
+   they can read is its own barrier — so this leans on faces already present
+   and, failing those, a wider-spaced fallback. */
+html[data-dyslexia-font] body {
+  font-family: "OpenDyslexic", "Comic Sans MS", "Trebuchet MS", Verdana, sans-serif;
+  letter-spacing: 0.02em;
+  word-spacing: 0.08em;
+  line-height: 1.7;
+}
+
+/* Stronger borders and text, since the default palette is tuned for
+   comfort rather than for maximum separation. */
+html[data-high-contrast] body {
+  @apply bg-white text-black dark:bg-black dark:text-white;
+}
+
+html[data-high-contrast] :is(a, button):focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+
+html[data-high-contrast] [class*="text-slate-5"],
+html[data-high-contrast] [class*="text-slate-4"],
+html[data-high-contrast] [class*="text-slate-6"] {
+  @apply text-slate-900 dark:text-slate-100;
+}
+
+html[data-high-contrast] [class*="border-slate-"] {
+  @apply border-slate-900 dark:border-slate-100;
+}
+
+/* Honour the student's saved choice as well as the operating system's, since
+   a shared school device may not be set up for them. */
+html[data-reduce-motion] *,
+html[data-reduce-motion] *::before,
+html[data-reduce-motion] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Every interactive element must show where the keyboard is. A student who
+   cannot use a mouse navigates entirely by this ring. */
+:is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid theme("colors.brand.500");
+  outline-offset: 2px;
+}
+
+/* Visible only once focused: the first thing a keyboard or screen-reader
+   user hits, so they can skip the sidebar on every page. */
+.skip-link {
+  @apply sr-only;
+}
+
+.skip-link:focus {
+  @apply not-sr-only fixed left-4 top-4 z-50 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white;
+}

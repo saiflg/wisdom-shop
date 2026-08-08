@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 import type { LessonResourceKind } from "ems-tenant-client";
 
 export class CreateLessonResourceDto {
@@ -34,4 +34,13 @@ export class CreateLessonResourceDto {
   @IsString()
   @MaxLength(300)
   keywords?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "Whether this demonstration is captioned. Defaults to false: the honest default for 'we haven't " +
+      "checked' is to withhold it from a student who needs captions.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  hasCaptions?: boolean;
 }

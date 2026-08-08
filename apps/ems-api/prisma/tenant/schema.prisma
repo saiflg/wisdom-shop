@@ -72,6 +72,8 @@ model User {
   staffProfile         StaffProfile?
   tutorSessions        TutorSession[]       @relation("TutorSessionStartedBy")
   lessonResources      LessonResource[]     @relation("LessonResourceAddedBy")
+  accessibilityProfile AccessibilityProfile?
+  accessibilityEdits   AccessibilityProfile[] @relation("AccessibilityProfileUpdatedBy")
 
   @@map("users")
 }
@@ -1306,6 +1308,14 @@ model TutorTurn {
   /// rendered in a child's browser, so it is untrusted input.
   diagram String?
 
+  /// What the diagram shows, in words.
+  ///
+  /// Lifted from the diagram's own `<title>`/`<desc>` when it has them. A
+  /// picture with no text alternative is simply absent for a student using a
+  /// screen reader, which is the difference between a lesson they can take
+  /// and one they cannot.
+  diagramAlt String?
+
   /// Which lesson of the course this turn belongs to, for AUTO classes.
   /// Null for questions, which is how a question asked mid-class is
   /// distinguished from the teaching itself.
@@ -1316,6 +1326,62 @@ model TutorTurn {
   @@unique([sessionId, sequence])
   @@index([sessionId])
   @@map("tutor_turns")
+}
+
+// ── Accessibility ────────────────────────────────────────────────────────
+// A student who cannot read small text, cannot see a diagram, or needs an
+// idea broken into smaller pieces is not a student who should be taught
+// differently on request — they should be taught that way by default, every
+// time, without having to ask again.
+//
+// One line governs this whole area: the profile shapes *how* a lesson is
+// taught, and the note recording *why* never leaves this database. Neutral
+// instructions go to the AI provider; a child's diagnosis does not.
+
+enum ReadingSupport {
+  NONE
+  /// Short sentences, everyday words, new terms defined on first use.
+  SIMPLIFIED
+  /// One idea at a time, with a check for understanding before moving on.
+  STEP_BY_STEP
+}
+
+model AccessibilityProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Display preferences, applied across the whole portal rather than only
+  /// in the AI Teacher: a student who needs larger text needs it on the
+  /// timetable too.
+  largeText    Boolean @default(false)
+  highContrast Boolean @default(false)
+  dyslexiaFont Boolean @default(false)
+  reduceMotion Boolean @default(false)
+
+  readingSupport ReadingSupport @default(NONE)
+
+  /// Describe every diagram in words as well as drawing it. A screen-reader
+  /// user needs this; a sighted student loses nothing by having it.
+  describeVisuals Boolean @default(false)
+
+  /// Withhold demonstrations that are not known to be captioned, rather than
+  /// offering a video this student cannot follow.
+  requireCaptions Boolean @default(false)
+
+  /// Staff-only, both to read and to write, and never sent to the AI
+  /// provider. This is where "uses a screen reader" or a diagnosis would be
+  /// written down, which makes it the most sensitive column in the tenant
+  /// schema — see accessibility.service.ts.
+  notes String?
+
+  updatedByUserId String?
+  updatedByUser   User?   @relation("AccessibilityProfileUpdatedBy", fields: [updatedByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("accessibility_profiles")
 }
 
 enum LessonResourceKind {
@@ -1343,6 +1409,13 @@ model LessonResource {
   /// Deliberately not a foreign key to a lesson: the course is generated and
   /// its lessons have no stable ids to point at.
   keywords  String?
+
+  /// Whether this demonstration is captioned.
+  ///
+  /// Defaults to false and must be asserted by the person adding it, because
+  /// the honest default for "we do not know" is "do not offer this to a
+  /// student who needs captions".
+  hasCaptions Boolean @default(false)
 
   addedByUserId String?
   addedByUser   User?   @relation("LessonResourceAddedBy", fields: [addedByUserId], references: [id])

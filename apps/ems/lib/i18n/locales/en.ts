@@ -59,6 +59,7 @@ export const en = {
   "nav.dashboard.overview": "Overview",
   "nav.dashboard.analytics": "Analytics",
   "nav.dashboard.notifications": "Notifications",
+  "nav.dashboard.accessibility": "Accessibility",
 
   // ── Navigation: Students ───────────────────────────────────────────
   "nav.students.dashboard": "Student dashboard",

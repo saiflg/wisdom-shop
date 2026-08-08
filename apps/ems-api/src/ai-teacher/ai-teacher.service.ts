@@ -3,6 +3,7 @@ import type { RoleName, TutorTurnRole } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { CurriculumSettingsService } from "@/curriculum-settings/curriculum-settings.service";
+import { AccessibilityService } from "@/accessibility/accessibility.service";
 import { AiService } from "@/ai/ai.service";
 import {
   buildCoursePrompt,
@@ -45,6 +46,7 @@ export class AiTeacherService {
   constructor(
     private readonly tenantPrisma: TenantPrismaService,
     private readonly curriculumSettings: CurriculumSettingsService,
+    private readonly accessibility: AccessibilityService,
     private readonly ai: AiService,
   ) {}
 
@@ -242,10 +244,19 @@ export class AiTeacherService {
 
     // Demonstrations for the lesson about to be taught, offered rather than
     // forced: the student chooses whether to watch before carrying on.
+    //
+    // A student who needs captions is shown only captioned ones. Offering a
+    // video they cannot follow is worse than offering nothing: it presents a
+    // choice that is not actually theirs to make.
+    const needs = await this.accessibility.needsFor(session.startedByUserId);
     const resources = upcoming
       ? matchResources(
           await client.lessonResource.findMany({
-            where: { subjectId: session.subjectId, deletedAt: null },
+            where: {
+              subjectId: session.subjectId,
+              deletedAt: null,
+              ...(needs?.requireCaptions ? { hasCaptions: true } : {}),
+            },
             orderBy: { createdAt: "asc" },
           }),
           upcoming.title,
@@ -352,7 +363,7 @@ export class AiTeacherService {
     // The diagram is model-written markup bound for a child's browser, so it
     // is sanitised before it is stored, not on the way out. Anything that
     // fails is dropped and the lesson text kept.
-    const { text, diagram } = splitReplyAndDiagram(reply);
+    const { text, diagram, diagramAlt } = splitReplyAndDiagram(reply);
 
     const answer = await client.tutorTurn.create({
       data: {
@@ -361,6 +372,7 @@ export class AiTeacherService {
         role: "TUTOR" as TutorTurnRole,
         content: text || reply.trim(),
         diagram,
+        diagramAlt,
         lessonIndex: input.lessonIndex,
       },
     });
@@ -370,12 +382,17 @@ export class AiTeacherService {
   }
 
   private async contextFor(session: {
+    startedByUserId: string;
     subject: { name: string; gradeLevel: string | null };
     topic: string;
     weekNumber: number | null;
     schemeOfWork: { content: unknown } | null;
   }): Promise<TutorContext> {
     const settings = await this.curriculumSettings.get();
+    // Only the accommodation travels — `needsFor` never selects the note
+    // saying why it is needed. See accessibility-prompt.ts.
+    const accessibility = await this.accessibility.needsFor(session.startedByUserId);
+
     return {
       subjectName: session.subject.name,
       gradeLevel: session.subject.gradeLevel,
@@ -383,6 +400,7 @@ export class AiTeacherService {
       objectives: this.weekObjectives(session.schemeOfWork?.content, session.weekNumber),
       country: settings.country,
       curriculumStandard: settings.curriculumStandard,
+      accessibility,
     };
   }
 

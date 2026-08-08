@@ -153,7 +153,15 @@ export default function TutorLessonPage() {
         </p>
       )}
 
-      <div className="flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+      {/* Polite rather than assertive: a new lesson should be announced when
+          the screen reader reaches a natural pause, not cut the student off
+          mid-word. */}
+      <div
+        className="flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+        role="log"
+        aria-live="polite"
+        aria-label="Lesson transcript"
+      >
         {session.turns?.length === 0 && (
           <p className="py-8 text-center text-sm text-slate-500">
             {!canAct
@@ -250,6 +258,7 @@ function Turn({ turn }: { turn: TutorTurn }) {
     return (
       <div className="flex justify-end">
         <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-brand-600 px-4 py-2.5 text-sm text-white">
+          <span className="sr-only">You asked: </span>
           {turn.content}
         </div>
       </div>
@@ -259,19 +268,79 @@ function Turn({ turn }: { turn: TutorTurn }) {
   return (
     <div className="flex justify-start">
       <div className="max-w-[85%] space-y-3 rounded-2xl rounded-bl-sm bg-slate-100 px-4 py-2.5 dark:bg-slate-800">
+        <span className="sr-only">Teacher: </span>
         <p className="whitespace-pre-wrap text-sm">{turn.content}</p>
+
         {turn.diagram && (
-          // Sanitised server-side before it was ever stored — see
-          // sanitize-svg.ts. Rendering it here is the only way to show a
-          // diagram inline; the safety lives at the point of storage, so a
-          // diagram that reached the database is one that passed.
-          <div
-            className="overflow-x-auto rounded-lg bg-white p-3 dark:bg-slate-900 [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-w-md"
-            dangerouslySetInnerHTML={{ __html: turn.diagram }}
-          />
+          <figure>
+            {/* Sanitised server-side before it was ever stored — see
+                sanitize-svg.ts. The safety lives at the point of storage, so
+                a diagram that reached the database is one that passed. */}
+            <div
+              role="img"
+              aria-label={turn.diagramAlt ?? "Diagram"}
+              className="overflow-x-auto rounded-lg bg-white p-3 dark:bg-slate-900 [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-w-md"
+              dangerouslySetInnerHTML={{ __html: turn.diagram }}
+            />
+            {/* Shown, not only announced: a description written for a screen
+                reader is just as useful to a student who finds the picture
+                hard to interpret. */}
+            {turn.diagramAlt && (
+              <figcaption className="mt-1.5 text-xs text-slate-500">{turn.diagramAlt}</figcaption>
+            )}
+          </figure>
         )}
+
+        <ReadAloud text={[turn.content, turn.diagramAlt].filter(Boolean).join(". ")} />
       </div>
     </div>
+  );
+}
+
+/**
+ * Reads a lesson out.
+ *
+ * The browser's own speech synthesiser: no API, no cost, no audio leaving the
+ * device, and it works offline. Hidden entirely where it is unsupported
+ * rather than offering a button that does nothing.
+ */
+function ReadAloud({ text }: { text: string }) {
+  const [speaking, setSpeaking] = useState(false);
+  const [supported, setSupported] = useState(false);
+
+  useEffect(() => {
+    setSupported(typeof window !== "undefined" && "speechSynthesis" in window);
+    // Speech carries on after the component unmounts, so a student who
+    // navigates away mid-sentence is not followed around by it.
+    return () => window.speechSynthesis?.cancel();
+  }, []);
+
+  if (!supported || !text) return null;
+
+  const toggle = () => {
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.95;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className="text-xs font-semibold text-brand-600 hover:underline"
+      aria-label={speaking ? "Stop reading this lesson aloud" : "Read this lesson aloud"}
+    >
+      {speaking ? "◼ Stop reading" : "▶ Read aloud"}
+    </button>
   );
 }
 

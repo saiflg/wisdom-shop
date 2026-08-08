@@ -24,6 +24,7 @@ import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
 import { AiTeacherModule } from "./ai-teacher/ai-teacher.module";
+import { AccessibilityModule } from "./accessibility/accessibility.module";
 import { BillingModule } from "./billing/billing.module";
 import { AttendanceModule } from "./attendance/attendance.module";
 import { FeesModule } from "./fees/fees.module";
@@ -73,6 +74,7 @@ import { SettingsModule } from "./settings/settings.module";
     LessonPlansModule,
     QuizzesModule,
     AiTeacherModule,
+    AccessibilityModule,
     TenantSecretsModule,
     SettingsModule,
     BillingModule,

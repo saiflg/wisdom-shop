@@ -210,12 +210,16 @@ function checkAttributes(raw: string): boolean {
  * for no benefit. Anything that fails to sanitise is discarded and the prose
  * is kept — a lesson without a picture is still a lesson.
  */
-export function splitReplyAndDiagram(reply: string): { text: string; diagram: string | null } {
+export function splitReplyAndDiagram(reply: string): {
+  text: string;
+  diagram: string | null;
+  diagramAlt: string | null;
+} {
   const start = reply.search(/<svg[\s>]/i);
-  if (start === -1) return { text: reply.trim(), diagram: null };
+  if (start === -1) return { text: reply.trim(), diagram: null, diagramAlt: null };
 
   const endMarker = reply.toLowerCase().lastIndexOf("</svg>");
-  if (endMarker === -1) return { text: reply.trim(), diagram: null };
+  if (endMarker === -1) return { text: reply.trim(), diagram: null, diagramAlt: null };
 
   const candidate = reply.slice(start, endMarker + "</svg>".length);
   const text = (reply.slice(0, start) + reply.slice(endMarker + "</svg>".length))
@@ -224,5 +228,36 @@ export function splitReplyAndDiagram(reply: string): { text: string; diagram: st
     .replace(/```(?:svg|xml|html)?/gi, "")
     .trim();
 
-  return { text, diagram: sanitizeSvg(candidate) };
+  const diagram = sanitizeSvg(candidate);
+  return { text, diagram, diagramAlt: diagram ? describeSvg(diagram) : null };
+}
+
+/**
+ * The diagram's own words, for a student who cannot see it.
+ *
+ * SVG already has the right places for this — `<title>` is the short name and
+ * `<desc>` the longer explanation — and both are on the sanitiser's allowlist
+ * precisely so they survive. Pulled out into its own column rather than left
+ * inside the markup because a screen reader's support for `<desc>` on inline
+ * SVG is inconsistent, and because a diagram nobody can describe should be
+ * visibly missing its description rather than quietly inaccessible.
+ */
+export function describeSvg(svg: string): string | null {
+  const title = firstTagText(svg, "title");
+  const description = firstTagText(svg, "desc");
+
+  const combined = [title, description]
+    .filter((part): part is string => Boolean(part))
+    // A model that repeats the title as the description should not produce
+    // "Fractions. Fractions."
+    .filter((part, index, all) => all.indexOf(part) === index)
+    .join(". ");
+
+  return combined.length > 0 ? combined : null;
+}
+
+function firstTagText(svg: string, tag: "title" | "desc"): string | null {
+  const match = new RegExp(`<${tag}[^>]*>([^<]*)</${tag}\\s*>`, "i").exec(svg);
+  const text = match?.[1]?.replace(/\s+/g, " ").trim();
+  return text && text.length > 0 ? text.replace(/\.$/, "") : null;
 }

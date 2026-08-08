@@ -7,6 +7,8 @@
  * protect a child live, so it deserves tests that read like requirements.
  */
 
+import { accessibilitySection, type AccessibilityNeeds } from "./accessibility-prompt";
+
 export interface TutorContext {
   subjectName: string;
   gradeLevel: string | null;
@@ -15,12 +17,19 @@ export interface TutorContext {
   objectives?: string[];
   country?: string | null;
   curriculumStandard?: string | null;
+  /**
+   * How this student is taught. Carries the accommodation only — never the
+   * note saying why it is needed. See accessibility-prompt.ts.
+   */
+  accessibility?: AccessibilityNeeds | null;
 }
 
 export interface TranscriptTurn {
   role: "STUDENT" | "TUTOR";
   content: string;
 }
+
+export type { AccessibilityNeeds };
 
 /**
  * How much of the conversation is replayed to the provider.
@@ -97,6 +106,9 @@ export function buildTutorPrompt(
     "- If the student says anything suggesting they are unsafe, being hurt, or in distress, do not counsel them: tell them warmly to speak to their teacher or another trusted adult straight away, and say nothing else on the subject.",
   );
   lines.push("- Never claim to be a human being.");
+
+  const accessibility = accessibilitySection(context.accessibility);
+  if (accessibility) lines.push(accessibility);
 
   const trimmed = trimTranscript(transcript);
   if (trimmed.length > 0) {
@@ -215,6 +227,9 @@ export function buildLessonPrompt(
     "- If the student says anything suggesting they are unsafe, being hurt, or in distress, do not counsel them: tell them warmly to speak to their teacher or another trusted adult straight away, and say nothing else on the subject.",
   );
   lines.push("- Never claim to be a human being.");
+
+  const accessibility = accessibilitySection(context.accessibility);
+  if (accessibility) lines.push(accessibility);
 
   const trimmed = trimTranscript(transcript);
   if (trimmed.length > 0) {

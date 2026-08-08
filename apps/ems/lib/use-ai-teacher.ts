@@ -15,6 +15,8 @@ export interface TutorTurn {
   content: string;
   /** Sanitised server-side before storage — see sanitize-svg.ts. */
   diagram: string | null;
+  /** What the diagram shows, in words. Null when it carried none. */
+  diagramAlt: string | null;
   lessonIndex: number | null;
   createdAt: string;
 }

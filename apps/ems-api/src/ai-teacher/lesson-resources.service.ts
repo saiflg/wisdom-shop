@@ -33,6 +33,7 @@ export class LessonResourcesService {
         url,
         kind: dto.kind ?? "VIDEO",
         keywords: dto.keywords?.trim() || null,
+        hasCaptions: dto.hasCaptions ?? false,
         addedByUserId: viewer.id,
       },
     });
