@@ -1,4 +1,4 @@
-import type { ImportSpec, RowPlan } from "./import-engine";
+import { compositeKey, type ImportSpec, type RowPlan } from "./import-engine";
 import type { ExportColumn } from "./workbook";
 
 /**
@@ -35,6 +35,11 @@ type TenantClient = {
   guardianLink: AnyDelegate;
   subject: AnyDelegate;
   class: AnyDelegate;
+  timetableEntry: AnyDelegate;
+  timetablePeriod: AnyDelegate;
+  assessment: AnyDelegate;
+  mark: AnyDelegate;
+  schemeOfWork: AnyDelegate;
 };
 
 type AnyDelegate = {
@@ -428,7 +433,381 @@ const classes: EntityDefinition = {
   },
 };
 
-export const ENTITIES: EntityDefinition[] = [students, staff, parents, subjects, classes];
+// ─────────────────────────────────────────────────────────── timetable
+//
+// The first entity whose identity is a *slot* rather than a person: a lesson
+// is identified by class, day and period together. One row per lesson rather
+// than a week-shaped grid, because a grid's meaning lives in its column
+// positions and a spreadsheet with a column inserted would silently move
+// every lesson along by one.
+
+const WEEKDAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;
+
+const timetable: EntityDefinition = {
+  name: "timetable",
+  label: "Timetable",
+  columns: [
+    { header: "Class", field: "className" },
+    { header: "Day", field: "day" },
+    { header: "Period", field: "period" },
+    { header: "Subject", field: "subject" },
+    { header: "Teacher email", field: "teacherEmail" },
+  ],
+  spec: {
+    keyField: "className",
+    additionalKeyFields: ["day", "period"],
+    columns: [
+      { field: "className", headers: ["Class"], required: true },
+      { field: "day", headers: ["Day"], required: true, kind: "choice", choices: WEEKDAYS },
+      { field: "period", headers: ["Period"], required: true },
+      { field: "subject", headers: ["Subject"], required: true },
+      // Email rather than a name: two teachers can share a name, and an
+      // import that guesses between them puts someone in the wrong room.
+      { field: "teacherEmail", headers: ["Teacher email", "Teacher"] },
+    ],
+  },
+
+  async loadExistingKeys(client) {
+    const rows = await client.timetableEntry.findMany({
+      include: { class: true, period: true },
+    });
+    return new Set(
+      rows.map((row) =>
+        compositeKey([
+          text((row.class as Record<string, unknown>)?.name),
+          text(row.weekday),
+          text((row.period as Record<string, unknown>)?.label),
+        ]),
+      ),
+    );
+  },
+
+  async exportRows(client) {
+    const rows = await client.timetableEntry.findMany({
+      include: { class: true, subject: true, period: true, teacher: true },
+      orderBy: [{ weekday: "asc" }],
+    });
+    return rows.map((row) => ({
+      className: text((row.class as Record<string, unknown>)?.name),
+      day: text(row.weekday),
+      period: text((row.period as Record<string, unknown>)?.label),
+      subject: text((row.subject as Record<string, unknown>)?.name),
+      teacherEmail: text((row.teacher as Record<string, unknown>)?.email),
+    }));
+  },
+
+  async apply(client, row) {
+    const { className, day, period, subject, teacherEmail } = row.values;
+
+    const klass = await client.class.findFirst({ where: { name: className, deletedAt: null } });
+    if (!klass) throw new Error(`No class called "${className}"`);
+
+    const subjectRecord = await client.subject.findFirst({ where: { name: subject, deletedAt: null } });
+    if (!subjectRecord) throw new Error(`No subject called "${subject}"`);
+
+    const teacher = teacherEmail
+      ? await client.user.findFirst({ where: { email: teacherEmail, deletedAt: null } })
+      : null;
+    if (teacherEmail && !teacher) throw new Error(`No staff member with the email "${teacherEmail}"`);
+
+    const data = {
+      subjectId: subjectRecord.id as string,
+      teacherUserId: (teacher?.id as string) ?? null,
+    };
+
+    // Matched through the period *relation*, on the same three things the
+    // key is built from, rather than by resolving a period id first. Nothing
+    // makes a period's label unique, so resolving "Period 1" to an id picks
+    // one arbitrarily — and if the lesson already in that slot points at the
+    // other one, the update silently becomes a second lesson in the same
+    // period. Which is exactly what happened the first time this ran.
+    const existing = await client.timetableEntry.findFirst({
+      where: { classId: klass.id as string, weekday: day, period: { label: period } },
+    });
+
+    if (existing) {
+      await client.timetableEntry.update({ where: { id: existing.id as string }, data });
+      return;
+    }
+
+    const candidates = await client.timetablePeriod.findMany({ where: { label: period } });
+    if (candidates.length === 0) {
+      throw new Error(`No period called "${period}" — set the school day up first`);
+    }
+    if (candidates.length > 1) {
+      // Refused rather than guessed: two periods share this name, and picking
+      // one would put the lesson at a time nobody chose.
+      throw new Error(
+        `There is more than one period called "${period}". Rename them so each is distinct, then import again.`,
+      );
+    }
+
+    await client.timetableEntry.create({
+      data: {
+        classId: klass.id as string,
+        weekday: day,
+        periodId: candidates[0].id as string,
+        ...data,
+      },
+    });
+  },
+};
+
+// ───────────────────────────────────────────────────────────── results
+//
+// Long format — one row per mark — rather than a wide student-by-subject
+// grid. A wide grid cannot say which assessment a column is without encoding
+// it in the header, and hand-edited headers are exactly what goes wrong.
+
+const results: EntityDefinition = {
+  name: "results",
+  label: "Results and marks",
+  columns: [
+    { header: "Admission number", field: "studentCode" },
+    { header: "Assessment", field: "assessment" },
+    { header: "Score", field: "score" },
+    { header: "Out of", field: "maxScore" },
+  ],
+  spec: {
+    keyField: "studentCode",
+    additionalKeyFields: ["assessment"],
+    columns: [
+      { field: "studentCode", headers: ["Admission number", "studentCode"], required: true },
+      { field: "assessment", headers: ["Assessment"], required: true },
+      {
+        field: "score",
+        headers: ["Score", "Mark"],
+        required: true,
+        kind: "number",
+        // Caught here rather than at write time so it is reported against the
+        // row number, next to the other problems in the same file.
+        validate: (value) => (Number(value) < 0 ? "Score cannot be negative" : null),
+      },
+      { field: "maxScore", headers: ["Out of", "Maximum"], kind: "number" },
+    ],
+  },
+
+  async loadExistingKeys(client) {
+    const rows = await client.mark.findMany({
+      include: { studentProfile: true, assessment: true },
+    });
+    return new Set(
+      rows.map((row) =>
+        compositeKey([
+          text((row.studentProfile as Record<string, unknown>)?.studentCode),
+          text((row.assessment as Record<string, unknown>)?.title),
+        ]),
+      ),
+    );
+  },
+
+  async exportRows(client) {
+    const rows = await client.mark.findMany({
+      include: { studentProfile: true, assessment: true },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((row) => {
+      const assessment = row.assessment as Record<string, unknown>;
+      return {
+        studentCode: text((row.studentProfile as Record<string, unknown>)?.studentCode),
+        assessment: text(assessment?.title),
+        score: text(row.score),
+        maxScore: text(assessment?.maxScore),
+      };
+    });
+  },
+
+  async apply(client, row) {
+    const { studentCode, assessment, score } = row.values;
+
+    const student = await client.studentProfile.findFirst({ where: { studentCode, deletedAt: null } });
+    if (!student) throw new Error(`No student with admission number "${studentCode}"`);
+
+    const assessmentRecord = await client.assessment.findFirst({ where: { title: assessment } });
+    if (!assessmentRecord) throw new Error(`No assessment called "${assessment}"`);
+
+    const numericScore = Number(score);
+    const maxScore = Number(assessmentRecord.maxScore ?? 0);
+    if (maxScore > 0 && numericScore > maxScore) {
+      throw new Error(`Score ${score} is more than the ${maxScore} this assessment is out of`);
+    }
+
+    const existing = await client.mark.findFirst({
+      where: { studentProfileId: student.id as string, assessmentId: assessmentRecord.id as string },
+    });
+
+    if (existing) {
+      await client.mark.update({ where: { id: existing.id as string }, data: { score: numericScore } });
+      return;
+    }
+
+    await client.mark.create({
+      data: {
+        studentProfileId: student.id as string,
+        assessmentId: assessmentRecord.id as string,
+        score: numericScore,
+      },
+    });
+  },
+};
+
+// ────────────────────────────────────────────────────────── curriculum
+//
+// One row per *week* of a scheme of work, with objectives and activities as
+// lists inside a cell. The alternative — a row per objective — would repeat
+// the week's topic on every line and make it possible for two rows to
+// disagree about it.
+
+const LIST_SEPARATOR = ";";
+
+const splitList = (value: string): string[] =>
+  value
+    .split(LIST_SEPARATOR)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+interface SchemeWeek {
+  weekNumber: number;
+  topic: string;
+  objectives: string[];
+  activities: string[];
+}
+
+const curriculum: EntityDefinition = {
+  name: "curriculum",
+  label: "Curriculum (schemes of work)",
+  columns: [
+    { header: "Subject", field: "subject" },
+    { header: "Academic year", field: "academicYear" },
+    { header: "Term", field: "term" },
+    { header: "Week", field: "weekNumber" },
+    { header: "Topic", field: "topic" },
+    { header: "Objectives", field: "objectives" },
+    { header: "Activities", field: "activities" },
+  ],
+  spec: {
+    keyField: "subject",
+    additionalKeyFields: ["academicYear", "term", "weekNumber"],
+    columns: [
+      { field: "subject", headers: ["Subject"], required: true },
+      { field: "academicYear", headers: ["Academic year"], required: true },
+      { field: "term", headers: ["Term"], required: true },
+      { field: "weekNumber", headers: ["Week", "Week number"], required: true, kind: "number" },
+      { field: "topic", headers: ["Topic"], required: true },
+      {
+        field: "objectives",
+        headers: ["Objectives"],
+        validate: (value) =>
+          value.includes("\n") ? "Separate objectives with a semicolon rather than new lines" : null,
+      },
+      { field: "activities", headers: ["Activities"] },
+    ],
+  },
+
+  async loadExistingKeys(client) {
+    const rows = await client.schemeOfWork.findMany({ include: { subject: true } });
+
+    const keys = new Set<string>();
+    for (const scheme of rows) {
+      const weeks = ((scheme.content as { weeks?: SchemeWeek[] })?.weeks ?? []) as SchemeWeek[];
+      for (const week of weeks) {
+        keys.add(
+          compositeKey([
+            text((scheme.subject as Record<string, unknown>)?.name),
+            text(scheme.academicYear),
+            text(scheme.term),
+            text(week.weekNumber),
+          ]),
+        );
+      }
+    }
+    return keys;
+  },
+
+  async exportRows(client) {
+    const schemes = await client.schemeOfWork.findMany({
+      include: { subject: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const rows: Record<string, string>[] = [];
+    for (const scheme of schemes) {
+      const weeks = ((scheme.content as { weeks?: SchemeWeek[] })?.weeks ?? []) as SchemeWeek[];
+      for (const week of [...weeks].sort((a, b) => (a.weekNumber ?? 0) - (b.weekNumber ?? 0))) {
+        rows.push({
+          subject: text((scheme.subject as Record<string, unknown>)?.name),
+          academicYear: text(scheme.academicYear),
+          term: text(scheme.term),
+          weekNumber: text(week.weekNumber),
+          topic: text(week.topic),
+          objectives: (week.objectives ?? []).join(`${LIST_SEPARATOR} `),
+          activities: (week.activities ?? []).join(`${LIST_SEPARATOR} `),
+        });
+      }
+    }
+    return rows;
+  },
+
+  /**
+   * Writes one week into a scheme of work, creating the scheme if it is new.
+   *
+   * Read-modify-write on a JSON column, one row at a time. Rows are applied
+   * sequentially by the caller, so two weeks of the same scheme in one file
+   * do not race each other — a detail worth knowing before this is ever made
+   * concurrent.
+   */
+  async apply(client, row) {
+    const { subject, academicYear, term, weekNumber, topic, objectives, activities } = row.values;
+
+    const subjectRecord = await client.subject.findFirst({ where: { name: subject, deletedAt: null } });
+    if (!subjectRecord) throw new Error(`No subject called "${subject}"`);
+
+    const week: SchemeWeek = {
+      weekNumber: Number(weekNumber),
+      topic,
+      objectives: splitList(objectives ?? ""),
+      activities: splitList(activities ?? ""),
+    };
+
+    const existing = await client.schemeOfWork.findFirst({
+      where: { subjectId: subjectRecord.id as string, academicYear, term },
+    });
+
+    if (!existing) {
+      await client.schemeOfWork.create({
+        data: {
+          subjectId: subjectRecord.id as string,
+          academicYear,
+          term,
+          status: "DRAFT",
+          source: "MANUAL",
+          content: { weeks: [week] },
+        },
+      });
+      return;
+    }
+
+    const weeks = ((existing.content as { weeks?: SchemeWeek[] })?.weeks ?? []) as SchemeWeek[];
+    const index = weeks.findIndex((candidate) => candidate.weekNumber === week.weekNumber);
+    const updated = index >= 0 ? weeks.map((w, i) => (i === index ? week : w)) : [...weeks, week];
+
+    await client.schemeOfWork.update({
+      where: { id: existing.id as string },
+      data: { content: { weeks: updated.sort((a, b) => (a.weekNumber ?? 0) - (b.weekNumber ?? 0)) } },
+    });
+  },
+};
+
+export const ENTITIES: EntityDefinition[] = [
+  students,
+  staff,
+  parents,
+  subjects,
+  classes,
+  timetable,
+  results,
+  curriculum,
+];
 
 export function findEntity(name: string): EntityDefinition | undefined {
   return ENTITIES.find((entity) => entity.name === name.toLowerCase());

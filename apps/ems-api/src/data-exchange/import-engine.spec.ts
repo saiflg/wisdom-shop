@@ -1,4 +1,11 @@
-import { buildImportPlan, canCommit, mapHeaders, type ImportSpec } from "./import-engine";
+import {
+  buildImportPlan,
+  canCommit,
+  compositeKey,
+  keyFieldsOf,
+  mapHeaders,
+  type ImportSpec,
+} from "./import-engine";
 
 const SPEC: ImportSpec = {
   keyField: "studentCode",
@@ -202,5 +209,99 @@ describe("canCommit", () => {
 
   it("refuses a file where every row is broken", () => {
     expect(canCommit(planFor([["", "", "", "", ""], ["ADM001", "", "", "", ""]]))).toMatch(/every row/i);
+  });
+});
+
+// ── Composite keys ───────────────────────────────────────────────────────
+// A person has one identifying column; a slot rarely does. A timetable entry
+// is a class *and* a day *and* a period.
+
+const TIMETABLE_SPEC: ImportSpec = {
+  keyField: "className",
+  additionalKeyFields: ["day", "period"],
+  columns: [
+    { field: "className", headers: ["Class"], required: true },
+    { field: "day", headers: ["Day"], required: true },
+    { field: "period", headers: ["Period"], required: true },
+    { field: "subject", headers: ["Subject"], required: true },
+    { field: "teacher", headers: ["Teacher"] },
+  ],
+};
+
+const TT_HEADERS = ["Class", "Day", "Period", "Subject", "Teacher"];
+
+describe("composite keys", () => {
+  const planFor = (rows: string[][], existing = new Set<string>()) =>
+    buildImportPlan(TT_HEADERS, rows, TIMETABLE_SPEC, existing);
+
+  it("lists the key fields in order", () => {
+    expect(keyFieldsOf(TIMETABLE_SPEC)).toEqual(["className", "day", "period"]);
+    expect(keyFieldsOf(SPEC)).toEqual(["studentCode"]);
+  });
+
+  it("normalises case and spacing, so a hand-typed file still matches", () => {
+    expect(compositeKey(["Grade 5A", "MONDAY", " Period 1 "])).toBe(compositeKey(["grade 5a", "monday", "period 1"]));
+  });
+
+  it("is idempotent, so an already-built key can be normalised again safely", () => {
+    const once = compositeKey(["Grade 5A", "Monday"]);
+    expect(compositeKey([once])).toBe(once);
+  });
+
+  it("treats different rows of the same class as distinct, not duplicates", () => {
+    // The bug this exists to prevent: with a single key column, every row
+    // after the first would read as a repeat of Grade 5A.
+    const plan = planFor([
+      ["Grade 5A", "Monday", "Period 1", "Mathematics", "Ade"],
+      ["Grade 5A", "Monday", "Period 2", "English", "Ngozi"],
+      ["Grade 5A", "Tuesday", "Period 1", "Science", "Ade"],
+    ]);
+
+    expect(plan.rows.every((row) => row.action === "create")).toBe(true);
+    expect(plan.toCreate).toBe(3);
+  });
+
+  it("still catches a genuine duplicate slot, naming all three columns", () => {
+    const plan = planFor([
+      ["Grade 5A", "Monday", "Period 1", "Mathematics", "Ade"],
+      ["Grade 5A", "Monday", "Period 1", "English", "Ngozi"],
+    ]);
+
+    expect(plan.rows[1].action).toBe("error");
+    expect(plan.rows[1].problems[0]).toMatch(/Class \+ Day \+ Period/);
+    expect(plan.rows[1].problems[0]).toMatch(/row 2/);
+  });
+
+  it("plans an update when the whole slot is already on file", () => {
+    const existing = new Set([compositeKey(["Grade 5A", "Monday", "Period 1"])]);
+    const plan = planFor([["Grade 5A", "Monday", "Period 1", "Mathematics", "Ade"]], existing);
+
+    // Re-uploading a corrected timetable replaces the lesson in that slot
+    // rather than adding a second one to it.
+    expect(plan.rows[0].action).toBe("update");
+    expect(plan.toUpdate).toBe(1);
+  });
+
+  it("matches an existing slot regardless of how it was capitalised", () => {
+    const existing = new Set([compositeKey(["grade 5a", "monday", "period 1"])]);
+    const plan = planFor([["GRADE 5A", "Monday", "PERIOD 1", "Mathematics", ""]], existing);
+    expect(plan.rows[0].action).toBe("update");
+  });
+
+  it("has no key at all when part of it is missing", () => {
+    // Half a key identifies nothing, and calling it a create would be a guess.
+    const plan = planFor([["Grade 5A", "", "Period 1", "Mathematics", ""]]);
+    expect(plan.rows[0].key).toBeNull();
+    expect(plan.rows[0].action).toBe("error");
+  });
+
+  it("leaves single-column keys behaving exactly as before", () => {
+    const plan = buildImportPlan(
+      HEADERS,
+      [["ADM001", "Ada", "One", "", ""]],
+      SPEC,
+      new Set(["ADM001"]),
+    );
+    expect(plan.rows[0].action).toBe("update");
   });
 });

@@ -1188,6 +1188,50 @@ session — a page rendered "Loading…" forever when its query *failed* rather
 than showing the API's message, and the message in this case ("Ade has no
 employment record yet") was the entire value of the failure.
 
+**Import/export finished: timetable, results and curriculum (done).** The
+three from the owner's original list that a flat row could not describe.
+(`parents` already existed — it is flat enough.)
+
+- **The import engine grew composite keys.** A person has one identifying
+  column; a *slot* rarely does. A lesson is class **and** day **and** period,
+  a mark is student **and** assessment, a curriculum row is subject **and**
+  year **and** term **and** week. Without this, re-uploading a corrected
+  timetable reads every row after the first as a duplicate of it.
+- Both sides of the match now go through the same normalisation, which also
+  made matching case- and whitespace-insensitive: `stu-001` typed by hand is
+  the same child as `STU-001` on file, and treating them as two would create
+  a duplicate record for a real student. The separator is a NUL, written as
+  ` ` so it is visible in the source — a space would let "Grade 5" +
+  "A Monday" collide with "Grade 5A" + "Monday".
+- **Long format everywhere, never a grid.** A week-shaped timetable's meaning
+  lives in its column positions, and a spreadsheet with one column inserted
+  would silently move every lesson along by one. Same for results: a wide
+  student-by-subject sheet cannot say which assessment a column is without
+  encoding it in the header, and hand-edited headers are exactly what goes
+  wrong. Curriculum is one row per week with objectives and activities
+  semicolon-joined inside a cell, so two rows cannot disagree about a week's
+  topic.
+- Teachers are matched by email rather than name, because two teachers can
+  share a name and guessing between them puts someone in the wrong room.
+
+**A bug the tests missed and a browser found.** The first real import against
+Demo Academy reported "4 updated" and quietly produced a double-booked
+timetable. The plan said *update* — `loadExistingKeys` matched on class, day
+and period **label** — but `apply` resolved that label to a period **id**
+first, and Demo Academy has two periods both called "Period 1" (one set from
+the original manual periods, one from the later school-hours derivation).
+Nothing makes a period's label unique. The id it picked was not the id the
+existing lesson pointed at, so the update became a second lesson in the same
+slot. `apply` now matches through the period *relation* on exactly the three
+things the key is built from, and refuses outright to create against an
+ambiguous label rather than guessing a time nobody chose. There is now an
+e2e that imports the same slot twice and asserts one lesson survives.
+
+The general rule this is the second instance of: **whenever a plan decides
+"update" by one definition of identity and the write finds the row by
+another, the difference is a silent duplicate.** The two must be the same
+lookup.
+
 Two things this cost that are worth not re-learning. `z.coerce.number()` on
 an untouched optional number input receives `""`, coerces it to `0`, and then
 fails `.min(1)` — so an optional field rejects being left alone.

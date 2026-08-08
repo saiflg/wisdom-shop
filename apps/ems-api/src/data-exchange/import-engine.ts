@@ -35,7 +35,43 @@ export interface ImportSpec {
    * same person — which is what makes re-uploading a corrected file safe.
    */
   keyField: string;
+  /**
+   * Extra columns that, together with `keyField`, identify a record.
+   *
+   * A person has one identifying column; a *slot* rarely does. A timetable
+   * entry is identified by class **and** day **and** period, a mark by
+   * student **and** subject **and** assessment. Without this, re-uploading a
+   * corrected timetable would read every row after the first as a duplicate
+   * of it.
+   */
+  additionalKeyFields?: string[];
   columns: ColumnSpec[];
+}
+
+/**
+ * The separator inside a composite key.
+ *
+ * A NUL, written as an escape so it is visible in the source, because it is
+ * the one character that cannot appear in a spreadsheet cell. A space would
+ * let "Grade 5" + "A Monday" collide with "Grade 5A" + "Monday" — two
+ * different lessons sharing one key.
+ */
+const KEY_SEPARATOR = "\u0000";
+
+/**
+ * The identity of a row, as one string.
+ *
+ * Exported because `loadExistingKeys` has to build exactly the same string
+ * from the database side; if the two ever disagree, every row looks new and
+ * an import that should update silently duplicates instead.
+ */
+export function compositeKey(parts: Array<string | null | undefined>): string {
+  return parts.map((part) => (part ?? "").trim().toLowerCase()).join(KEY_SEPARATOR);
+}
+
+/** The fields that make up a spec's key, in order. */
+export function keyFieldsOf(spec: ImportSpec): string[] {
+  return [spec.keyField, ...(spec.additionalKeyFields ?? [])];
 }
 
 export type RowAction = "create" | "update" | "error";
@@ -151,6 +187,13 @@ export function buildImportPlan(
 ): ImportPlan {
   const { byIndex, unrecognised, missing } = mapHeaders(headers, spec);
 
+  // Both sides go through the same normalisation, which also makes matching
+  // case- and whitespace-insensitive: "stu-001" in a hand-typed file is the
+  // same child as "STU-001" on file, and treating them as two would create a
+  // duplicate record for a real student. Idempotent, so a key that was
+  // already built with `compositeKey` passes through unchanged.
+  const knownKeys = new Set([...existingKeys].map((key) => compositeKey([key])));
+
   const plan: RowPlan[] = [];
   const seenKeys = new Map<string, number>();
 
@@ -180,19 +223,28 @@ export function buildImportPlan(
       }
     }
 
-    const key = values[spec.keyField] ?? null;
+    const fields = keyFieldsOf(spec);
+    // Every part must be present, or the row does not identify anything and
+    // treating it as a create would be a guess.
+    const hasWholeKey = fields.every((field) => (values[field] ?? "").trim().length > 0);
+    const key = hasWholeKey ? compositeKey(fields.map((field) => values[field])) : null;
 
     if (key) {
       const firstSeen = seenKeys.get(key);
       if (firstSeen !== undefined) {
-        problems.push(`Same ${spec.keyField} as row ${firstSeen} — the file has it twice`);
+        // Named in the user's terms — "Class, Day, Period" rather than a
+        // field name they have never seen.
+        const label = fields
+          .map((field) => spec.columns.find((column) => column.field === field)?.headers[0] ?? field)
+          .join(" + ");
+        problems.push(`Same ${label} as row ${firstSeen} — the file has it twice`);
       } else {
         seenKeys.set(key, rowNumber);
       }
     }
 
     const action: RowAction =
-      problems.length > 0 ? "error" : key && existingKeys.has(key) ? "update" : "create";
+      problems.length > 0 ? "error" : key && knownKeys.has(key) ? "update" : "create";
 
     plan.push({ rowNumber, action, key, values, problems });
   });

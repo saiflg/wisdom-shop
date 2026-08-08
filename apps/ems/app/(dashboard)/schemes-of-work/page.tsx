@@ -11,6 +11,7 @@ import { useSubjects } from "@/lib/use-subjects";
 import { useCurriculumSettings } from "@/lib/use-curriculum-settings";
 import { useSchemesOfWork, useCreateSchemeOfWork, useGenerateSchemeOfWork } from "@/lib/use-schemes-of-work";
 import { FormField } from "@/components/form-field";
+import { DataExchangeBar } from "@/components/data-exchange-bar";
 
 const createSchema = z.object({
   subjectId: z.string().min(1, "Choose a subject"),
@@ -129,6 +130,8 @@ export default function SchemesOfWorkPage() {
           )}
         </div>
       </div>
+
+      <DataExchangeBar entity="curriculum" />
 
       {mode === "manual" && (
         <form onSubmit={onCreate} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">

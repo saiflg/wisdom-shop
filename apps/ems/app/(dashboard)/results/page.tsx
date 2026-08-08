@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import { useClasses } from "@/lib/use-classes";
 import { formatPercent, usePublishResults, useResults } from "@/lib/use-grading";
+import { DataExchangeBar } from "@/components/data-exchange-bar";
 
 const INPUT =
   "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900";
@@ -50,6 +51,8 @@ export default function ResultsPage() {
         <h1 className="text-2xl font-bold tracking-tight">{t("grading.results.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">{t("grading.results.intro")}</p>
       </div>
+
+      <DataExchangeBar entity="results" />
 
       <section className="grid gap-4 rounded-2xl border border-slate-200 p-5 sm:grid-cols-3 dark:border-slate-800">
         <div>

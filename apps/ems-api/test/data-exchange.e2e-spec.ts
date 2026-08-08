@@ -111,10 +111,13 @@ describe("Data import and export (e2e)", () => {
     const res = await request(app.getHttpServer()).get("/v1/data/entities").set(asAdmin()).expect(200);
     expect(res.body.map((e: { name: string }) => e.name).sort()).toEqual([
       "classes",
+      "curriculum",
       "parents",
+      "results",
       "staff",
       "students",
       "subjects",
+      "timetable",
     ]);
   });
 
@@ -347,6 +350,291 @@ describe("Data import and export (e2e)", () => {
     expect(res.body.created).toBe(0);
     expect(res.body.failures[0].problem).toMatch(/No student with admission number NOPE-999/);
     expect(res.body.failures[0].rowNumber).toBe(2);
+  });
+
+  // ── The three whose identity is more than one column ─────────────────
+
+  describe("timetable, results and curriculum", () => {
+    it("offers a template for each", async () => {
+      for (const entity of ["timetable", "results", "curriculum"]) {
+        const res = await request(app.getHttpServer())
+          .get(`/v1/data/${entity}/template?format=csv`)
+          .set(asAdmin())
+          .expect(200);
+        expect(res.headers["content-disposition"]).toContain(`${entity}-template.csv`);
+      }
+    });
+
+    it("does not mistake several lessons for the same class as duplicates", async () => {
+      // With a single key column every row after the first would read as a
+      // repeat of Grade 5A, and the whole timetable would collapse to one
+      // lesson.
+      const file = await buildSheet(
+        [
+          { header: "Class", field: "className" },
+          { header: "Day", field: "day" },
+          { header: "Period", field: "period" },
+          { header: "Subject", field: "subject" },
+        ],
+        [
+          { className: "Grade 5A", day: "MONDAY", period: "Period 1", subject: "Mathematics" },
+          { className: "Grade 5A", day: "MONDAY", period: "Period 2", subject: "Mathematics" },
+          { className: "Grade 5A", day: "TUESDAY", period: "Period 1", subject: "Mathematics" },
+        ],
+        "csv",
+      );
+
+      const preview = await request(app.getHttpServer())
+        .post("/v1/data/timetable/preview")
+        .set(asAdmin())
+        .attach("file", file, "timetable.csv")
+        .expect(201);
+
+      expect(preview.body.withErrors).toBe(0);
+      expect(preview.body.toCreate).toBe(3);
+    });
+
+    it("still catches a genuine double-booking of one slot", async () => {
+      const file = await buildSheet(
+        [
+          { header: "Class", field: "className" },
+          { header: "Day", field: "day" },
+          { header: "Period", field: "period" },
+          { header: "Subject", field: "subject" },
+        ],
+        [
+          { className: "Grade 5A", day: "MONDAY", period: "Period 1", subject: "Mathematics" },
+          { className: "Grade 5A", day: "MONDAY", period: "Period 1", subject: "English" },
+        ],
+        "csv",
+      );
+
+      const preview = await request(app.getHttpServer())
+        .post("/v1/data/timetable/preview")
+        .set(asAdmin())
+        .attach("file", file, "timetable.csv")
+        .expect(201);
+
+      expect(preview.body.withErrors).toBe(1);
+      expect(JSON.stringify(preview.body)).toMatch(/Class \+ Day \+ Period/);
+    });
+
+    it("refuses a weekday it does not recognise", async () => {
+      const file = await buildSheet(
+        [
+          { header: "Class", field: "className" },
+          { header: "Day", field: "day" },
+          { header: "Period", field: "period" },
+          { header: "Subject", field: "subject" },
+        ],
+        [{ className: "Grade 5A", day: "Someday", period: "Period 1", subject: "Mathematics" }],
+        "csv",
+      );
+
+      const preview = await request(app.getHttpServer())
+        .post("/v1/data/timetable/preview")
+        .set(asAdmin())
+        .attach("file", file, "timetable.csv")
+        .expect(201);
+
+      expect(preview.body.withErrors).toBe(1);
+      expect(JSON.stringify(preview.body)).toMatch(/MONDAY/);
+    });
+
+    it("refuses a timetable row naming a class the school does not have", async () => {
+      const file = await buildSheet(
+        [
+          { header: "Class", field: "className" },
+          { header: "Day", field: "day" },
+          { header: "Period", field: "period" },
+          { header: "Subject", field: "subject" },
+        ],
+        [{ className: "Nonexistent", day: "MONDAY", period: "Period 1", subject: "Mathematics" }],
+        "csv",
+      );
+
+      const res = await request(app.getHttpServer())
+        .post("/v1/data/timetable/import")
+        .set(asAdmin())
+        .attach("file", file, "timetable.csv")
+        .expect(201);
+
+      // Importing a timetable must never quietly invent a class.
+      expect(res.body.created).toBe(0);
+      expect(res.body.failures[0].problem).toMatch(/No class called "Nonexistent"/);
+    });
+
+    it("re-importing a timetable replaces the lesson rather than double-booking the slot", async () => {
+      // The bug this exists for: the plan says "update", but if `apply`
+      // matches the slot differently from the way the key was built, the
+      // update quietly becomes a second lesson in the same period. Found in
+      // a browser, not by a test — hence this one.
+      await request(app.getHttpServer())
+        .post("/v1/classes")
+        .set(asAdmin())
+        .send({ name: "Import 5A", academicYear: "2026-2027" })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post("/v1/subjects")
+        .set(asAdmin())
+        .send({ name: "Import Maths" })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post("/v1/subjects")
+        .set(asAdmin())
+        .send({ name: "Import English" })
+        .expect(201);
+      // Replaces the whole day, which is safe here: nothing else in this
+      // suite depends on the period structure.
+      await request(app.getHttpServer())
+        .put("/v1/timetable/periods")
+        .set(asAdmin())
+        .send({ periods: [{ label: "Slot A", startMinute: 480, endMinute: 520 }] })
+        .expect(200);
+
+      const sheet = (subject: string) =>
+        buildSheet(
+          [
+            { header: "Class", field: "className" },
+            { header: "Day", field: "day" },
+            { header: "Period", field: "period" },
+            { header: "Subject", field: "subject" },
+          ],
+          [{ className: "Import 5A", day: "MONDAY", period: "Slot A", subject }],
+          "csv",
+        );
+
+      await request(app.getHttpServer())
+        .post("/v1/data/timetable/import")
+        .set(asAdmin())
+        .attach("file", await sheet("Import Maths"), "timetable.csv")
+        .expect(201);
+
+      const second = await request(app.getHttpServer())
+        .post("/v1/data/timetable/import")
+        .set(asAdmin())
+        .attach("file", await sheet("Import English"), "timetable.csv")
+        .expect(201);
+      expect(second.body.failures).toEqual([]);
+
+      const exported = await request(app.getHttpServer())
+        .get("/v1/data/timetable/export?format=csv")
+        .set(asAdmin())
+        .expect(200);
+
+      const slots = exported.text
+        .split("\n")
+        .filter((line) => line.includes("Import 5A") && line.includes("Slot A"));
+
+      // One lesson in the slot, and it is the one most recently imported.
+      expect(slots).toHaveLength(1);
+      expect(slots[0]).toContain("Import English");
+    });
+
+    it("refuses a negative mark before it reaches the database", async () => {
+      const file = await buildSheet(
+        [
+          { header: "Admission number", field: "studentCode" },
+          { header: "Assessment", field: "assessment" },
+          { header: "Score", field: "score" },
+        ],
+        [{ studentCode: "ADM001", assessment: "Mid-term", score: "-5" }],
+        "csv",
+      );
+
+      const preview = await request(app.getHttpServer())
+        .post("/v1/data/results/preview")
+        .set(asAdmin())
+        .attach("file", file, "results.csv")
+        .expect(201);
+
+      expect(preview.body.withErrors).toBe(1);
+      expect(JSON.stringify(preview.body)).toMatch(/cannot be negative/i);
+    });
+
+    it("treats each week of a scheme of work as its own row", async () => {
+      const file = await buildSheet(
+        [
+          { header: "Subject", field: "subject" },
+          { header: "Academic year", field: "academicYear" },
+          { header: "Term", field: "term" },
+          { header: "Week", field: "weekNumber" },
+          { header: "Topic", field: "topic" },
+          { header: "Objectives", field: "objectives" },
+        ],
+        [
+          {
+            subject: "Mathematics",
+            academicYear: "2026-2027",
+            term: "Term 1",
+            weekNumber: "1",
+            topic: "Counting",
+            objectives: "Count to ten; Count backwards",
+          },
+          {
+            subject: "Mathematics",
+            academicYear: "2026-2027",
+            term: "Term 1",
+            weekNumber: "2",
+            topic: "Adding",
+            objectives: "Add single digits",
+          },
+        ],
+        "csv",
+      );
+
+      const preview = await request(app.getHttpServer())
+        .post("/v1/data/curriculum/preview")
+        .set(asAdmin())
+        .attach("file", file, "curriculum.csv")
+        .expect(201);
+
+      // Same subject, year and term — different weeks, so two rows.
+      expect(preview.body.withErrors).toBe(0);
+      expect(preview.body.toCreate).toBe(2);
+    });
+
+    it("tells the user to use semicolons rather than new lines in a list", async () => {
+      const file = await buildSheet(
+        [
+          { header: "Subject", field: "subject" },
+          { header: "Academic year", field: "academicYear" },
+          { header: "Term", field: "term" },
+          { header: "Week", field: "weekNumber" },
+          { header: "Topic", field: "topic" },
+          { header: "Objectives", field: "objectives" },
+        ],
+        [
+          {
+            subject: "Mathematics",
+            academicYear: "2026-2027",
+            term: "Term 1",
+            weekNumber: "1",
+            topic: "Counting",
+            objectives: "Count to ten\nCount backwards",
+          },
+        ],
+        "csv",
+      );
+
+      const preview = await request(app.getHttpServer())
+        .post("/v1/data/curriculum/preview")
+        .set(asAdmin())
+        .attach("file", file, "curriculum.csv")
+        .expect(201);
+
+      expect(JSON.stringify(preview.body)).toMatch(/semicolon/i);
+    });
+
+    it("exports all three without error, even when empty", async () => {
+      for (const entity of ["timetable", "results", "curriculum"]) {
+        const res = await request(app.getHttpServer())
+          .get(`/v1/data/${entity}/export?format=csv`)
+          .set(asAdmin())
+          .expect(200);
+        expect(res.headers["content-disposition"]).toContain(entity);
+      }
+    });
   });
 
   it("hides import and export from a teacher", async () => {
