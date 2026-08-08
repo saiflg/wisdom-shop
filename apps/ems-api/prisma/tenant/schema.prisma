@@ -74,6 +74,7 @@ model User {
   lessonResources      LessonResource[]     @relation("LessonResourceAddedBy")
   accessibilityProfile AccessibilityProfile?
   accessibilityEdits   AccessibilityProfile[] @relation("AccessibilityProfileUpdatedBy")
+  assignmentsSet       Assignment[]           @relation("AssignmentSetBy")
 
   @@map("users")
 }
@@ -116,6 +117,7 @@ model Class {
   termResults         TermResult[]
   timetableEntries    TimetableEntry[]
   teachingAssignments TeachingAssignment[]
+  assignments         Assignment[]
 
   @@index([academicYear])
   @@map("classes")
@@ -142,6 +144,7 @@ model StudentProfile {
   termResults       TermResult[]
   messages          Message[]
   tutorSessions     TutorSession[]
+  submissions       Submission[]
 
   @@map("student_profiles")
 }
@@ -241,6 +244,7 @@ model Subject {
   teachingAssignments TeachingAssignment[]
   tutorSessions    TutorSession[]
   lessonResources  LessonResource[]
+  assignments      Assignment[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -606,6 +610,108 @@ model BankDetailAccess {
   @@index([staffProfileId])
   @@index([createdAt])
   @@map("bank_detail_access")
+}
+
+// ── Homework and assignments ─────────────────────────────────────────────
+// The daily loop the rest of the academic side was missing: a teacher sets
+// work, students hand it in, it is marked, and the mark can flow into the
+// grading already built rather than living in a second parallel gradebook.
+
+enum AssignmentStatus {
+  /// Being written. Invisible to students.
+  DRAFT
+  /// Visible to the class.
+  SET
+  /// Past its due date and closed to new submissions.
+  CLOSED
+}
+
+model Assignment {
+  id        String  @id @default(cuid())
+  classId   String
+  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  title        String
+  instructions String
+  status       AssignmentStatus @default(DRAFT)
+
+  /// When it is due. Nullable: plenty of homework is "before next lesson"
+  /// rather than a timestamp, and inventing one would make work look late
+  /// that nobody considered late.
+  dueAt DateTime?
+
+  /// Hundredths of a mark, as everywhere else marks are stored.
+  maxScoreHundredths Int @default(10000)
+
+  /// Optional link to the assessment this counts towards. When set, releasing
+  /// a mark writes it through, so homework reaches the report card instead of
+  /// being re-typed into a second gradebook. Nullable because most homework
+  /// is formative and counts towards nothing.
+  assessmentId String?
+  assessment   Assessment? @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+
+  setByUserId String?
+  setByUser   User?   @relation("AssignmentSetBy", fields: [setByUserId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  submissions Submission[]
+
+  @@index([classId, status])
+  @@index([subjectId])
+  @@map("assignments")
+}
+
+enum SubmissionStatus {
+  /// Handed in, not yet looked at.
+  SUBMITTED
+  /// Marked, but the mark is not yet visible to the student.
+  MARKED
+  /// Marked and released to the student and their guardians.
+  RELEASED
+}
+
+model Submission {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// What the student handed in. Text for now: file upload needs object
+  /// storage, which is a phase of its own, and a text box is the difference
+  /// between homework working and not existing.
+  content String
+
+  status      SubmissionStatus @default(SUBMITTED)
+  submittedAt DateTime         @default(now())
+
+  /// Decided once, when the work is handed in, and stored — not recomputed on
+  /// read. A due date moved afterwards must not retroactively make a student
+  /// late for something they handed in on time.
+  isLate Boolean @default(false)
+
+  scoreHundredths Int?
+  feedback        String?
+  markedAt        DateTime?
+  markedByUserId  String?
+  markedByName    String?
+  releasedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One submission per student per assignment. Handing in again replaces
+  /// what is there rather than adding a second copy a teacher has to choose
+  /// between.
+  @@unique([assignmentId, studentProfileId])
+  @@index([studentProfileId])
+  @@map("submissions")
 }
 
 // ── Payroll ──────────────────────────────────────────────────────────────
@@ -1034,7 +1140,8 @@ model Assessment {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  marks Mark[]
+  marks       Mark[]
+  assignments Assignment[]
 
   @@unique([subjectId, classId, academicYear, term, name])
   @@index([classId, academicYear, term])

@@ -1256,6 +1256,42 @@ directory**, not just to the directory's first appearance: the first build of
 `app/(dashboard)/ai-teacher/` was served happily and then three subsequent
 edits to it were not, which reads exactly like a bug in the code being edited.
 
+**Homework and assignments (done).** The daily loop the academic side was
+missing: a teacher sets work, students hand it in, it is marked, and the mark
+can reach the report card.
+
+- **A mark is held back from the student until it is released.** A teacher
+  marking a class over an evening should not be releasing marks one at a time
+  as they go, so MARKED and RELEASED are different states and the unreleased
+  score is *removed from the response* rather than nulled — a null score
+  alongside a MARKED status still tells a student their work has been marked,
+  which is the thing being withheld.
+- **Late work is accepted and flagged, never refused.** Software that turns
+  it away has decided for the teacher and lost the work. Only an explicitly
+  CLOSED assignment stops accepting.
+- **Lateness is decided once, when the work arrives, and stored.** A due date
+  moved afterwards must not retroactively make a student late for something
+  they handed in on time.
+- **On time at exactly the deadline.** The comparison is strictly
+  greater-than: a student who hands in as the clock strikes has met it, and
+  the alternative is arguing with a child over one millisecond.
+- **No due date means never late.** Plenty of homework is "before next
+  lesson", and inventing a deadline would make work look late that nobody
+  considered late.
+- **`@@unique([assignmentId, studentProfileId])`** — handing in again replaces
+  the work rather than adding a second copy a teacher has to choose between.
+  Replacement stops once it has been marked, because silently invalidating a
+  mark already given is worse than saying no.
+- **The student is taken from the token, never a parameter**, so there is
+  nothing to tamper with: a guardian cannot hand work in on a child's behalf,
+  and no student can point at another's record. Guardians read their own
+  children's marks and nobody else's.
+- **A released mark can flow into the gradebook**, scaled rather than copied
+  — 8/10 on the homework is 16/20 in an assessment out of 20. Optional and
+  off by default, because most homework is formative and counts towards
+  nothing; and an assignment cannot be linked to another class's assessment,
+  or the mark would land in a gradebook nobody was looking at.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was
