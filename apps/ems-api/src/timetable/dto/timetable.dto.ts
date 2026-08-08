@@ -90,6 +90,79 @@ export class UpsertEntryDto {
   room?: string;
 }
 
+export class TimetableSettingsDto {
+  @ApiProperty({ example: 480, description: "Minutes since midnight — 480 is 08:00" })
+  @IsInt()
+  @Min(0)
+  @Max(1440)
+  dayStartMinute!: number;
+
+  @ApiProperty({ example: 840, description: "840 is 14:00" })
+  @IsInt()
+  @Min(0)
+  @Max(1440)
+  dayEndMinute!: number;
+
+  @ApiProperty({ example: 8, description: "Teaching periods, not counting the break" })
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  periodsPerDay!: number;
+
+  @ApiPropertyOptional({ example: 4, description: "Break after this many periods. Omit for no break." })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  breakAfterPeriod?: number;
+
+  @ApiPropertyOptional({ example: 30 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(240)
+  breakLengthMinutes?: number;
+
+  @ApiPropertyOptional({
+    description: "Rebuild the period structure from these settings. Lessons already scheduled are cleared.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  applyToPeriods?: boolean;
+}
+
+export class UpsertAssignmentDto {
+  @ApiProperty()
+  @IsString()
+  classId!: string;
+
+  @ApiProperty()
+  @IsString()
+  subjectId!: string;
+
+  @ApiPropertyOptional({ description: "Omit while the school does not yet know who will teach it" })
+  @IsOptional()
+  @IsString()
+  teacherUserId?: string;
+
+  @ApiProperty({ example: 4 })
+  @IsInt()
+  @Min(1)
+  @Max(40)
+  periodsPerWeek!: number;
+}
+
+export class GenerateTimetableDto {
+  @ApiPropertyOptional({
+    description:
+      "Preview only. Defaults to true — nothing is written unless this is explicitly false, because " +
+      "generating replaces the whole week.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  commit?: boolean;
+}
+
 export class BulkEntriesDto {
   @ApiProperty({ type: [UpsertEntryDto] })
   @IsArray()

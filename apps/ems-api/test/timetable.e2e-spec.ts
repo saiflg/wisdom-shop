@@ -339,4 +339,163 @@ describe("Timetable (e2e)", () => {
     expect(survivors.length).toBeGreaterThan(0);
     expect(after.body.length).toBeLessThanOrEqual(before.body.length);
   });
+
+  // ───────────────────────────────── automatic generation ─────────────────
+
+  it("sets the school day and derives the periods from it", async () => {
+    const res = await request(app.getHttpServer())
+      .put("/v1/timetable/settings")
+      .set(asAdmin())
+      .send({
+        dayStartMinute: 480,
+        dayEndMinute: 840,
+        periodsPerDay: 6,
+        breakAfterPeriod: 3,
+        breakLengthMinutes: 30,
+        applyToPeriods: true,
+      })
+      .expect(200);
+
+    expect(res.body.applied).toBe(true);
+    // 360 minutes less a 30-minute break, over 6 periods = 55 each.
+    expect(res.body.preview.periodLengthMinutes).toBe(55);
+
+    const periods = await request(app.getHttpServer()).get("/v1/timetable/periods").set(asAdmin()).expect(200);
+    expect(periods.body.filter((p: { isTeaching: boolean }) => p.isTeaching)).toHaveLength(6);
+    expect(periods.body.filter((p: { isTeaching: boolean }) => !p.isTeaching)).toHaveLength(1);
+  });
+
+  it("previews the school day without touching the periods", async () => {
+    const before = await request(app.getHttpServer()).get("/v1/timetable/periods").set(asAdmin()).expect(200);
+
+    const res = await request(app.getHttpServer())
+      .put("/v1/timetable/settings")
+      .set(asAdmin())
+      .send({ dayStartMinute: 480, dayEndMinute: 900, periodsPerDay: 9 })
+      .expect(200);
+    expect(res.body.applied).toBe(false);
+
+    const after = await request(app.getHttpServer()).get("/v1/timetable/periods").set(asAdmin()).expect(200);
+    expect(after.body).toHaveLength(before.body.length);
+  });
+
+  it("refuses a school day that cannot hold the periods asked for", async () => {
+    await request(app.getHttpServer())
+      .put("/v1/timetable/settings")
+      .set(asAdmin())
+      .send({ dayStartMinute: 480, dayEndMinute: 500, periodsPerDay: 12 })
+      .expect(400);
+  });
+
+  it("records what each class is taught, by whom, once per subject", async () => {
+    await request(app.getHttpServer())
+      .put("/v1/timetable/assignments")
+      .set(asAdmin())
+      .send({ classId: classA, subjectId, teacherUserId: teacherId, periodsPerWeek: 5 })
+      .expect(200);
+
+    // The same class and subject again is one assignment updated, not two.
+    const second = await request(app.getHttpServer())
+      .put("/v1/timetable/assignments")
+      .set(asAdmin())
+      .send({ classId: classA, subjectId, teacherUserId: teacherId, periodsPerWeek: 4 })
+      .expect(200);
+    expect(second.body.periodsPerWeek).toBe(4);
+
+    const listed = await request(app.getHttpServer()).get("/v1/timetable/assignments").set(asAdmin()).expect(200);
+    expect(listed.body.filter((a: { classId: string }) => a.classId === classA)).toHaveLength(1);
+  });
+
+  it("previews a generated week without writing it", async () => {
+    await request(app.getHttpServer())
+      .put("/v1/timetable/assignments")
+      .set(asAdmin())
+      .send({ classId: classB, subjectId, teacherUserId: teacherId, periodsPerWeek: 4 })
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .post("/v1/timetable/generate")
+      .set(asAdmin())
+      .send({})
+      .expect(201);
+
+    expect(res.body.committed).toBe(false);
+    expect(res.body.placed).toBeGreaterThan(0);
+  });
+
+  it("generates a week that double-books nobody", async () => {
+    // Checked against what was actually written, not what the algorithm
+    // claimed — the invariant the whole feature rests on.
+    const res = await request(app.getHttpServer())
+      .post("/v1/timetable/generate")
+      .set(asAdmin())
+      .send({ commit: true })
+      .expect(201);
+    expect(res.body.committed).toBe(true);
+
+    const seenClass = new Set<string>();
+    const seenTeacher = new Set<string>();
+
+    for (const id of [classA, classB]) {
+      const week = await request(app.getHttpServer())
+        .get(`/v1/timetable/classes/${id}`)
+        .set(asAdmin())
+        .expect(200);
+
+      for (const entry of week.body) {
+        const slot = `${entry.weekday}#${entry.periodId}`;
+        expect(seenClass.has(`${id}@${slot}`)).toBe(false);
+        seenClass.add(`${id}@${slot}`);
+
+        if (entry.teacher) {
+          expect(seenTeacher.has(`${entry.teacher.id}@${slot}`)).toBe(false);
+          seenTeacher.add(`${entry.teacher.id}@${slot}`);
+        }
+      }
+    }
+  });
+
+  it("reports what it could not fit rather than dropping it silently", async () => {
+    await request(app.getHttpServer())
+      .put("/v1/timetable/assignments")
+      .set(asAdmin())
+      .send({ classId: classA, subjectId, teacherUserId: teacherId, periodsPerWeek: 40 })
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .post("/v1/timetable/generate")
+      .set(asAdmin())
+      .send({})
+      .expect(201);
+
+    expect(res.body.unplaced.length).toBeGreaterThan(0);
+    expect(res.body.unplaced[0].shortfall).toBeGreaterThan(0);
+    // Named, so a head teacher knows which class and subject to change.
+    expect(res.body.unplaced[0].className).toBeTruthy();
+    expect(res.body.unplaced[0].subjectName).toBeTruthy();
+  });
+
+  it("refuses generation by a guardian", async () => {
+    await request(app.getHttpServer())
+      .post("/v1/timetable/generate")
+      .set("Authorization", `Bearer ${guardianToken}`)
+      .send({})
+      .expect(403);
+  });
+
+  it("gives a teacher their own printable week", async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/v1/pdf/teachers/${teacherId}/timetable`)
+      .set(asAdmin())
+      .responseType("blob")
+      .expect(200);
+    expect((res.body as Buffer).subarray(0, 5).toString()).toBe("%PDF-");
+  });
+
+  it("hides a teacher's printable week from a family", async () => {
+    await request(app.getHttpServer())
+      .get(`/v1/pdf/teachers/${teacherId}/timetable`)
+      .set("Authorization", `Bearer ${guardianToken}`)
+      .expect(404);
+  });
 });

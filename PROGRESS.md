@@ -916,6 +916,47 @@ timetables, as the printable sheets a school actually hands out.
 - Served `inline` rather than `attachment`, so a parent checking a report
   card on a phone gets it opened rather than dropped in a downloads folder.
 
+**Automatic timetable generation (done).** A school states the shape of its
+day once; the periods and the whole week follow.
+
+- **The school day is settings, not data entry.** "08:00 to 14:00, six
+  lessons, break after the third" derives the period boundaries. Typing six
+  start and end times by hand is slower and is how a day acquires a gap
+  nobody notices until two classes are booked into the same minute.
+- **Leftover minutes are reported, never absorbed.** If the lessons and the
+  break do not divide the day exactly, the remainder is real and a head
+  teacher should see it — silently stretching the last period is how a
+  timetable stops matching the bell.
+- **A missing prerequisite had to come first.** `TimetableEntry` records
+  where a lesson *ended up*; nothing recorded what the school actually needs
+  taught. `TeachingAssignment` — this class, this subject, this teacher, so
+  many periods a week — is the input generation reads, and without it
+  automatic scheduling has nothing to work from.
+- **The generator never double-books.** Greedy placement ordered
+  most-constrained-first, checked again over the finished week before
+  anything is written: a scheduler that silently double-books is worse than
+  one that refuses to save. Proved by a property-style sweep over 27 school
+  shapes (3–8 periods a day × 1–6 classes × 1–5 teachers), and again in the
+  e2e against what was actually written to the database rather than what the
+  algorithm claimed.
+- **It reports what it could not fit, in terms a head teacher can act on.**
+  "Grade 5A · Mathematics, 3 short — that teacher is already teaching in
+  every period of the week" rather than a week that looks finished and
+  quietly lost three lessons. Placed plus shortfall always equals what was
+  asked for; nothing may vanish.
+- **A subject spreads across days before doubling up**, so four periods of
+  Maths land on four days rather than stacking into one afternoon — but a
+  doubled-up lesson still beats a missing one, so it falls back rather than
+  giving up.
+- **Deterministic.** Same input, same week. A school that has worked around
+  one awkward slot should not find everything rearranged after an unrelated
+  edit.
+- **Generating previews by default**, because it replaces every lesson in the
+  school — the same rule as spreadsheet import, for the same reason.
+- Teachers get their own printable week, which is what a timetable is
+  actually for: seeing at a glance whether you have a class. Free periods are
+  left blank on purpose.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was

@@ -7,6 +7,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
 import { useClasses } from "@/lib/use-classes";
 import { PdfButton } from "@/components/pdf-button";
+import { SchoolHours, TeachingPlan } from "@/components/timetable-generator";
 import { useSubjects } from "@/lib/use-subjects";
 import { useTeachers } from "@/lib/use-teachers";
 import {
@@ -50,6 +51,9 @@ export default function TimetablePage() {
         <h1 className="text-2xl font-bold tracking-tight">{t("timetable.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">{t("timetable.intro")}</p>
       </div>
+
+      <SchoolHours />
+      <TeachingPlan />
 
       <PeriodEditor periods={periods ?? []} />
 

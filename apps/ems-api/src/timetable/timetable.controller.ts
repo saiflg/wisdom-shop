@@ -4,7 +4,13 @@ import { Roles } from "@/auth/decorators/roles.decorator";
 import { CurrentUser } from "@/auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { TimetableService } from "./timetable.service";
-import { ReplacePeriodsDto, UpsertEntryDto } from "./dto/timetable.dto";
+import {
+  GenerateTimetableDto,
+  ReplacePeriodsDto,
+  TimetableSettingsDto,
+  UpsertAssignmentDto,
+  UpsertEntryDto,
+} from "./dto/timetable.dto";
 
 @ApiTags("timetable")
 @ApiBearerAuth()
@@ -28,6 +34,58 @@ export class TimetableController {
   })
   replacePeriods(@Body() dto: ReplacePeriodsDto) {
     return this.timetable.replacePeriods(dto);
+  }
+
+  @Get("settings")
+  @ApiOperation({ summary: "The shape of the school day" })
+  getSettings() {
+    return this.timetable.getSettings();
+  }
+
+  @Put("settings")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Set the school day, and optionally rebuild the periods from it",
+    description:
+      "Without applyToPeriods this only previews what the day would look like. Rebuilding clears every " +
+      "scheduled lesson, because the periods they were placed against no longer exist.",
+  })
+  updateSettings(@Body() dto: TimetableSettingsDto) {
+    return this.timetable.updateSettings(dto);
+  }
+
+  @Get("assignments")
+  @Roles("SCHOOL_ADMIN", "TEACHER")
+  @ApiOperation({ summary: "What each class is taught, by whom, and how often" })
+  listAssignments() {
+    return this.timetable.listAssignments();
+  }
+
+  @Put("assignments")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({ summary: "Record that a class takes a subject for so many periods a week" })
+  upsertAssignment(@Body() dto: UpsertAssignmentDto) {
+    return this.timetable.upsertAssignment(dto);
+  }
+
+  @Delete("assignments/:id")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({ summary: "Stop scheduling a subject for a class" })
+  deleteAssignment(@Param("id") id: string) {
+    return this.timetable.deleteAssignment(id);
+  }
+
+  @Post("generate")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Build the whole week automatically",
+    description:
+      "Preview unless commit is true, because generating replaces every lesson in the school. Never places " +
+      "a class or a teacher in two lessons at once, and reports anything it could not fit rather than " +
+      "quietly dropping it.",
+  })
+  generate(@Body() dto: GenerateTimetableDto) {
+    return this.timetable.generate(dto);
   }
 
   @Post("entries")

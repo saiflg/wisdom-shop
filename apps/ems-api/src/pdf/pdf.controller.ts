@@ -53,6 +53,20 @@ export class PdfController {
     send(res, buffer, filename);
   }
 
+  @Get("teachers/:teacherUserId/timetable")
+  @ApiOperation({
+    summary: "A teacher's own week as a PDF",
+    description: "Staff only. What a teacher needs to see whether they have a class.",
+  })
+  async teacherTimetable(
+    @Param("teacherUserId") teacherUserId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.pdf.teacherTimetable(teacherUserId, user);
+    send(res, buffer, filename);
+  }
+
   @Get("invoices/:invoiceId")
   @ApiOperation({
     summary: "A fee invoice as a PDF",

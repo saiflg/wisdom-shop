@@ -196,6 +196,63 @@ export class PdfService {
     return { buffer: await pdf.finish(), filename: `invoice-${invoice.invoiceNumber}.pdf` };
   }
 
+  /**
+   * A teacher's own week, so they can see at a glance whether they have a
+   * class — the thing a printed timetable is actually for.
+   */
+  async teacherTimetable(
+    teacherUserId: string,
+    viewer: AuthenticatedUser,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const entries = await this.timetable.teacherTimetable(teacherUserId, viewer);
+
+    const client = await this.tenantPrisma.getClient();
+    const teacher = await client.user.findFirst({ where: { id: teacherUserId, deletedAt: null } });
+    if (!teacher) throw new NotFoundException("No teacher found with that id");
+
+    const periods = await client.timetablePeriod.findMany({
+      where: { deletedAt: null },
+      orderBy: { startMinute: "asc" },
+    });
+
+    const pdf = new PdfBuilder({
+      schoolName: this.schoolName(),
+      title: "Teaching timetable",
+      subtitle: `${teacher.firstName} ${teacher.lastName} · ${entries.length} lesson(s) a week`,
+    });
+
+    pdf.table(
+      [
+        { header: "Period", field: "period", weight: 1.4 },
+        ...WEEKDAYS.map((day) => ({
+          header: day.charAt(0) + day.slice(1).toLowerCase(),
+          field: day,
+          weight: 1,
+        })),
+      ],
+      periods.map((period) => {
+        const row: Record<string, string> = { period: `${period.label} ${formatMinute(period.startMinute)}` };
+        for (const day of WEEKDAYS) {
+          if (!period.isTeaching) {
+            row[day] = period.label;
+            continue;
+          }
+          const entry = entries.find((item) => item.weekday === day && item.periodId === period.id);
+          // A free period is left blank on purpose: the whole point of this
+          // sheet is seeing at a glance where the gaps are.
+          row[day] = entry ? `${entry.subject?.name ?? ""} · ${entry.class?.name ?? ""}` : "";
+        }
+        return row;
+      }),
+      "No periods have been set up yet.",
+    );
+
+    return {
+      buffer: await pdf.finish(),
+      filename: `timetable-${teacher.firstName}-${teacher.lastName}.pdf`.replace(/\s+/g, "-").toLowerCase(),
+    };
+  }
+
   async classTimetable(classId: string, viewer: AuthenticatedUser): Promise<{ buffer: Buffer; filename: string }> {
     const entries = await this.timetable.classTimetable(classId, viewer);
 

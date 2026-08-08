@@ -68,6 +68,7 @@ model User {
   attendanceTaken      AttendanceRegister[] @relation("AttendanceTakenBy")
   messagesReceived     Message[]            @relation("MessageRecipient")
   timetableEntries     TimetableEntry[]     @relation("TimetableTeacher")
+  teachingAssignments  TeachingAssignment[] @relation("TeachingAssignmentTeacher")
   staffProfile         StaffProfile?
 
   @@map("users")
@@ -110,6 +111,7 @@ model Class {
   assessments         Assessment[]
   termResults         TermResult[]
   timetableEntries    TimetableEntry[]
+  teachingAssignments TeachingAssignment[]
 
   @@index([academicYear])
   @@map("classes")
@@ -231,6 +233,7 @@ model Subject {
   assessments   Assessment[]
   subjectResults SubjectResult[]
   timetableEntries TimetableEntry[]
+  teachingAssignments TeachingAssignment[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -592,6 +595,65 @@ model BankDetailAccess {
   @@index([staffProfileId])
   @@index([createdAt])
   @@map("bank_detail_access")
+}
+
+/// The shape of a school's day, from which periods are derived.
+///
+/// Singleton per school, seeded at provisioning like the other settings. A
+/// school states when the day starts and ends and how many lessons it wants
+/// in it; the period boundaries are then computed rather than typed one at a
+/// time, which is both faster and impossible to get inconsistent.
+model TimetableSettings {
+  id String @id @default(cuid())
+
+  /// Minutes since midnight, as everywhere else in timetabling: a school day
+  /// is a time-of-day that recurs, not an instant.
+  dayStartMinute Int @default(480)
+  dayEndMinute   Int @default(840)
+  /// Teaching periods, not counting the break.
+  periodsPerDay Int @default(8)
+
+  /// A single break, placed after this many periods. Null means no break.
+  /// One break covers the common case; a school wanting morning break and
+  /// lunch can still edit the derived periods by hand afterwards.
+  breakAfterPeriod  Int?
+  breakLengthMinutes Int @default(30)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("timetable_settings")
+}
+
+/// "Ade teaches Mathematics to Grade 5A, four periods a week."
+///
+/// The missing input that made automatic generation impossible: a
+/// TimetableEntry records where a lesson *ended up*, but nothing recorded
+/// what the school actually needs scheduled. Generation reads these and
+/// places them.
+model TeachingAssignment {
+  id      String @id @default(cuid())
+  classId String
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  /// Nullable so a school can record what must be taught before it knows who
+  /// will teach it. An unstaffed assignment still gets placed on the
+  /// timetable — it simply cannot clash with anybody.
+  teacherUserId String?
+  teacher       User?   @relation("TeachingAssignmentTeacher", fields: [teacherUserId], references: [id], onDelete: SetNull)
+
+  periodsPerWeek Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One assignment per subject per class: "how many periods of Maths does
+  /// Grade 5A get" has exactly one answer.
+  @@unique([classId, subjectId])
+  @@index([teacherUserId])
+  @@map("teaching_assignments")
 }
 
 /// A slot in the school's day: "Period 1", "Break", "Period 2"…

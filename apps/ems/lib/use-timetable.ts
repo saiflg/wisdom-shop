@@ -131,6 +131,134 @@ export function useUpsertEntry() {
   });
 }
 
+export interface TimetableSettings {
+  id: string;
+  dayStartMinute: number;
+  dayEndMinute: number;
+  periodsPerDay: number;
+  breakAfterPeriod: number | null;
+  breakLengthMinutes: number;
+}
+
+export interface DayPreview {
+  periods: { label: string; startMinute: number; endMinute: number; isTeaching: boolean }[];
+  leftoverMinutes: number;
+  periodLengthMinutes: number;
+}
+
+export interface TeachingAssignment {
+  id: string;
+  classId: string;
+  subjectId: string;
+  teacherUserId: string | null;
+  periodsPerWeek: number;
+  class?: { id: string; name: string };
+  subject?: { id: string; name: string };
+  teacher?: { id: string; firstName: string; lastName: string } | null;
+}
+
+export interface GenerationSummary {
+  placed: number;
+  committed: boolean;
+  unplaced: {
+    assignmentId: string;
+    shortfall: number;
+    reason: string;
+    className: string;
+    subjectName: string;
+  }[];
+}
+
+export function useTimetableSettings() {
+  const { accessToken, enabled } = useAuthQueryState();
+  return useQuery({
+    queryKey: [...TIMETABLE_KEY, "settings"],
+    enabled,
+    queryFn: () =>
+      apiFetch<TimetableSettings>("/v1/timetable/settings", { headers: authHeaders(accessToken) }),
+  });
+}
+
+export interface SaveSettingsInput {
+  dayStartMinute: number;
+  dayEndMinute: number;
+  periodsPerDay: number;
+  breakAfterPeriod?: number;
+  breakLengthMinutes?: number;
+  /** Rebuilds the periods, which clears every scheduled lesson. */
+  applyToPeriods?: boolean;
+}
+
+export function useSaveSettings() {
+  const accessToken = useAuthQueryState().accessToken;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SaveSettingsInput) =>
+      apiFetch<{ settings: TimetableSettings; preview: DayPreview; applied: boolean }>(
+        "/v1/timetable/settings",
+        { method: "PUT", headers: authHeaders(accessToken), body: input },
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: TIMETABLE_KEY }),
+  });
+}
+
+export function useAssignments() {
+  const { accessToken, enabled } = useAuthQueryState();
+  return useQuery({
+    queryKey: [...TIMETABLE_KEY, "assignments"],
+    enabled,
+    queryFn: () =>
+      apiFetch<TeachingAssignment[]>("/v1/timetable/assignments", { headers: authHeaders(accessToken) }),
+  });
+}
+
+export function useUpsertAssignment() {
+  const accessToken = useAuthQueryState().accessToken;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      classId: string;
+      subjectId: string;
+      teacherUserId?: string;
+      periodsPerWeek: number;
+    }) =>
+      apiFetch<TeachingAssignment>("/v1/timetable/assignments", {
+        method: "PUT",
+        headers: authHeaders(accessToken),
+        body: input,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: TIMETABLE_KEY }),
+  });
+}
+
+export function useDeleteAssignment() {
+  const accessToken = useAuthQueryState().accessToken;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ deleted: boolean }>(`/v1/timetable/assignments/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(accessToken),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: TIMETABLE_KEY }),
+  });
+}
+
+/** Preview unless `commit` — generating replaces every lesson in the school. */
+export function useGenerateTimetable() {
+  const accessToken = useAuthQueryState().accessToken;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (commit: boolean) =>
+      apiFetch<GenerationSummary>("/v1/timetable/generate", {
+        method: "POST",
+        headers: authHeaders(accessToken),
+        body: { commit },
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: TIMETABLE_KEY }),
+  });
+}
+
 export function useDeleteEntry() {
   const accessToken = useAuthQueryState().accessToken;
   const queryClient = useQueryClient();
