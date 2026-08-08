@@ -105,7 +105,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.staff.teachers", href: "/teachers" },
       { key: "nav.staff.nonTeaching" },
       { key: "nav.staff.hr", roles: ADMIN_ONLY },
-      { key: "nav.staff.payroll", roles: ADMIN_ONLY },
+      { key: "nav.staff.payroll", href: "/payroll", roles: ADMIN_ONLY },
       { key: "nav.staff.welfare", roles: ADMIN_ONLY },
       { key: "nav.staff.loans", roles: ADMIN_ONLY },
       { key: "nav.staff.salaryAdvance", roles: ADMIN_ONLY },

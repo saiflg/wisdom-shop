@@ -1142,6 +1142,52 @@ that way by default.
   the student's own saved choice, and status messages announced rather than
   only shown.
 
+**Payroll (done).** What the encrypted staff bank details were always for.
+
+- **Two unique indexes carry most of the safety.** `(year, month)` on the run
+  means a month cannot be paid twice — the constraint that stops two
+  administrators both pressing the button — and `(runId, staffProfileId)`
+  means nobody is paid twice within one. Paying somebody twice is a mistake a
+  school discovers at the bank, not in an audit log. The 409 says "August
+  2026 has already been run. Open it rather than starting it again," because
+  a bare conflict error invites exactly the retry that caused it.
+- **Approving freezes the payslips.** After that they are a record of what was
+  paid, not a view of what the salaries currently say: a rise in April must
+  not rewrite March. Same reasoning as publishing a term result, and the
+  refresh route refuses outright afterwards rather than silently doing
+  nothing.
+- **Percentages are of basic, never of gross.** A deduction that is a
+  percentage of gross, where gross depends on the deductions, has no fixed
+  point. Basic is flagged explicitly rather than inferred from the first or
+  largest earning, so renaming "Basic" to "Consolidated" cannot silently
+  change what pension is computed against.
+- **Net is clamped at zero and the over-deduction is flagged.** Deductions
+  exceeding pay is a data-entry mistake; a negative payslip is something a
+  bank might act on. The payslip PDF says so in words, because that is the
+  document somebody brings to the bursar to ask about.
+- **The bank file is the one place full account numbers leave the database**,
+  so every disclosure is written to `BankDetailAccess` *before* the file is
+  produced — the same order as the staff reveal route, for the same reason:
+  an unlogged disclosure is worse than a failed download, because only one of
+  the two is recoverable. Staff with no account on file come back as a count
+  in a response header, never silently dropped; somebody not being paid is
+  exactly what a silent filter would hide until payday.
+- **The software never moves money.** It produces the instruction and records
+  that a human acted on it — the same line already drawn around the payment
+  gateways.
+- Payroll is SCHOOL_ADMIN-only including reads, since a payroll list is a
+  list of salaries and a teacher must not be able to look up a colleague's.
+
+Two UI defects this phase surfaced, both worth naming because they are a
+pattern rather than one-offs. First, `setDrafts(drafts.map(...))` closes over
+a stale array: two fields changed before a re-render both read the same
+snapshot and the second silently undid the first, which showed up in the
+browser as a salary saving with a line missing. Every state update in that
+component now uses the functional form. Second — for the second time this
+session — a page rendered "Loading…" forever when its query *failed* rather
+than showing the API's message, and the message in this case ("Ade has no
+employment record yet") was the entire value of the failure.
+
 Two things this cost that are worth not re-learning. `z.coerce.number()` on
 an untouched optional number input receives `""`, coerces it to `0`, and then
 fails `.min(1)` — so an optional field rejects being left alone.

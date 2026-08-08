@@ -575,6 +575,9 @@ model StaffProfile {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
+  salaryComponents SalaryComponent[]
+  payslips         Payslip[]
+
   @@map("staff_profiles")
 }
 
@@ -603,6 +606,130 @@ model BankDetailAccess {
   @@index([staffProfileId])
   @@index([createdAt])
   @@map("bank_detail_access")
+}
+
+// ── Payroll ──────────────────────────────────────────────────────────────
+// What the encrypted bank details on StaffProfile were always for.
+//
+// Money is an integer count of minor units throughout, as everywhere else in
+// this schema. Two constraints carry most of the safety: one run per month,
+// and one payslip per person per run. Paying somebody twice is a mistake a
+// school notices at the bank, not in an audit log.
+//
+// The software never moves money. A run produces a file a bursar takes to
+// the bank — the same line already drawn around the payment gateways.
+
+enum PayComponentKind {
+  EARNING
+  DEDUCTION
+}
+
+enum PayComponentBasis {
+  /// A flat amount in minor units.
+  FIXED
+  /// A percentage of basic pay, in hundredths of a percent (1250 = 12.5%).
+  ///
+  /// Of *basic*, never of gross: a deduction that is a percentage of gross,
+  /// where gross depends on the deductions, has no fixed point.
+  PERCENT_OF_BASIC
+}
+
+/// One line of a staff member's salary: "Basic", "Housing", "Pension", "Tax".
+model SalaryComponent {
+  id             String       @id @default(cuid())
+  staffProfileId String
+  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+
+  label String
+  kind  PayComponentKind
+  basis PayComponentBasis @default(FIXED)
+
+  /// Minor units when FIXED, hundredths of a percent when PERCENT_OF_BASIC.
+  amount Int
+
+  /// Exactly one component per staff member should be the basis percentages
+  /// are taken from. Enforced in the service rather than the schema, since
+  /// "at most one true per staffProfileId" needs a partial unique index that
+  /// Prisma's DSL cannot express — same situation as Enrollment.
+  isBasic Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([staffProfileId])
+  @@map("salary_components")
+}
+
+enum PayrollRunStatus {
+  /// Being prepared. Payslips are recomputed from current salaries on demand.
+  DRAFT
+  /// Signed off. Payslips are frozen and no longer track salary changes.
+  APPROVED
+  /// The bank has been instructed. Recorded, never performed by this software.
+  PAID
+}
+
+model PayrollRun {
+  id     String           @id @default(cuid())
+  year   Int
+  /// 1-12.
+  month  Int
+  status PayrollRunStatus @default(DRAFT)
+
+  /// Free text: "March 2027 salaries", or a note about why it was late.
+  notes String?
+
+  approvedAt        DateTime?
+  approvedByUserId  String?
+  approvedByName    String?
+  paidAt            DateTime?
+  paidByUserId      String?
+  paidByName        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payslips Payslip[]
+
+  /// One payroll per month. The constraint that stops a school paying
+  /// everybody twice because two administrators both pressed the button —
+  /// the same reasoning as the one-invoice-per-subscription-period index.
+  @@unique([year, month])
+  @@map("payroll_runs")
+}
+
+model Payslip {
+  id    String     @id @default(cuid())
+  runId String
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  staffProfileId String
+  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+
+  /// Copied rather than joined, like the attendance amendment actor: a
+  /// payslip is a financial record that must still read correctly after the
+  /// person leaves and their account is removed.
+  staffName   String
+  staffNumber String?
+
+  grossCents      Int
+  deductionsCents Int
+  netCents        Int
+
+  /// Every component as it stood when the run was approved:
+  /// `[{ label, kind, amountCents }]`. Snapshotted rather than recomputed so
+  /// a pay rise in April cannot quietly rewrite March's payslip — the same
+  /// choice as published term results.
+  lines Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One payslip per person per run.
+  @@unique([runId, staffProfileId])
+  @@index([staffProfileId])
+  @@map("payslips")
 }
 
 /// The shape of a school's day, from which periods are derived.
