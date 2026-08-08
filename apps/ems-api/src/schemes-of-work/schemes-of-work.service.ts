@@ -1,9 +1,9 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+﻿import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { RoleName } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { CurriculumSettingsService } from "@/curriculum-settings/curriculum-settings.service";
-import { GeminiService } from "@/ai/gemini.service";
+import { AiService } from "@/ai/ai.service";
 import { canGenerateWithAi } from "./can-generate-with-ai";
 import { buildSchemeOfWorkPrompt, SCHEME_OF_WORK_RESPONSE_SCHEMA } from "./scheme-of-work-prompt";
 import type { CreateSchemeOfWorkDto } from "./dto/create-scheme-of-work.dto";
@@ -18,7 +18,7 @@ export class SchemesOfWorkService {
   constructor(
     private readonly tenantPrisma: TenantPrismaService,
     private readonly curriculumSettings: CurriculumSettingsService,
-    private readonly gemini: GeminiService,
+    private readonly ai: AiService,
   ) {}
 
   async create(dto: CreateSchemeOfWorkDto, viewer: AuthenticatedUser) {
@@ -51,7 +51,7 @@ export class SchemesOfWorkService {
     await this.assertNoExistingScheme(dto.subjectId, dto.academicYear, dto.term);
 
     const prompt = buildSchemeOfWorkPrompt(subject, dto, settings);
-    const content = await this.gemini.generateJson<SchemeOfWorkContentDto>(prompt, SCHEME_OF_WORK_RESPONSE_SCHEMA);
+    const content = await this.ai.generateJson<SchemeOfWorkContentDto>(prompt, SCHEME_OF_WORK_RESPONSE_SCHEMA);
 
     return client.schemeOfWork.create({
       data: {
@@ -84,7 +84,7 @@ export class SchemesOfWorkService {
 
     const isStaff = viewer.roles.some((role) => STAFF_ROLES.includes(role));
     if (!isStaff && record.status !== "PUBLISHED") {
-      // 404, not 403 — a student/guardian must not learn an unpublished
+      // 404, not 403 â€” a student/guardian must not learn an unpublished
       // scheme exists at all, same reasoning as students.service.ts.
       throw new NotFoundException("No scheme of work found with that id");
     }
@@ -119,3 +119,4 @@ export class SchemesOfWorkService {
     }
   }
 }
+

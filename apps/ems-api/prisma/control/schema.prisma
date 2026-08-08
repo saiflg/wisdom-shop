@@ -299,3 +299,54 @@ model InvoiceCounter {
 
   @@map("invoice_counter")
 }
+
+/// Which AI service the platform talks to.
+///
+/// Most of these speak the same OpenAI chat-completions shape, so the list is
+/// about where the request goes and which key it carries rather than five
+/// separate integrations. OPENAI_COMPATIBLE is the escape hatch: Groq,
+/// Together, DeepSeek, a local Ollama — anything that implements the same
+/// endpoint works by setting a base URL, so a new vendor does not need a code
+/// change.
+enum AiProvider {
+  OPENROUTER
+  OPENAI
+  ANTHROPIC
+  GOOGLE_GEMINI
+  OPENAI_COMPATIBLE
+}
+
+/// Platform-wide AI configuration, owned by the Super Admin.
+///
+/// In the control database rather than per school: the key is the platform
+/// operator's, billed to them, and a school should not be able to read or
+/// change it. Per-school keys would be a reasonable later addition — schools
+/// wanting to pay for their own usage — but that is a billing decision, not a
+/// technical one, so it is deliberately not assumed here.
+///
+/// Replaces the old GEMINI_API_KEY environment variable, which meant one
+/// hardcoded vendor and a container restart to change anything.
+model AiProviderSettings {
+  id       Int        @id @default(1)
+  provider AiProvider @default(OPENROUTER)
+  /// AES-256-GCM, like every other stored credential. Masked on read; there
+  /// is no route that returns it.
+  apiKeyEncrypted String?
+  /// Empty falls back to the provider's default, so a school can start
+  /// without knowing model names.
+  model String?
+  /// Only meaningful for OPENAI_COMPATIBLE; ignored otherwise.
+  baseUrl String?
+  enabled Boolean @default(true)
+
+  /// What happened last time the connection was tested, so the state of the
+  /// key is visible without anyone having to try a real generation.
+  lastTestedAt  DateTime?
+  lastTestOk    Boolean?
+  lastTestError String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ai_provider_settings")
+}

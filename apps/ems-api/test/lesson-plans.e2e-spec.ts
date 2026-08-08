@@ -5,14 +5,14 @@ import { Client as PgClient } from "pg";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/bootstrap";
 import { ControlPrismaService } from "../src/control-db/control-prisma.service";
-import { GeminiService } from "../src/ai/gemini.service";
+import { AiService } from "../src/ai/ai.service";
 
 const FIXTURE_PREFIX = "e2e-lp-";
 
 /**
- * `GeminiService` is overridden with a fake that returns a canned structured
+ * `AiService` is overridden with a fake that returns a canned structured
  * response — proves the full generate -> parse -> persist -> response path
- * works without needing a real GEMINI_API_KEY or network access, same
+ * works without a configured provider key or network access, same
  * reasoning as schemes-of-work.e2e-spec.ts.
  */
 const FAKE_GENERATED_CONTENT = {
@@ -51,9 +51,8 @@ describe("Lesson plans (e2e)", () => {
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(GeminiService)
+      .overrideProvider(AiService)
       .useValue({
-        isConfigured: true,
         generateJson: jest.fn().mockResolvedValue(FAKE_GENERATED_CONTENT),
       })
       .compile();

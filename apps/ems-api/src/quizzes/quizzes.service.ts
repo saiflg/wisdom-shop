@@ -1,9 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+﻿import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { RoleName } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { CurriculumSettingsService } from "@/curriculum-settings/curriculum-settings.service";
-import { GeminiService } from "@/ai/gemini.service";
+import { AiService } from "@/ai/ai.service";
 import { canGenerateWithAi } from "@/schemes-of-work/can-generate-with-ai";
 import type { SourceWeek } from "@/lesson-plans/lesson-plan-prompt";
 import { buildQuizPrompt, QUIZ_RESPONSE_SCHEMA } from "./quiz-prompt";
@@ -24,7 +24,7 @@ export class QuizzesService {
   constructor(
     private readonly tenantPrisma: TenantPrismaService,
     private readonly curriculumSettings: CurriculumSettingsService,
-    private readonly gemini: GeminiService,
+    private readonly ai: AiService,
   ) {}
 
   async create(dto: CreateQuizDto, viewer: AuthenticatedUser) {
@@ -52,7 +52,7 @@ export class QuizzesService {
 
     const { scheme, week } = await this.findSourceWeek(dto.schemeOfWorkId, dto.weekNumber);
     const prompt = buildQuizPrompt(scheme.subject, week, settings, dto.questionCount);
-    const content = await this.gemini.generateJson<QuizContentDto>(prompt, QUIZ_RESPONSE_SCHEMA);
+    const content = await this.ai.generateJson<QuizContentDto>(prompt, QUIZ_RESPONSE_SCHEMA);
 
     const client = await this.tenantPrisma.getClient();
     return client.quiz.create({
@@ -71,7 +71,7 @@ export class QuizzesService {
 
   /**
    * Staff get the quiz as stored, answers included. Everyone else gets only
-   * PUBLISHED quizzes, with the answer key stripped — see strip-answers.ts.
+   * PUBLISHED quizzes, with the answer key stripped â€” see strip-answers.ts.
    */
   async list(viewer: AuthenticatedUser, schemeOfWorkId?: string) {
     const client = await this.tenantPrisma.getClient();
@@ -98,7 +98,7 @@ export class QuizzesService {
     if (isStaff(viewer)) return record;
 
     if (record.status !== "PUBLISHED") {
-      // 404, not 403 — same reasoning as schemes-of-work.service.ts.
+      // 404, not 403 â€” same reasoning as schemes-of-work.service.ts.
       throw new NotFoundException("No quiz found with that id");
     }
     return { ...record, content: stripAnswers(record.content) };
@@ -140,3 +140,4 @@ export class QuizzesService {
     return { scheme, week };
   }
 }
+

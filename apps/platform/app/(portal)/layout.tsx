@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/schools", label: "Tenants" },
   { href: "/plans", label: "Plans" },
   { href: "/billing", label: "Billing" },
+  { href: "/ai", label: "AI provider" },
 ];
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {

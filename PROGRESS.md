@@ -957,6 +957,47 @@ day once; the periods and the whole week follow.
   actually for: seeing at a glance whether you have a class. Free periods are
   left blank on purpose.
 
+**The AI provider is a Super Admin setting, not an environment variable
+(done).** `GEMINI_API_KEY` is gone; whoever runs the platform picks a
+provider in the console and pastes their own key.
+
+- **Five providers, one code path.** OpenRouter, OpenAI, Anthropic, Google
+  Gemini, and anything OpenAI-compatible (Groq, Together, DeepSeek, a local
+  Ollama — that one asks for a base URL). They differ only in where the key
+  goes and how the response is shaped: Gemini wants the key in the query
+  string, Anthropic wants `x-api-key` plus a version header, the rest want
+  `Authorization: Bearer`. Three response shapes, one `generateJson`.
+- **The key is never returned, by design and by test.** AES-256-GCM at rest
+  via the same `TenantSecretsService` the payment gateways use; the settings
+  route returns `••••` plus the last four and there is no route that returns
+  it whole. The e2e asserts on the `apiKeyEncrypted` *column*, not the API
+  response — a masked view can be right while the column still holds
+  plaintext, and only one of those two is a breach.
+- **Omitting the key keeps it; sending an empty one clears it.** Changing the
+  model must not silently sign the platform out of its provider, and there
+  has to be some way to revoke without a database edit.
+- **A Test button, because the alternative is finding out mid-lesson.**
+  One small real request, and the result is stored — a wrong key should
+  surface in the console, not as a teacher's generation failing while they
+  are planning tomorrow's class. Provider errors are translated: 401/403
+  becomes "rejected the API key", 404 points at the model name, 429 at rate
+  limits or credit.
+- **Structured output is asked for in words, not with a provider flag.**
+  Only Gemini has a real `responseSchema`; folding the schema into the prompt
+  and unwrapping ```json fences on the way back is the one approach all five
+  support. `extractJson` returns null rather than throwing, so a chatty model
+  degrades to a clear error instead of a stack trace.
+- **PLATFORM_ADMIN only.** A school administrator must not be able to read
+  the key, change it, or point generation at a provider of their own — the
+  bill lands on the platform. `PLATFORM_SUPPORT` gets 403, and the e2e checks
+  the rejected write did not land.
+
+A note on the guard, since it cost a debugging round: `@PlatformRoles(...)`
+is only metadata. A `/platform/*` controller also needs
+`@Public()` (to opt out of the tenant `JwtAuthGuard`) **and**
+`@UseGuards(PlatformJwtAuthGuard, PlatformRolesGuard)`. Without them every
+route 401s with a perfectly valid platform token.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was

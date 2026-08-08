@@ -1,9 +1,9 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+﻿import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { RoleName } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { CurriculumSettingsService } from "@/curriculum-settings/curriculum-settings.service";
-import { GeminiService } from "@/ai/gemini.service";
+import { AiService } from "@/ai/ai.service";
 import { canGenerateWithAi } from "@/schemes-of-work/can-generate-with-ai";
 import { buildLessonPlanPrompt, LESSON_PLAN_RESPONSE_SCHEMA, type SourceWeek } from "./lesson-plan-prompt";
 import type { CreateLessonPlanDto } from "./dto/create-lesson-plan.dto";
@@ -18,7 +18,7 @@ export class LessonPlansService {
   constructor(
     private readonly tenantPrisma: TenantPrismaService,
     private readonly curriculumSettings: CurriculumSettingsService,
-    private readonly gemini: GeminiService,
+    private readonly ai: AiService,
   ) {}
 
   async create(dto: CreateLessonPlanDto, viewer: AuthenticatedUser) {
@@ -48,7 +48,7 @@ export class LessonPlansService {
     await this.assertNoExistingPlan(dto.schemeOfWorkId, dto.weekNumber);
 
     const prompt = buildLessonPlanPrompt(scheme.subject, week, settings);
-    const content = await this.gemini.generateJson<LessonPlanContentDto>(prompt, LESSON_PLAN_RESPONSE_SCHEMA);
+    const content = await this.ai.generateJson<LessonPlanContentDto>(prompt, LESSON_PLAN_RESPONSE_SCHEMA);
 
     const client = await this.tenantPrisma.getClient();
     return client.lessonPlan.create({
@@ -86,7 +86,7 @@ export class LessonPlansService {
 
     const isStaff = viewer.roles.some((role) => STAFF_ROLES.includes(role));
     if (!isStaff && record.status !== "PUBLISHED") {
-      // 404, not 403 — same reasoning as schemes-of-work.service.ts.
+      // 404, not 403 â€” same reasoning as schemes-of-work.service.ts.
       throw new NotFoundException("No lesson plan found with that id");
     }
     return record;
@@ -129,3 +129,4 @@ export class LessonPlansService {
     }
   }
 }
+

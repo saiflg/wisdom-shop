@@ -5,7 +5,7 @@ import { Client as PgClient } from "pg";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/bootstrap";
 import { ControlPrismaService } from "../src/control-db/control-prisma.service";
-import { GeminiService } from "../src/ai/gemini.service";
+import { AiService } from "../src/ai/ai.service";
 
 const FIXTURE_PREFIX = "e2e-quiz-";
 
@@ -71,9 +71,8 @@ describe("Quizzes (e2e)", () => {
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(GeminiService)
+      .overrideProvider(AiService)
       .useValue({
-        isConfigured: true,
         generateJson: jest.fn().mockResolvedValue(FAKE_GENERATED_CONTENT),
       })
       .compile();
