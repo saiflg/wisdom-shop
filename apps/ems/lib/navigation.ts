@@ -49,6 +49,9 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "nav.dashboard",
     icon: "dashboard",
     items: [
+      // First for everybody, but only students and guardians have anything
+      // behind it — it tells staff so rather than showing a broken page.
+      { key: "nav.dashboard.my", href: "/my" },
       { key: "nav.dashboard.overview", href: "/dashboard" },
       { key: "nav.dashboard.analytics" },
       { key: "nav.dashboard.notifications" },

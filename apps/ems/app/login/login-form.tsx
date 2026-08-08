@@ -37,7 +37,12 @@ export function LoginForm({ defaultSchoolSlug }: { defaultSchoolSlug?: string } 
         body: values,
       });
       setSession(result.accessToken, result.user);
-      router.push("/dashboard");
+      // A student or parent lands on their own page; the dashboard is an
+      // administrator's overview and means very little to a family.
+      const isStaff = result.user.roles.some(
+        (role: string) => role === "SCHOOL_ADMIN" || role === "TEACHER",
+      );
+      router.push(isStaff ? "/dashboard" : "/my");
       router.refresh();
     } catch (error) {
       setFormError(describeSignInError(error, "Incorrect school, email or password."));

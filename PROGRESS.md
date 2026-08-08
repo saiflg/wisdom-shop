@@ -1292,6 +1292,43 @@ can reach the report card.
   nothing; and an assignment cannot be linked to another class's assessment,
   or the mark would land in a gradebook nobody was looking at.
 
+**Student and parent portal (done).** Everything above was built for the
+people who run a school. This is the one page built for the people the school
+is for: `/my`, the first thing a student or parent sees after signing in.
+
+- **Families land here, staff land on the dashboard.** The redirect is
+  decided from the roles on the token at sign-in. An administrator's overview
+  — enrolment counts, revenue, outstanding fees across the school — means
+  nothing to a parent, and putting them there first would have been a
+  statement about who the software is for.
+- **The portal owns no data of its own.** It calls the same attendance, fees,
+  homework and AI-lesson services every other screen calls, through the same
+  guards, with the viewer taken from the token. That is the whole reason a
+  guardian cannot read another family's child here: there is no second code
+  path that could have got the scoping wrong, only the one already tested by
+  each module's own e2e suite.
+- **Every panel fails on its own.** A composed page has four ways to break,
+  and one unconfigured module must not blank out a child's timetable. Each
+  source is awaited independently and a failure renders as an empty or
+  absent panel, never as a page-wide error.
+- **"Not taken yet" is not "0%".** A child whose class has no registers yet
+  has no attendance rate — showing 0% to a parent states, in the plainest
+  possible terms, that their child has never once been to school. The service
+  returns null and the page says so in words. This is the same rule as the
+  homework mark that is removed rather than nulled: the absence of a number
+  and a bad number are different things, and only one of them frightens a
+  parent at breakfast.
+- **Due dates are bucketed against the family's own day.** Overdue / today /
+  coming up / no deadline, computed from a single pure `bucketByDue` with the
+  day boundaries fixed once — otherwise "due today" quietly means "due within
+  24 hours", and work due at 9am tomorrow reads as due today.
+- **The child switcher appears only for a family with more than one child.**
+  A dropdown with one option is furniture.
+- **A parent with no linked student gets a sentence, not an empty page**, and
+  so does a staff member who reaches `/my` from the nav — the nav shows the
+  link to everyone because a parent must be able to find it, so the page
+  itself has to explain when it is not for you.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was
