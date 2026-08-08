@@ -559,85 +559,131 @@ const timetable: EntityDefinition = {
 // grid. A wide grid cannot say which assessment a column is without encoding
 // it in the header, and hand-edited headers are exactly what goes wrong.
 
+/** Hundredths of a mark to something a teacher would write: 1750 -> "17.5". */
+const fromHundredths = (value: unknown): string =>
+  value === null || value === undefined ? "" : String(Number(value) / 100);
+
 const results: EntityDefinition = {
   name: "results",
   label: "Results and marks",
+  // An assessment is identified in the database by subject, class, year, term
+  // and name together — the same five things. Keying on the name alone would
+  // match "Mid-term" in every class in the school and write a mark to
+  // whichever one came back first.
   columns: [
     { header: "Admission number", field: "studentCode" },
+    { header: "Class", field: "className" },
+    { header: "Subject", field: "subject" },
+    { header: "Academic year", field: "academicYear" },
+    { header: "Term", field: "term" },
     { header: "Assessment", field: "assessment" },
     { header: "Score", field: "score" },
     { header: "Out of", field: "maxScore" },
+    { header: "Status", field: "status" },
   ],
   spec: {
     keyField: "studentCode",
-    additionalKeyFields: ["assessment"],
+    additionalKeyFields: ["className", "subject", "academicYear", "term", "assessment"],
     columns: [
       { field: "studentCode", headers: ["Admission number", "studentCode"], required: true },
+      { field: "className", headers: ["Class"], required: true },
+      { field: "subject", headers: ["Subject"], required: true },
+      { field: "academicYear", headers: ["Academic year"], required: true },
+      { field: "term", headers: ["Term"], required: true },
       { field: "assessment", headers: ["Assessment"], required: true },
       {
         field: "score",
         headers: ["Score", "Mark"],
-        required: true,
         kind: "number",
         // Caught here rather than at write time so it is reported against the
         // row number, next to the other problems in the same file.
         validate: (value) => (Number(value) < 0 ? "Score cannot be negative" : null),
       },
-      { field: "maxScore", headers: ["Out of", "Maximum"], kind: "number" },
+      {
+        field: "status",
+        headers: ["Status"],
+        kind: "choice",
+        choices: ["RECORDED", "ABSENT", "EXCUSED"],
+      },
     ],
   },
 
   async loadExistingKeys(client) {
     const rows = await client.mark.findMany({
-      include: { studentProfile: true, assessment: true },
+      include: { studentProfile: true, assessment: { include: { subject: true, class: true } } },
     });
-    return new Set(
-      rows.map((row) =>
-        compositeKey([
-          text((row.studentProfile as Record<string, unknown>)?.studentCode),
-          text((row.assessment as Record<string, unknown>)?.title),
-        ]),
-      ),
-    );
+    return new Set(rows.map((row) => markKey(row)));
   },
 
   async exportRows(client) {
     const rows = await client.mark.findMany({
-      include: { studentProfile: true, assessment: true },
+      include: { studentProfile: true, assessment: { include: { subject: true, class: true } } },
       orderBy: { createdAt: "asc" },
     });
+
     return rows.map((row) => {
-      const assessment = row.assessment as Record<string, unknown>;
+      const assessment = (row.assessment ?? {}) as Record<string, unknown>;
       return {
         studentCode: text((row.studentProfile as Record<string, unknown>)?.studentCode),
-        assessment: text(assessment?.title),
-        score: text(row.score),
-        maxScore: text(assessment?.maxScore),
+        className: text((assessment.class as Record<string, unknown>)?.name),
+        subject: text((assessment.subject as Record<string, unknown>)?.name),
+        academicYear: text(assessment.academicYear),
+        term: text(assessment.term),
+        assessment: text(assessment.name),
+        // Whole marks out, whole marks in. The hundredths are an internal
+        // representation, not something to make a teacher type.
+        score: fromHundredths(row.scoreHundredths),
+        maxScore: fromHundredths(assessment.maxScoreHundredths),
+        status: text(row.status),
       };
     });
   },
 
   async apply(client, row) {
-    const { studentCode, assessment, score } = row.values;
+    const { studentCode, className, subject, academicYear, term, assessment, score, status } = row.values;
 
     const student = await client.studentProfile.findFirst({ where: { studentCode, deletedAt: null } });
     if (!student) throw new Error(`No student with admission number "${studentCode}"`);
 
-    const assessmentRecord = await client.assessment.findFirst({ where: { title: assessment } });
-    if (!assessmentRecord) throw new Error(`No assessment called "${assessment}"`);
+    const assessmentRecord = await client.assessment.findFirst({
+      where: {
+        name: assessment,
+        academicYear,
+        term,
+        deletedAt: null,
+        class: { name: className },
+        subject: { name: subject },
+      },
+    });
+    if (!assessmentRecord) {
+      throw new Error(
+        `No assessment called "${assessment}" for ${subject} in ${className}, ${term} ${academicYear}`,
+      );
+    }
 
-    const numericScore = Number(score);
-    const maxScore = Number(assessmentRecord.maxScore ?? 0);
-    if (maxScore > 0 && numericScore > maxScore) {
-      throw new Error(`Score ${score} is more than the ${maxScore} this assessment is out of`);
+    const markStatus = status || "RECORDED";
+    // A score cannot express "was not there", so the schema stores null for
+    // those and the import must not quietly write a zero instead.
+    const scoreHundredths =
+      markStatus === "RECORDED" ? Math.round(Number(score || 0) * 100) : null;
+
+    if (markStatus === "RECORDED" && !score) {
+      throw new Error("A recorded mark needs a score. Use Status ABSENT or EXCUSED if there is none.");
+    }
+
+    const maxHundredths = Number(assessmentRecord.maxScoreHundredths ?? 0);
+    if (scoreHundredths !== null && maxHundredths > 0 && scoreHundredths > maxHundredths) {
+      throw new Error(`Score ${score} is more than the ${maxHundredths / 100} this assessment is out of`);
     }
 
     const existing = await client.mark.findFirst({
       where: { studentProfileId: student.id as string, assessmentId: assessmentRecord.id as string },
     });
 
+    const data = { scoreHundredths, status: markStatus };
+
     if (existing) {
-      await client.mark.update({ where: { id: existing.id as string }, data: { score: numericScore } });
+      await client.mark.update({ where: { id: existing.id as string }, data });
       return;
     }
 
@@ -645,11 +691,24 @@ const results: EntityDefinition = {
       data: {
         studentProfileId: student.id as string,
         assessmentId: assessmentRecord.id as string,
-        score: numericScore,
+        ...data,
       },
     });
   },
 };
+
+/** The identity of a mark, built identically on both sides of the import. */
+function markKey(row: Record<string, unknown>): string {
+  const assessment = (row.assessment ?? {}) as Record<string, unknown>;
+  return compositeKey([
+    text((row.studentProfile as Record<string, unknown>)?.studentCode),
+    text((assessment.class as Record<string, unknown>)?.name),
+    text((assessment.subject as Record<string, unknown>)?.name),
+    text(assessment.academicYear),
+    text(assessment.term),
+    text(assessment.name),
+  ]);
+}
 
 // ────────────────────────────────────────────────────────── curriculum
 //

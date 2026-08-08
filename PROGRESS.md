@@ -1232,6 +1232,19 @@ The general rule this is the second instance of: **whenever a plan decides
 another, the difference is a silent duplicate.** The two must be the same
 lookup.
 
+**And a second bug in the same phase, from the same blind spot.** The results
+entity was written against field names that do not exist — `title` for what
+is really `Assessment.name`, `maxScore`/`score` for `maxScoreHundredths`/
+`scoreHundredths`. Every test passed, because the results tests only
+*previewed* (which never touches the database) and *exported an empty table*
+(where a missing field maps to an empty string). Nothing exercised the write.
+It also keyed on the assessment name alone, which matches "Mid-term" in every
+class in the school. Now keyed on the same five things the database's own
+unique index uses — student, class, subject, year, term, name — with a test
+that writes a half mark, reads it back as `17.5`, and corrects it to 19
+without creating a second row. **A preview-only test proves nothing about an
+import;** the round trip has to go through `apply` and come back out.
+
 Two things this cost that are worth not re-learning. `z.coerce.number()` on
 an untouched optional number input receives `""`, coerces it to `0`, and then
 fails `.min(1)` — so an optional field rejects being left alone.

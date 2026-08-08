@@ -552,6 +552,141 @@ describe("Data import and export (e2e)", () => {
       expect(JSON.stringify(preview.body)).toMatch(/cannot be negative/i);
     });
 
+    it("writes a mark and reads it back unchanged", async () => {
+      // The coverage that was missing the first time: the earlier results
+      // tests only previewed and exported an empty table, so nothing ever
+      // exercised the write — and the write was using field names that do
+      // not exist.
+      const klass = await request(app.getHttpServer())
+        .post("/v1/classes")
+        .set(asAdmin())
+        .send({ name: "Marks 5A", academicYear: "2026-2027" })
+        .expect(201);
+      const subject = await request(app.getHttpServer())
+        .post("/v1/subjects")
+        .set(asAdmin())
+        .send({ name: "Marks Maths" })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post("/v1/grading/assessments")
+        .set(asAdmin())
+        .send({
+          classId: klass.body.id,
+          subjectId: subject.body.id,
+          name: "Mid-term",
+          academicYear: "2026-2027",
+          term: "Term 1",
+          maxScoreHundredths: 2000,
+          weightPercent: 100,
+        })
+        .expect(201);
+
+      const student = await request(app.getHttpServer())
+        .post("/v1/students")
+        .set(asAdmin())
+        .send({ firstName: "Mark", lastName: "Taker", studentCode: "MARK-001" })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post("/v1/enrollments")
+        .set(asAdmin())
+        .send({ studentProfileId: student.body.id, classId: klass.body.id })
+        .expect(201);
+
+      const sheet = (score: string) =>
+        buildSheet(
+          [
+            { header: "Admission number", field: "studentCode" },
+            { header: "Class", field: "className" },
+            { header: "Subject", field: "subject" },
+            { header: "Academic year", field: "academicYear" },
+            { header: "Term", field: "term" },
+            { header: "Assessment", field: "assessment" },
+            { header: "Score", field: "score" },
+          ],
+          [
+            {
+              studentCode: "MARK-001",
+              className: "Marks 5A",
+              subject: "Marks Maths",
+              academicYear: "2026-2027",
+              term: "Term 1",
+              assessment: "Mid-term",
+              score,
+            },
+          ],
+          "csv",
+        );
+
+      // A half mark: teachers really do award them, and the round trip has to
+      // survive the hundredths the database stores.
+      const first = await request(app.getHttpServer())
+        .post("/v1/data/results/import")
+        .set(asAdmin())
+        .attach("file", await sheet("17.5"), "results.csv")
+        .expect(201);
+      expect(first.body.failures).toEqual([]);
+      expect(first.body.created).toBe(1);
+
+      const exported = await request(app.getHttpServer())
+        .get("/v1/data/results/export?format=csv")
+        .set(asAdmin())
+        .expect(200);
+      const line = exported.text.split("\n").find((l) => l.includes("MARK-001"));
+      expect(line).toContain("17.5");
+      expect(line).toContain("20");
+
+      // Correcting the mark updates it rather than adding a second one.
+      const second = await request(app.getHttpServer())
+        .post("/v1/data/results/import")
+        .set(asAdmin())
+        .attach("file", await sheet("19"), "results.csv")
+        .expect(201);
+      expect(second.body.created).toBe(0);
+      expect(second.body.updated).toBe(1);
+
+      const after = await request(app.getHttpServer())
+        .get("/v1/data/results/export?format=csv")
+        .set(asAdmin())
+        .expect(200);
+      expect(after.text.split("\n").filter((l) => l.includes("MARK-001"))).toHaveLength(1);
+    });
+
+    it("refuses a mark higher than the assessment is out of", async () => {
+      const file = await buildSheet(
+        [
+          { header: "Admission number", field: "studentCode" },
+          { header: "Class", field: "className" },
+          { header: "Subject", field: "subject" },
+          { header: "Academic year", field: "academicYear" },
+          { header: "Term", field: "term" },
+          { header: "Assessment", field: "assessment" },
+          { header: "Score", field: "score" },
+        ],
+        [
+          {
+            studentCode: "MARK-001",
+            className: "Marks 5A",
+            subject: "Marks Maths",
+            academicYear: "2026-2027",
+            term: "Term 1",
+            assessment: "Mid-term",
+            score: "45",
+          },
+        ],
+        "csv",
+      );
+
+      const res = await request(app.getHttpServer())
+        .post("/v1/data/results/import")
+        .set(asAdmin())
+        .attach("file", file, "results.csv")
+        .expect(201);
+
+      expect(res.body.created).toBe(0);
+      expect(res.body.failures[0].problem).toMatch(/more than the 20/);
+    });
+
     it("treats each week of a scheme of work as its own row", async () => {
       const file = await buildSheet(
         [
