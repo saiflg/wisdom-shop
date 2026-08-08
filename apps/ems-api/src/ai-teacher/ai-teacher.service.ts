@@ -1,11 +1,30 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import type { RoleName } from "ems-tenant-client";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import type { RoleName, TutorTurnRole } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { CurriculumSettingsService } from "@/curriculum-settings/curriculum-settings.service";
 import { AiService } from "@/ai/ai.service";
-import { buildTutorPrompt, type TranscriptTurn, type TutorContext } from "./tutor-prompt";
+import {
+  buildCoursePrompt,
+  buildLessonPrompt,
+  buildTutorPrompt,
+  type TranscriptTurn,
+  type TutorContext,
+} from "./tutor-prompt";
 import { checkTurnAllowed, startOfDay } from "./tutor-limits";
+import {
+  COURSE_RESPONSE_SCHEMA,
+  courseFromSchemeWeeks,
+  isComplete,
+  lessonAt,
+  MAX_LESSONS,
+  MIN_LESSONS,
+  parseCourse,
+  percentComplete,
+  type Course,
+} from "./course";
+import { splitReplyAndDiagram } from "./sanitize-svg";
+import { matchResources } from "./match-resources";
 import type { StartSessionDto } from "./dto/start-session.dto";
 import type { AskQuestionDto } from "./dto/ask-question.dto";
 
@@ -41,18 +60,28 @@ export class AiTeacherService {
     const subject = await client.subject.findFirst({ where: { id: dto.subjectId, deletedAt: null } });
     if (!subject) throw new NotFoundException("No subject found with that id");
 
+    let scheme = null;
     if (dto.schemeOfWorkId) {
-      const scheme = await client.schemeOfWork.findFirst({ where: { id: dto.schemeOfWorkId } });
+      scheme = await client.schemeOfWork.findFirst({ where: { id: dto.schemeOfWorkId } });
       if (!scheme) throw new NotFoundException("No scheme of work found with that id");
       if (scheme.subjectId !== dto.subjectId) {
         throw new NotFoundException("That scheme of work belongs to a different subject");
       }
     }
 
+    const mode = dto.mode ?? "ASK";
     const ownProfile = await client.studentProfile.findUnique({
       where: { userId: viewer.id },
       select: { id: true },
     });
+
+    // Planning the course is the one provider call a class makes before any
+    // teaching happens, so it is subject to the same daily ceiling.
+    let outline: Course | null = null;
+    if (mode === "AUTO") {
+      await this.assertWithinDailyLimit(viewer.id);
+      outline = await this.planCourse(subject, scheme?.content, dto);
+    }
 
     return client.tutorSession.create({
       data: {
@@ -64,6 +93,8 @@ export class AiTeacherService {
         schemeOfWorkId: dto.schemeOfWorkId ?? null,
         weekNumber: dto.weekNumber ?? null,
         topic: dto.topic.trim(),
+        mode,
+        outline: outline as unknown as object,
       },
       include: { subject: true, turns: { orderBy: { sequence: "asc" } } },
     });
@@ -76,79 +107,108 @@ export class AiTeacherService {
    * an admin. The transcript is what a school or a parent reads to know what
    * the AI said to a child, and it is only worth reading if nobody else can
    * write into it.
+   *
+   * In an automatic class this answers without advancing: interrupting to ask
+   * something must not cost the student a lesson.
    */
   async ask(sessionId: string, dto: AskQuestionDto, viewer: AuthenticatedUser) {
+    const session = await this.ownSession(sessionId, viewer);
+    await this.assertMaySpend(session, viewer.id);
+
+    const context = await this.contextFor(session);
+    const transcript = this.transcriptOf(session.turns);
+    const prompt = buildTutorPrompt(context, transcript, dto.question);
+
+    const { question, answer } = await this.exchange(session, {
+      studentContent: dto.question.trim(),
+      prompt,
+      // Null: a question is not part of the course, which is what stops it
+      // being mistaken for a taught lesson when the transcript is read back.
+      lessonIndex: null,
+    });
+
+    return { question, answer, position: session.position };
+  }
+
+  /**
+   * Teaches the next lesson of an automatic class.
+   *
+   * `position` moves only after the lesson is stored. A request that dies
+   * mid-flight therefore re-teaches a lesson rather than skipping one — the
+   * same choice as reserving a turn before calling the provider, and for the
+   * same reason: repeating is recoverable, losing is not.
+   */
+  async continueClass(sessionId: string, viewer: AuthenticatedUser) {
+    const session = await this.ownSession(sessionId, viewer);
+    if (session.mode !== "AUTO") {
+      throw new BadRequestException("This lesson is question-and-answer. Ask a question instead.");
+    }
+
+    const course = parseCourse(session.outline);
+    if (isComplete(course, session.position)) {
+      return { finished: true, position: session.position, percent: 100, turn: null };
+    }
+
+    const lesson = lessonAt(course, session.position);
+    if (!lesson || !course) throw new BadRequestException("This class has no lessons left to teach.");
+
+    await this.assertMaySpend(session, viewer.id);
+
+    const context = await this.contextFor(session);
+    const prompt = buildLessonPrompt(
+      context,
+      lesson,
+      { index: session.position, total: course.lessons.length },
+      this.transcriptOf(session.turns),
+    );
+
+    const { answer } = await this.exchange(session, {
+      studentContent: null,
+      prompt,
+      lessonIndex: session.position,
+    });
+
     const client = await this.tenantPrisma.getClient();
-
-    const session = await client.tutorSession.findFirst({
+    const position = session.position + 1;
+    await client.tutorSession.update({
       where: { id: sessionId },
-      include: { subject: true, schemeOfWork: true, turns: { orderBy: { sequence: "asc" } } },
-    });
-    if (!session) throw new NotFoundException("No lesson found with that id");
-    if (session.startedByUserId !== viewer.id) {
-      // 404 rather than 403: whether a given lesson exists is itself
-      // information about another student.
-      throw new NotFoundException("No lesson found with that id");
-    }
-
-    const turnsInSession = session.turns.filter((turn) => turn.role === "STUDENT").length;
-    const turnsToday = await client.tutorTurn.count({
-      where: {
-        role: "STUDENT",
-        createdAt: { gte: startOfDay(new Date()) },
-        session: { startedByUserId: viewer.id },
-      },
+      // Resuming a paused class is implicit in continuing it; making the
+      // student press two buttons to carry on would be pointless ceremony.
+      data: { position, status: "ACTIVE" },
     });
 
-    const decision = checkTurnAllowed({ turnsInSession, turnsToday }, session.status);
-    if (!decision.allowed) throw new ForbiddenException(decision.reason);
-
-    const settings = await this.curriculumSettings.get();
-    const context: TutorContext = {
-      subjectName: session.subject.name,
-      gradeLevel: session.subject.gradeLevel,
-      topic: session.topic,
-      objectives: this.weekObjectives(session.schemeOfWork?.content, session.weekNumber),
-      country: settings.country,
-      curriculumStandard: settings.curriculumStandard,
+    return {
+      finished: isComplete(course, position),
+      position,
+      percent: percentComplete(course, position),
+      turn: answer,
+      lesson,
     };
+  }
 
-    const transcript: TranscriptTurn[] = session.turns.map((turn) => ({
-      role: turn.role,
-      content: turn.content,
-    }));
+  /** Puts a class down without ending it. `position` is what it comes back to. */
+  async pause(sessionId: string, viewer: AuthenticatedUser) {
+    const session = await this.ownSession(sessionId, viewer);
+    if (session.status === "ENDED") return session;
 
-    const nextSequence = session.turns.reduce((max, turn) => Math.max(max, turn.sequence), 0) + 1;
+    const client = await this.tenantPrisma.getClient();
+    return client.tutorSession.update({ where: { id: sessionId }, data: { status: "PAUSED" } });
+  }
 
-    // The question is stored before the provider is called, so a double-tapped
-    // Send collides on (sessionId, sequence) and never gets billed twice. If
-    // the call then fails the reservation is removed, leaving a clean
-    // transcript the student can simply retry into.
-    const studentTurn = await client.tutorTurn.create({
-      data: { sessionId, sequence: nextSequence, role: "STUDENT", content: dto.question.trim() },
-    });
-
-    let answer: string;
-    try {
-      answer = await this.ai.generateText(buildTutorPrompt(context, transcript, dto.question));
-    } catch (error) {
-      await client.tutorTurn.delete({ where: { id: studentTurn.id } }).catch(() => undefined);
-      throw error;
+  async resume(sessionId: string, viewer: AuthenticatedUser) {
+    const session = await this.ownSession(sessionId, viewer);
+    if (session.status === "ENDED") {
+      throw new BadRequestException("This class has ended. Start a new one to keep learning.");
     }
 
-    const tutorTurn = await client.tutorTurn.create({
-      data: { sessionId, sequence: nextSequence + 1, role: "TUTOR", content: answer },
-    });
-
-    await client.tutorSession.update({ where: { id: sessionId }, data: { updatedAt: new Date() } });
-
-    return { question: studentTurn, answer: tutorTurn };
+    const client = await this.tenantPrisma.getClient();
+    return client.tutorSession.update({ where: { id: sessionId }, data: { status: "ACTIVE" } });
   }
 
   async list(viewer: AuthenticatedUser) {
     const client = await this.tenantPrisma.getClient();
 
-    return client.tutorSession.findMany({
+    const sessions = await client.tutorSession.findMany({
       where: await this.readableWhere(viewer),
       include: {
         subject: true,
@@ -157,6 +217,11 @@ export class AiTeacherService {
       },
       orderBy: { updatedAt: "desc" },
     });
+
+    return sessions.map((session) => ({
+      ...session,
+      percent: percentComplete(parseCourse(session.outline), session.position),
+    }));
   }
 
   async findOne(id: string, viewer: AuthenticatedUser) {
@@ -171,7 +236,30 @@ export class AiTeacherService {
       },
     });
     if (!session) throw new NotFoundException("No lesson found with that id");
-    return session;
+
+    const course = parseCourse(session.outline);
+    const upcoming = lessonAt(course, session.position);
+
+    // Demonstrations for the lesson about to be taught, offered rather than
+    // forced: the student chooses whether to watch before carrying on.
+    const resources = upcoming
+      ? matchResources(
+          await client.lessonResource.findMany({
+            where: { subjectId: session.subjectId, deletedAt: null },
+            orderBy: { createdAt: "asc" },
+          }),
+          upcoming.title,
+        )
+      : [];
+
+    return {
+      ...session,
+      course,
+      currentLesson: upcoming,
+      percent: percentComplete(course, session.position),
+      finished: isComplete(course, session.position),
+      resources,
+    };
   }
 
   async end(id: string, viewer: AuthenticatedUser) {
@@ -191,6 +279,167 @@ export class AiTeacherService {
       where: { id },
       data: { status: "ENDED", endedAt: new Date() },
     });
+  }
+
+  private async planCourse(
+    subject: { name: string; gradeLevel: string | null },
+    schemeContent: unknown,
+    dto: StartSessionDto,
+  ): Promise<Course> {
+    // When the class is anchored to a scheme of work the school has already
+    // decided what is taught and in what order. Generating a parallel
+    // syllabus would quietly teach something else.
+    const fromScheme = courseFromSchemeWeeks((schemeContent as { weeks?: SchemeWeek[] })?.weeks);
+    if (fromScheme) return fromScheme;
+
+    const settings = await this.curriculumSettings.get();
+    const prompt = buildCoursePrompt(
+      {
+        subjectName: subject.name,
+        gradeLevel: subject.gradeLevel,
+        topic: dto.topic,
+        country: settings.country,
+        curriculumStandard: settings.curriculumStandard,
+      },
+      { min: MIN_LESSONS, max: MAX_LESSONS },
+    );
+
+    const course = parseCourse(await this.ai.generateJson(prompt, COURSE_RESPONSE_SCHEMA));
+    if (!course) {
+      // Better to refuse than to open a class whose first "continue" has
+      // nothing to teach.
+      throw new BadRequestException("Couldn't plan a course for that topic. Try describing it differently.");
+    }
+    return course;
+  }
+
+  /**
+   * Writes the student's turn, calls the provider, writes the reply.
+   *
+   * The student's turn is stored first so a double-tapped Send collides on
+   * `(sessionId, sequence)` instead of buying a second answer; if the call
+   * then fails, the reservation is removed so the transcript never shows a
+   * question the tutor appears to have ignored.
+   */
+  private async exchange(
+    session: { id: string; turns: Array<{ sequence: number }> },
+    input: { studentContent: string | null; prompt: string; lessonIndex: number | null },
+  ) {
+    const client = await this.tenantPrisma.getClient();
+    const nextSequence = session.turns.reduce((max, turn) => Math.max(max, turn.sequence), 0) + 1;
+
+    const question =
+      input.studentContent === null
+        ? null
+        : await client.tutorTurn.create({
+            data: {
+              sessionId: session.id,
+              sequence: nextSequence,
+              role: "STUDENT" as TutorTurnRole,
+              content: input.studentContent,
+              lessonIndex: input.lessonIndex,
+            },
+          });
+
+    let reply: string;
+    try {
+      reply = await this.ai.generateText(input.prompt);
+    } catch (error) {
+      if (question) await client.tutorTurn.delete({ where: { id: question.id } }).catch(() => undefined);
+      throw error;
+    }
+
+    // The diagram is model-written markup bound for a child's browser, so it
+    // is sanitised before it is stored, not on the way out. Anything that
+    // fails is dropped and the lesson text kept.
+    const { text, diagram } = splitReplyAndDiagram(reply);
+
+    const answer = await client.tutorTurn.create({
+      data: {
+        sessionId: session.id,
+        sequence: question ? nextSequence + 1 : nextSequence,
+        role: "TUTOR" as TutorTurnRole,
+        content: text || reply.trim(),
+        diagram,
+        lessonIndex: input.lessonIndex,
+      },
+    });
+
+    await client.tutorSession.update({ where: { id: session.id }, data: { updatedAt: new Date() } });
+    return { question, answer };
+  }
+
+  private async contextFor(session: {
+    subject: { name: string; gradeLevel: string | null };
+    topic: string;
+    weekNumber: number | null;
+    schemeOfWork: { content: unknown } | null;
+  }): Promise<TutorContext> {
+    const settings = await this.curriculumSettings.get();
+    return {
+      subjectName: session.subject.name,
+      gradeLevel: session.subject.gradeLevel,
+      topic: session.topic,
+      objectives: this.weekObjectives(session.schemeOfWork?.content, session.weekNumber),
+      country: settings.country,
+      curriculumStandard: settings.curriculumStandard,
+    };
+  }
+
+  private transcriptOf(turns: Array<{ role: TutorTurnRole; content: string }>): TranscriptTurn[] {
+    return turns.map((turn) => ({ role: turn.role, content: turn.content }));
+  }
+
+  /** Loads a session the viewer is allowed to speak in, which is only their own. */
+  private async ownSession(sessionId: string, viewer: AuthenticatedUser) {
+    const client = await this.tenantPrisma.getClient();
+
+    const session = await client.tutorSession.findFirst({
+      where: { id: sessionId },
+      include: { subject: true, schemeOfWork: true, turns: { orderBy: { sequence: "asc" } } },
+    });
+    // 404 rather than 403 in both cases: whether a given lesson exists is
+    // itself information about another student.
+    if (!session || session.startedByUserId !== viewer.id) {
+      throw new NotFoundException("No lesson found with that id");
+    }
+    return session;
+  }
+
+  private async assertMaySpend(
+    session: { status: "ACTIVE" | "PAUSED" | "ENDED"; turns: Array<{ role: TutorTurnRole }> },
+    userId: string,
+  ) {
+    const client = await this.tenantPrisma.getClient();
+
+    // Tutor turns, not student ones: an automatic class advances without a
+    // question being typed and costs exactly the same.
+    const turnsInSession = session.turns.filter((turn) => turn.role === "TUTOR").length;
+    const turnsToday = await client.tutorTurn.count({
+      where: {
+        role: "TUTOR",
+        createdAt: { gte: startOfDay(new Date()) },
+        session: { startedByUserId: userId },
+      },
+    });
+
+    const decision = checkTurnAllowed({ turnsInSession, turnsToday }, session.status);
+    if (!decision.allowed) throw new ForbiddenException(decision.reason);
+  }
+
+  /** The daily ceiling alone, for spending that happens before a session exists. */
+  private async assertWithinDailyLimit(userId: string) {
+    const client = await this.tenantPrisma.getClient();
+    const turnsToday = await client.tutorTurn.count({
+      where: {
+        role: "TUTOR",
+        createdAt: { gte: startOfDay(new Date()) },
+        session: { startedByUserId: userId },
+      },
+    });
+
+    const decision = checkTurnAllowed({ turnsInSession: 0, turnsToday }, "ACTIVE");
+    if (!decision.allowed) throw new ForbiddenException(decision.reason);
   }
 
   /**

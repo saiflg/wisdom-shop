@@ -330,9 +330,11 @@ describe("AI Teacher (e2e)", () => {
     await tenantDb.connect();
     try {
       for (let index = 0; index < MAX_TURNS_PER_SESSION; index += 1) {
+        // TUTOR turns, because the cap counts provider calls: an automatic
+        // class advances without a question being typed and costs the same.
         await tenantDb.query(
           `INSERT INTO tutor_turns (id, "sessionId", sequence, role, content, "createdAt")
-           VALUES ($1, $2, $3, 'STUDENT', $4, NOW())`,
+           VALUES ($1, $2, $3, 'TUTOR', $4, NOW())`,
           [`filler-${index}-${Date.now()}`, fresh.body.id, index + 1, `filler ${index}`],
         );
       }

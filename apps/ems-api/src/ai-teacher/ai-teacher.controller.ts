@@ -1,10 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "@/auth/decorators/current-user.decorator";
+import { Roles } from "@/auth/decorators/roles.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { AiTeacherService } from "./ai-teacher.service";
+import { LessonResourcesService } from "./lesson-resources.service";
 import { StartSessionDto } from "./dto/start-session.dto";
 import { AskQuestionDto } from "./dto/ask-question.dto";
+import { CreateLessonResourceDto } from "./dto/create-lesson-resource.dto";
 
 /**
  * The AI Teacher: a tutoring conversation grounded in the school's own
@@ -53,9 +56,65 @@ export class AiTeacherController {
     return this.aiTeacher.ask(id, dto, user);
   }
 
+  @Post(":id/continue")
+  @ApiOperation({
+    summary: "Teach the next lesson of an automatic class",
+    description:
+      "Advances only after the lesson is stored, so an interrupted request re-teaches a lesson rather than " +
+      "skipping one. Resuming a paused class is implicit.",
+  })
+  continueClass(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.aiTeacher.continueClass(id, user);
+  }
+
+  @Patch(":id/pause")
+  @ApiOperation({ summary: "Put a class down without ending it" })
+  pause(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.aiTeacher.pause(id, user);
+  }
+
+  @Patch(":id/resume")
+  @ApiOperation({ summary: "Pick a paused class back up at the lesson it stopped on" })
+  resume(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.aiTeacher.resume(id, user);
+  }
+
   @Patch(":id/end")
   @ApiOperation({ summary: "End a lesson" })
   end(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.aiTeacher.end(id, user);
+  }
+}
+
+/**
+ * The school's library of demonstrations, offered to students mid-class.
+ *
+ * Staff-only to write, readable by anyone who can take a class. Nothing here
+ * is ever suggested by the AI — see match-resources.ts.
+ */
+@ApiTags("ai-teacher")
+@ApiBearerAuth()
+@Controller("ai-teacher/resources")
+export class LessonResourcesController {
+  constructor(private readonly resources: LessonResourcesService) {}
+
+  @Post()
+  @Roles("SCHOOL_ADMIN", "TEACHER")
+  @ApiOperation({ summary: "Add a demonstration a student can watch during a lesson" })
+  create(@Body() dto: CreateLessonResourceDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.resources.create(dto, user);
+  }
+
+  @Get()
+  @ApiOperation({ summary: "The school's demonstrations, optionally for one subject" })
+  list(@Query("subjectId") subjectId?: string) {
+    return this.resources.list(subjectId);
+  }
+
+  @Delete(":id")
+  @Roles("SCHOOL_ADMIN", "TEACHER")
+  @ApiOperation({ summary: "Withdraw a demonstration" })
+  remove(@Param("id") id: string) {
+    return this.resources.remove(id);
   }
 }

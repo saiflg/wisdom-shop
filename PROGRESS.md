@@ -1043,6 +1043,57 @@ with a school logo on it.
   rather than merely ignored — a reply that arrives wrapped in an object is
   a bug the student sees.
 
+**The automatic class (done).** The AI Teacher gained a second mode: instead
+of the student asking, a course is planned once and taught a lesson at a
+time, with diagrams, and it can be put down and picked back up.
+
+- **The course is planned once and stored, not re-asked.** A student who
+  comes back next week must find the course they began, not a fresh one the
+  model happened to invent that day. Pausing only means something if the
+  thing you return to is the thing you left — proved by a test that changes
+  what the model would say and checks the stored course is unmoved.
+- **A scheme of work wins over generation.** If the class is anchored to one,
+  its weeks *are* the course. The school already decided what is taught and
+  in what order, and generating a parallel syllabus would quietly teach
+  something else. Demo Academy's class needed no AI call at all for this
+  reason.
+- **`position` advances only after the lesson is stored.** An interrupted
+  request re-teaches a lesson rather than skipping one; repeating is
+  recoverable and losing is not. Same reasoning as reserving a turn before
+  calling the provider.
+- **Asking a question mid-class does not advance the course.** Interrupting
+  to ask what a numerator is must not cost the student a lesson. Questions
+  carry a null `lessonIndex`, which is also how a transcript read back later
+  distinguishes a question from the teaching.
+- **Diagrams are SVG the model writes, not generated images.** A text model
+  draws a labelled number line or a bar split into parts perfectly well, it
+  costs nothing beyond the turn already being paid for, and it stays sharp on
+  a phone. It is also *text*, which means it can be checked.
+- **That check is the most security-sensitive code in the phase.** Model-
+  written markup rendered inside a child's session on the school's origin is
+  an XSS vector, and "the prompt told it not to" is not a control.
+  `sanitize-svg.ts` is an allowlist of thirteen elements and thirty
+  attributes that **fails closed on the whole document** — a diagram that
+  trips any rule is dropped entirely rather than cleaned and kept. Twenty-four
+  tests, one per vector: script, `on*` handlers, `foreignObject`, `image`,
+  `use`, `href`, `xlink`, `javascript:`, `data:`, `url()`, `style`, animation
+  elements, comments, CDATA, numeric entities (`javascript&#58;` decodes
+  *after* any parser sees it), case tricks, spacing tricks, and a stray `<`
+  that never parsed as a tag. The lesson text survives a rejected diagram —
+  a student without a picture is still taught.
+- **Demonstrations are curated by staff, never invented by the AI.** Ask a
+  model for "a good video about fractions" and it will produce a plausible
+  URL without hesitation; the failure mode is a child sent somewhere nobody
+  vetted. So a teacher adds them, the class offers whichever match the
+  lesson by loose word overlap, and the student chooses whether to watch
+  before carrying on. Only YouTube and Vimeo are ever put in a frame — and
+  only after the video id is confirmed to be a bare id, because anything else
+  is carried straight into the embed URL. Everything else is an explicit
+  outbound link.
+- **The caps now count provider calls rather than student questions**, since
+  advancing a lesson costs the same as asking something and nobody types
+  anything to do it.
+
 Two things this cost that are worth not re-learning. `z.coerce.number()` on
 an untouched optional number input receives `""`, coerces it to `0`, and then
 fails `.min(1)` — so an optional field rejects being left alone.

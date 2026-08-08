@@ -71,6 +71,7 @@ model User {
   teachingAssignments  TeachingAssignment[] @relation("TeachingAssignmentTeacher")
   staffProfile         StaffProfile?
   tutorSessions        TutorSession[]       @relation("TutorSessionStartedBy")
+  lessonResources      LessonResource[]     @relation("LessonResourceAddedBy")
 
   @@map("users")
 }
@@ -237,6 +238,7 @@ model Subject {
   timetableEntries TimetableEntry[]
   teachingAssignments TeachingAssignment[]
   tutorSessions    TutorSession[]
+  lessonResources  LessonResource[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -1210,7 +1212,18 @@ model PaymentGatewaySettings {
 
 enum TutorSessionStatus {
   ACTIVE
+  /// Put down mid-class. Distinct from ENDED because the student intends to
+  /// come back, and `position` is what they come back to.
+  PAUSED
   ENDED
+}
+
+enum TutorSessionMode {
+  /// The student drives: they ask, the tutor answers.
+  ASK
+  /// The tutor drives: a generated course is taught a step at a time, and
+  /// the student can interrupt with questions without losing their place.
+  AUTO
 }
 
 enum TutorTurnRole {
@@ -1244,6 +1257,21 @@ model TutorSession {
   /// What the student is trying to learn, in their own words.
   topic  String
   status TutorSessionStatus @default(ACTIVE)
+  mode   TutorSessionMode   @default(ASK)
+
+  /// The course for an AUTO class:
+  /// `{ lessons: [{ title, objectives: string[] }] }`, generated once when
+  /// the class starts. Kept rather than re-derived so a student who comes
+  /// back next week gets the same course they started, not a fresh one the
+  /// model happened to invent that day.
+  outline Json?
+
+  /// How many lessons of `outline` have been taught. This is the whole
+  /// point of pausing: coming back means resuming here, not restarting.
+  /// Advanced only after a lesson's turn is safely stored, so an
+  /// interrupted request re-teaches a step rather than skipping it — the
+  /// same reasoning as reserving a turn before calling the provider.
+  position Int @default(0)
 
   startedAt DateTime  @default(now())
   endedAt   DateTime?
@@ -1269,9 +1297,60 @@ model TutorTurn {
   role     TutorTurnRole
   content  String
 
+  /// An optional diagram for this turn, as SVG.
+  ///
+  /// SVG rather than a generated bitmap: a text model draws a labelled
+  /// number line or fraction bar well, it costs nothing beyond the turn
+  /// already being paid for, and it stays sharp on a phone. Stored only
+  /// after passing sanitize-svg.ts — this is markup written by a model and
+  /// rendered in a child's browser, so it is untrusted input.
+  diagram String?
+
+  /// Which lesson of the course this turn belongs to, for AUTO classes.
+  /// Null for questions, which is how a question asked mid-class is
+  /// distinguished from the teaching itself.
+  lessonIndex Int?
+
   createdAt DateTime @default(now())
 
   @@unique([sessionId, sequence])
   @@index([sessionId])
   @@map("tutor_turns")
+}
+
+enum LessonResourceKind {
+  VIDEO
+  DOCUMENT
+  LINK
+}
+
+/// A demonstration a person made, offered to a student mid-class.
+///
+/// Added by staff, never by the AI. A model asked for "a good video about
+/// fractions" will confidently invent a URL, and the failure mode of that is
+/// a child sent somewhere nobody vetted. So the school curates these and the
+/// class merely offers whichever ones match the lesson — the student chooses
+/// whether to watch, and the class waits.
+model LessonResource {
+  id        String             @id @default(cuid())
+  subjectId String
+  subject   Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  kind      LessonResourceKind @default(VIDEO)
+  title     String
+  url       String
+  /// Free-text words matched loosely against a lesson title, so one
+  /// demonstration can serve several lessons without being pinned to one.
+  /// Deliberately not a foreign key to a lesson: the course is generated and
+  /// its lessons have no stable ids to point at.
+  keywords  String?
+
+  addedByUserId String?
+  addedByUser   User?   @relation("LessonResourceAddedBy", fields: [addedByUserId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([subjectId])
+  @@map("lesson_resources")
 }

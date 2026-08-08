@@ -19,6 +19,10 @@ describe("checkTurnAllowed", () => {
     if (!decision.allowed) expect(decision.reason).toMatch(/new one/i);
   });
 
+  it("allows a paused class through, or pausing would be a trap", () => {
+    expect(checkTurnAllowed(fresh, "PAUSED")).toEqual({ allowed: true });
+  });
+
   it("allows the last turn under the session cap but not the one after", () => {
     expect(checkTurnAllowed({ turnsInSession: MAX_TURNS_PER_SESSION - 1, turnsToday: 0 }, "ACTIVE")).toEqual({
       allowed: true,

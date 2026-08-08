@@ -9,13 +9,14 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api";
 import { useSubjects } from "@/lib/use-subjects";
 import { useSchemesOfWork } from "@/lib/use-schemes-of-work";
-import { useTutorSessions, useStartTutorSession } from "@/lib/use-ai-teacher";
+import { useTutorSessions, useStartTutorSession, type TutorSessionStatus } from "@/lib/use-ai-teacher";
 import { useAuthStore } from "@/store/auth-store";
 import { FormField } from "@/components/form-field";
 
 const startSchema = z.object({
   subjectId: z.string().min(1, "Choose a subject"),
   topic: z.string().min(3, "What would you like to learn?"),
+  mode: z.enum(["ASK", "AUTO"]),
   schemeOfWorkId: z.string().optional(),
   // Kept a string on purpose. An untouched number input submits "", which
   // `z.coerce.number()` turns into 0 — and 0 then fails a `.min(1)`, so the
@@ -33,6 +34,18 @@ type StartValues = z.infer<typeof startSchema>;
 const SELECT =
   "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900";
 
+const BADGE = "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold";
+const STATUS_BADGE: Record<TutorSessionStatus, string> = {
+  ACTIVE: `${BADGE} bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300`,
+  PAUSED: `${BADGE} bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300`,
+  ENDED: `${BADGE} bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400`,
+};
+const STATUS_LABEL: Record<TutorSessionStatus, string> = {
+  ACTIVE: "Open",
+  PAUSED: "Paused",
+  ENDED: "Ended",
+};
+
 export default function AiTeacherPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -48,7 +61,10 @@ export default function AiTeacherPage() {
   // transcript is the child's record, so the form is simply absent for them.
   const isGuardian = Boolean(user?.roles.includes("GUARDIAN")) && !user?.roles.some((r) => r === "SCHOOL_ADMIN" || r === "TEACHER");
 
-  const form = useForm<StartValues>({ resolver: zodResolver(startSchema) });
+  const form = useForm<StartValues>({
+    resolver: zodResolver(startSchema),
+    defaultValues: { mode: "AUTO" },
+  });
 
   const onStart = form.handleSubmit(async (values) => {
     setFormError(null);
@@ -56,6 +72,7 @@ export default function AiTeacherPage() {
       const session = await startSession.mutateAsync({
         subjectId: values.subjectId,
         topic: values.topic,
+        mode: values.mode,
         ...(values.schemeOfWorkId ? { schemeOfWorkId: values.schemeOfWorkId } : {}),
         ...(values.weekNumber ? { weekNumber: Number(values.weekNumber) } : {}),
       });
@@ -95,6 +112,35 @@ export default function AiTeacherPage() {
           onSubmit={onStart}
           className="space-y-4 rounded-xl border border-slate-200 p-5 dark:border-slate-800"
         >
+          <fieldset className="grid gap-3 sm:grid-cols-2">
+            <legend className="mb-1.5 text-sm font-medium">How would you like to learn?</legend>
+            {(
+              [
+                {
+                  value: "AUTO" as const,
+                  title: "Take the class",
+                  blurb: "A course is planned for you and taught one lesson at a time. Pause any time and pick up where you left off.",
+                },
+                {
+                  value: "ASK" as const,
+                  title: "Just ask questions",
+                  blurb: "No course — ask whatever you like about the topic and get an answer.",
+                },
+              ]
+            ).map((option) => (
+              <label
+                key={option.value}
+                className="flex cursor-pointer gap-3 rounded-lg border border-slate-300 p-3 transition hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 dark:border-slate-700 dark:has-[:checked]:bg-brand-950/30"
+              >
+                <input type="radio" value={option.value} {...form.register("mode")} className="mt-1" />
+                <span>
+                  <span className="block text-sm font-semibold">{option.title}</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">{option.blurb}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="subjectId" className="block text-sm font-medium">
@@ -192,18 +238,26 @@ export default function AiTeacherPage() {
                   {session.startedByUser
                     ? ` · ${session.startedByUser.firstName} ${session.startedByUser.lastName}`
                     : ""}
-                  {typeof session._count?.turns === "number" ? ` · ${session._count.turns} messages` : ""}
+                  {session.mode === "AUTO"
+                    ? ` · ${session.percent}% through the course`
+                    : typeof session._count?.turns === "number"
+                      ? ` · ${session._count.turns} messages`
+                      : ""}
                 </p>
+                {session.mode === "AUTO" && (
+                  <div
+                    className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"
+                    role="progressbar"
+                    aria-valuenow={session.percent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${session.topic} progress`}
+                  >
+                    <div className="h-full bg-brand-600" style={{ width: `${session.percent}%` }} />
+                  </div>
+                )}
               </div>
-              <span
-                className={
-                  session.status === "ACTIVE"
-                    ? "shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                    : "shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                }
-              >
-                {session.status === "ACTIVE" ? "Open" : "Ended"}
-              </span>
+              <span className={STATUS_BADGE[session.status]}>{STATUS_LABEL[session.status]}</span>
             </Link>
           </li>
         ))}

@@ -1,7 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsInt, IsOptional, IsString, MaxLength, MinLength, Min } from "class-validator";
+import { IsIn, IsInt, IsOptional, IsString, MaxLength, MinLength, Min } from "class-validator";
+import type { TutorSessionMode } from "ems-tenant-client";
 
 export class StartSessionDto {
+  @ApiPropertyOptional({
+    enum: ["ASK", "AUTO"],
+    description:
+      "ASK: the student asks, the tutor answers. AUTO: a course is planned and taught a lesson at a time, " +
+      "pausable and resumable.",
+  })
+  @IsOptional()
+  @IsIn(["ASK", "AUTO"])
+  mode?: TutorSessionMode;
+
   @ApiProperty({ description: "Which subject this lesson is in" })
   @IsString()
   @MinLength(1)

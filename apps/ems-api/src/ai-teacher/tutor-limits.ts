@@ -17,19 +17,31 @@ export const MAX_QUESTION_LENGTH = 1000;
 export type TurnDecision = { allowed: true } | { allowed: false; reason: string };
 
 export interface TurnUsage {
-  /** Student turns already in this session. */
+  /**
+   * Billable turns already in this session.
+   *
+   * Counted as tutor replies rather than student questions, because an
+   * automatic class advances a lesson without anyone typing a question and
+   * that costs exactly the same as one.
+   */
   turnsInSession: number;
-  /** Student turns by this student across all sessions since midnight. */
+  /** Billable turns by this student across all their sessions since midnight. */
   turnsToday: number;
 }
 
 /**
- * Whether one more question may be asked.
+ * Whether one more provider call may be made.
  *
  * Checked before the provider is called, not after: a refusal that still cost
  * money defeats the point of having a limit.
+ *
+ * A PAUSED session is allowed through — resuming is the expected way back in,
+ * and refusing it would make pausing a trap.
  */
-export function checkTurnAllowed(usage: TurnUsage, sessionStatus: "ACTIVE" | "ENDED"): TurnDecision {
+export function checkTurnAllowed(
+  usage: TurnUsage,
+  sessionStatus: "ACTIVE" | "PAUSED" | "ENDED",
+): TurnDecision {
   if (sessionStatus === "ENDED") {
     return { allowed: false, reason: "This session has ended. Start a new one to keep learning." };
   }

@@ -1,4 +1,11 @@
-import { buildTutorPrompt, MAX_TRANSCRIPT_TURNS, trimTranscript, type TranscriptTurn } from "./tutor-prompt";
+import {
+  buildCoursePrompt,
+  buildLessonPrompt,
+  buildTutorPrompt,
+  MAX_TRANSCRIPT_TURNS,
+  trimTranscript,
+  type TranscriptTurn,
+} from "./tutor-prompt";
 
 const CONTEXT = {
   subjectName: "Mathematics",
@@ -166,5 +173,106 @@ describe("buildTutorPrompt", () => {
     const prompt = buildTutorPrompt({ ...CONTEXT, topic: "  Fractions  " }, [], "  spaced out  ");
     expect(prompt).toContain("Today's topic: Fractions");
     expect(prompt).toContain("The student now asks: spaced out");
+  });
+
+  it("offers a diagram, restricted to what the sanitiser will actually accept", () => {
+    const prompt = buildTutorPrompt(CONTEXT, [], "Hi");
+    expect(prompt).toMatch(/inline SVG/);
+    expect(prompt).toMatch(/viewBox/);
+    // Asking for anything the sanitiser drops on arrival would only waste it.
+    expect(prompt).toMatch(/No script, style, image, use, href/);
+    // And a picture of a definition is clutter.
+    expect(prompt).toMatch(/only if/);
+  });
+});
+
+describe("buildCoursePrompt", () => {
+  const bounds = { min: 3, max: 12 };
+
+  it("asks for an ordered course on the student's topic", () => {
+    const prompt = buildCoursePrompt(CONTEXT, bounds);
+    expect(prompt).toContain("Adding fractions with unlike denominators");
+    expect(prompt).toContain("Mathematics");
+    expect(prompt).toContain("Grade 5");
+    expect(prompt).toMatch(/in the order they should be taught/);
+  });
+
+  it("states the lesson-count bounds it was given", () => {
+    const prompt = buildCoursePrompt(CONTEXT, { min: 4, max: 8 });
+    expect(prompt).toContain("between 4 and 8 lessons");
+  });
+
+  it("carries the school's curriculum standard into the plan", () => {
+    const prompt = buildCoursePrompt({ ...CONTEXT, country: "Nigeria", curriculumStandard: "NERDC" }, bounds);
+    expect(prompt).toContain("NERDC");
+    expect(prompt).toContain("Nigeria");
+  });
+
+  it("requires the course to cover any objectives it was given", () => {
+    const prompt = buildCoursePrompt({ ...CONTEXT, objectives: ["Find a common denominator"] }, bounds);
+    expect(prompt).toContain("Find a common denominator");
+  });
+
+  it("asks for titles and objectives, which is what the parser reads", () => {
+    expect(buildCoursePrompt(CONTEXT, bounds)).toMatch(/short title and one to three objectives/);
+  });
+});
+
+describe("buildLessonPrompt", () => {
+  const lesson = { title: "Equivalent fractions", objectives: ["Spot equivalent fractions"] };
+
+  it("says which lesson of how many is being taught", () => {
+    const prompt = buildLessonPrompt(CONTEXT, lesson, { index: 1, total: 5 }, []);
+    expect(prompt).toContain("lesson 2 of 5");
+    expect(prompt).toContain("Equivalent fractions");
+    expect(prompt).toContain("Spot equivalent fractions");
+  });
+
+  it("tells the tutor to build on earlier lessons rather than repeat them", () => {
+    const prompt = buildLessonPrompt(CONTEXT, lesson, { index: 2, total: 5 }, []);
+    expect(prompt).toMatch(/build on them, do not repeat them/);
+    expect(prompt).toMatch(/Do not summarise the whole course/);
+  });
+
+  it("asks the last lesson to sum the course up", () => {
+    const prompt = buildLessonPrompt(CONTEXT, lesson, { index: 4, total: 5 }, []);
+    expect(prompt).toMatch(/This is the last lesson/);
+    expect(prompt).not.toMatch(/Do not summarise the whole course/);
+  });
+
+  it("replays the class so far, which is what makes resuming continuous", () => {
+    const prompt = buildLessonPrompt(CONTEXT, lesson, { index: 1, total: 3 }, [
+      { role: "TUTOR", content: "Lesson one covered what a fraction is." },
+      { role: "STUDENT", content: "Got it." },
+    ]);
+    expect(prompt).toContain("Teacher: Lesson one covered what a fraction is.");
+    expect(prompt).toContain("Student: Got it.");
+  });
+
+  it("tells the student they may pause", () => {
+    expect(buildLessonPrompt(CONTEXT, lesson, { index: 0, total: 3 }, [])).toMatch(/pause and come back/);
+  });
+
+  it("carries the same child-safety rules as a question does", () => {
+    const prompt = buildLessonPrompt(CONTEXT, lesson, { index: 0, total: 3 }, []);
+    expect(prompt).toMatch(/trusted adult/);
+    expect(prompt).toMatch(/do not counsel them/);
+    expect(prompt).toMatch(/Never ask for or repeat personal details/);
+    expect(prompt).toMatch(/Never claim to be a human being/);
+  });
+
+  it("offers a diagram here too", () => {
+    expect(buildLessonPrompt(CONTEXT, lesson, { index: 0, total: 3 }, [])).toMatch(/inline SVG/);
+  });
+
+  it("trims a long class transcript but keeps its opening", () => {
+    const long: TranscriptTurn[] = Array.from({ length: 40 }, (_, i) => ({
+      role: i % 2 === 0 ? ("TUTOR" as const) : ("STUDENT" as const),
+      content: `turn ${i + 1}`,
+    }));
+    const prompt = buildLessonPrompt(CONTEXT, lesson, { index: 5, total: 8 }, long);
+    expect(prompt).toContain("turn 1");
+    expect(prompt).toContain("turn 40");
+    expect(prompt).not.toContain("turn 20");
   });
 });

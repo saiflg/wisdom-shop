@@ -111,6 +111,123 @@ export function buildTutorPrompt(
   lines.push(`The student now asks: ${question.trim()}`);
   lines.push("");
   lines.push("Reply as the teacher, in prose. Do not prefix your reply with a name or label.");
+  lines.push(DIAGRAM_INSTRUCTION);
+
+  return lines.join("\n");
+}
+
+/**
+ * What the tutor may draw.
+ *
+ * Deliberately a narrow subset, matching sanitize-svg.ts exactly: anything
+ * outside it is thrown away on arrival, so asking for it would only waste a
+ * diagram. Stated as "if it helps" because a picture of a definition is
+ * clutter, and a model told to always draw will always draw.
+ */
+export const DIAGRAM_INSTRUCTION = [
+  "",
+  "If — and only if — a picture would genuinely help, add one after your reply as inline SVG.",
+  "It must be a single <svg> element with a viewBox, using only these elements:",
+  "svg, g, title, desc, path, rect, circle, ellipse, line, polyline, polygon, text, tspan.",
+  "No script, style, image, use, href, animation, gradients, ids, classes or CSS of any kind.",
+  "Keep it simple and label it clearly: a number line, a bar split into parts, a labelled shape.",
+].join("\n");
+
+/**
+ * Asks for the syllabus of an automatic class.
+ *
+ * Generated once, at the start. The model is asked for a sequence a student
+ * can actually finish, because a forty-lesson course that nobody completes
+ * teaches less than a six-lesson one they do.
+ */
+export function buildCoursePrompt(context: TutorContext, lessonCount: { min: number; max: number }): string {
+  const lines: string[] = [];
+
+  lines.push(
+    `Plan a short course teaching ${describeLearner(context)} about "${context.topic.trim()}" in ${context.subjectName}.`,
+  );
+
+  const standard = context.curriculumStandard?.trim();
+  const country = context.country?.trim();
+  if (standard) lines.push(`Follow the ${standard} curriculum${country ? ` as taught in ${country}` : ""}.`);
+  else if (country) lines.push(`Follow the curriculum as taught in ${country}.`);
+
+  const objectives = (context.objectives ?? []).map((o) => o.trim()).filter(Boolean);
+  if (objectives.length > 0) {
+    lines.push("It must cover these objectives:");
+    for (const objective of objectives) lines.push(`- ${objective}`);
+  }
+
+  lines.push("");
+  lines.push(
+    `Give between ${lessonCount.min} and ${lessonCount.max} lessons, in the order they should be taught, each building on the one before.`,
+  );
+  lines.push("Each lesson needs a short title and one to three objectives written in plain language.");
+  lines.push("Cover the whole topic across the course rather than repeating the same ground.");
+
+  return lines.join("\n");
+}
+
+/**
+ * Teaches one lesson of the course.
+ *
+ * The transcript is replayed so the class carries on rather than restarting
+ * — which is the whole promise of being able to pause and come back.
+ */
+export function buildLessonPrompt(
+  context: TutorContext,
+  course: { title: string; objectives: string[] },
+  progress: { index: number; total: number },
+  transcript: TranscriptTurn[],
+): string {
+  const lines: string[] = [];
+
+  lines.push(
+    `You are teaching ${describeLearner(context)} a course on "${context.topic.trim()}" in ${context.subjectName}.`,
+  );
+  lines.push(`This is lesson ${progress.index + 1} of ${progress.total}: ${course.title}`);
+
+  const objectives = course.objectives.map((o) => o.trim()).filter(Boolean);
+  if (objectives.length > 0) {
+    lines.push("By the end of this lesson the student should be able to:");
+    for (const objective of objectives) lines.push(`- ${objective}`);
+  }
+
+  lines.push("");
+  lines.push("How to teach this lesson:");
+  lines.push("- Teach it in one go: explain the idea, show a worked example, then check understanding.");
+  lines.push("- Assume the earlier lessons in this course have been taught; build on them, do not repeat them.");
+  lines.push("- Keep it to a few short paragraphs — a student is reading this on a phone.");
+  lines.push("- End by inviting a question, and say they can pause and come back whenever they like.");
+  lines.push(
+    progress.index + 1 === progress.total
+      ? "- This is the last lesson: finish by summing up what the whole course covered."
+      : "- Do not summarise the whole course; there are more lessons to come.",
+  );
+
+  lines.push("");
+  lines.push("Rules you must not break:");
+  lines.push(`- Stay on ${context.subjectName}.`);
+  lines.push(
+    "- Never ask for or repeat personal details: full name, address, phone number, email, passwords, or anything about the student's family.",
+  );
+  lines.push(
+    "- If the student says anything suggesting they are unsafe, being hurt, or in distress, do not counsel them: tell them warmly to speak to their teacher or another trusted adult straight away, and say nothing else on the subject.",
+  );
+  lines.push("- Never claim to be a human being.");
+
+  const trimmed = trimTranscript(transcript);
+  if (trimmed.length > 0) {
+    lines.push("");
+    lines.push("The class so far:");
+    for (const turn of trimmed) {
+      lines.push(`${turn.role === "STUDENT" ? "Student" : "Teacher"}: ${turn.content}`);
+    }
+  }
+
+  lines.push("");
+  lines.push("Teach the lesson now, in prose. Do not prefix your reply with a name or label.");
+  lines.push(DIAGRAM_INSTRUCTION);
 
   return lines.join("\n");
 }
