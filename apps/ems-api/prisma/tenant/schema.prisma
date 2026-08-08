@@ -70,6 +70,7 @@ model User {
   timetableEntries     TimetableEntry[]     @relation("TimetableTeacher")
   teachingAssignments  TeachingAssignment[] @relation("TeachingAssignmentTeacher")
   staffProfile         StaffProfile?
+  tutorSessions        TutorSession[]       @relation("TutorSessionStartedBy")
 
   @@map("users")
 }
@@ -137,6 +138,7 @@ model StudentProfile {
   marks             Mark[]
   termResults       TermResult[]
   messages          Message[]
+  tutorSessions     TutorSession[]
 
   @@map("student_profiles")
 }
@@ -234,6 +236,7 @@ model Subject {
   subjectResults SubjectResult[]
   timetableEntries TimetableEntry[]
   teachingAssignments TeachingAssignment[]
+  tutorSessions    TutorSession[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -269,8 +272,9 @@ model SchemeOfWork {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lessonPlans LessonPlan[]
-  quizzes     Quiz[]
+  lessonPlans   LessonPlan[]
+  quizzes       Quiz[]
+  tutorSessions TutorSession[]
 
   @@unique([subjectId, academicYear, term])
   @@map("schemes_of_work")
@@ -1191,4 +1195,83 @@ model PaymentGatewaySettings {
   updatedAt DateTime @updatedAt
 
   @@map("payment_gateway_settings")
+}
+
+// ── AI Teacher ───────────────────────────────────────────────────────────
+// A tutoring conversation grounded in the school's own curriculum, not
+// open-ended chat: a session is anchored to a subject and a topic, and
+// optionally to one week of a published scheme of work, so the AI teaches
+// what the school is actually teaching.
+//
+// Every turn is stored. That is not for resuming a conversation (though it
+// allows it) — it is because a child is on the other side of it, and a
+// school or a parent must be able to read exactly what the AI said. An
+// unlogged tutor is not shippable to minors.
+
+enum TutorSessionStatus {
+  ACTIVE
+  ENDED
+}
+
+enum TutorTurnRole {
+  STUDENT
+  TUTOR
+}
+
+model TutorSession {
+  id String @id @default(cuid())
+
+  /// Whose session this is. A staff member trying the tutor out has no
+  /// student profile, hence nullable — see `startedByUserId`, which is
+  /// always set and is what authorisation is actually checked against.
+  studentProfileId String?
+  studentProfile   StudentProfile? @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  startedByUserId String
+  startedByUser   User   @relation("TutorSessionStartedBy", fields: [startedByUserId], references: [id])
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  /// Optional anchor to a specific week of a scheme of work. When set, that
+  /// week's objectives go into the prompt, which is the difference between
+  /// "explain fractions" and "explain fractions the way this class is being
+  /// taught them this term".
+  schemeOfWorkId String?
+  schemeOfWork   SchemeOfWork? @relation(fields: [schemeOfWorkId], references: [id], onDelete: SetNull)
+  weekNumber     Int?
+
+  /// What the student is trying to learn, in their own words.
+  topic  String
+  status TutorSessionStatus @default(ACTIVE)
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  updatedAt DateTime  @updatedAt
+
+  turns TutorTurn[]
+
+  @@index([studentProfileId])
+  @@index([startedByUserId])
+  @@map("tutor_sessions")
+}
+
+model TutorTurn {
+  id        String       @id @default(cuid())
+  sessionId String
+  session   TutorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  /// Position in the conversation, 1-based. The unique constraint below is
+  /// what makes a double-tapped Send harmless: the second insert collides
+  /// rather than producing a second turn 4 and a transcript whose order
+  /// depends on createdAt tie-breaking.
+  sequence Int
+  role     TutorTurnRole
+  content  String
+
+  createdAt DateTime @default(now())
+
+  @@unique([sessionId, sequence])
+  @@index([sessionId])
+  @@map("tutor_turns")
 }

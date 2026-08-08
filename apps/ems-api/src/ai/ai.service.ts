@@ -127,6 +127,42 @@ export class AiService {
    * works everywhere.
    */
   async generateJson<T>(prompt: string, responseSchema?: Record<string, unknown>): Promise<T> {
+    const shaped = responseSchema
+      ? `${prompt}\n\nReply with JSON only — no prose, no markdown fences — matching this shape:\n${JSON.stringify(
+          responseSchema,
+        )}`
+      : `${prompt}\n\nReply with JSON only — no prose, no markdown fences.`;
+
+    const { text, profile } = await this.complete(shaped);
+    const parsed = extractJson<T>(text);
+
+    if (parsed === null) {
+      // The model answered, but not with JSON. Said plainly, because it is a
+      // different problem from a bad key and needs a different fix — usually
+      // a different model.
+      throw new ServiceUnavailableException(
+        `${profile.label} replied but not with usable JSON. Try a different model.`,
+      );
+    }
+
+    return parsed;
+  }
+
+  /**
+   * Asks the configured provider for prose.
+   *
+   * Separate from `generateJson` rather than a flag on it, because the
+   * "reply with JSON only" instruction has to be absent, not merely ignored:
+   * a tutoring reply that arrives wrapped in a JSON object is a bug the
+   * student sees.
+   */
+  async generateText(prompt: string, maxTokens?: number): Promise<string> {
+    const { text } = await this.complete(prompt, maxTokens);
+    return text.trim();
+  }
+
+  /** Resolves settings, builds the request, calls the provider. Shared by both public generators. */
+  private async complete(prompt: string, maxTokens?: number) {
     const settings = await this.getSettings();
     const apiKey = this.secrets.tryDecrypt(settings.apiKeyEncrypted);
 
@@ -140,33 +176,16 @@ export class AiService {
       throw new ServiceUnavailableException("No AI model is set for that provider.");
     }
 
-    const shaped = responseSchema
-      ? `${prompt}\n\nReply with JSON only — no prose, no markdown fences — matching this shape:\n${JSON.stringify(
-          responseSchema,
-        )}`
-      : `${prompt}\n\nReply with JSON only — no prose, no markdown fences.`;
-
     const plan = buildRequest({
       provider: profile,
       apiKey,
       model,
       baseUrl: settings.baseUrl,
-      prompt: shaped,
+      prompt,
+      maxTokens,
     });
 
-    const text = await this.call(plan, profile.shape);
-    const parsed = extractJson<T>(text);
-
-    if (parsed === null) {
-      // The model answered, but not with JSON. Said plainly, because it is a
-      // different problem from a bad key and needs a different fix — usually
-      // a different model.
-      throw new ServiceUnavailableException(
-        `${profile.label} replied but not with usable JSON. Try a different model.`,
-      );
-    }
-
-    return parsed;
+    return { text: await this.call(plan, profile.shape), profile };
   }
 
   /**

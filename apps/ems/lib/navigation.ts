@@ -122,7 +122,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.academics.curriculum", href: "/schemes-of-work" },
       { key: "nav.academics.lessonPlans", href: "/lesson-plans" },
       { key: "nav.academics.lessonNotes" },
-      { key: "nav.academics.aiTeaching" },
+      { key: "nav.academics.aiTeaching", href: "/ai-teacher" },
       { key: "nav.academics.liveClassroom" },
       { key: "nav.academics.timetable", href: "/timetable" },
       { key: "nav.academics.homework" },

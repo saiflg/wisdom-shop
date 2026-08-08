@@ -110,7 +110,7 @@ export const en = {
   "nav.academics.curriculum": "Curriculum",
   "nav.academics.lessonPlans": "Lesson plans",
   "nav.academics.lessonNotes": "Lesson notes",
-  "nav.academics.aiTeaching": "AI teaching",
+  "nav.academics.aiTeaching": "AI Teacher",
   "nav.academics.liveClassroom": "Live classroom",
   "nav.academics.timetable": "Timetable",
   "nav.academics.homework": "Homework",

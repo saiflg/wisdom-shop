@@ -998,6 +998,62 @@ is only metadata. A `/platform/*` controller also needs
 `@UseGuards(PlatformJwtAuthGuard, PlatformRolesGuard)`. Without them every
 route 401s with a perfectly valid platform token.
 
+**The AI Teacher (done).** A tutoring conversation grounded in the school's
+own curriculum, which is the difference between this and a general chatbot
+with a school logo on it.
+
+- **A lesson is anchored to a subject and a topic**, and optionally to one
+  week of a scheme of work — when it is, that week's objectives go into the
+  prompt. "Explain fractions" and "explain fractions the way this class is
+  being taught them this term" are different lessons.
+- **Every turn is stored, and that is the point.** Not for resuming a
+  conversation, though it allows it: a child is on the other side of this,
+  and a school or a parent must be able to read exactly what the AI said. An
+  unlogged tutor is not shippable to minors.
+- **Nobody can write into someone else's transcript — including staff.**
+  Teachers and admins read the whole thing; that is what keeping it is for.
+  Writing into it would forge the record a safeguarding review depends on.
+  Guardians see their own children's lessons and no others; a student sees
+  only their own. Someone else's lesson 404s rather than 403s, because
+  whether a given lesson exists is itself information about another child.
+- **The rules that make this safe live in a tested pure function.**
+  `tutor-prompt.ts` is where "stay on this subject", "never ask for personal
+  details", "never claim to be human", "guide them rather than doing their
+  homework", and — the one that matters most — "if the student says anything
+  suggesting they are unsafe or in distress, do not counsel them; tell them
+  to speak to a trusted adult" are written. Each has a test, because each is
+  a requirement for putting a chatbot in front of a child rather than a
+  nicety.
+- **Limits are checked before the provider is called**, never after: 40
+  questions a session, 120 a student a day, 1000 characters a question. The
+  key belongs to the platform operator and every turn is billed to them, so
+  a refusal that still cost money would defeat the purpose.
+- **`@@unique([sessionId, sequence])` makes a double-tapped Send harmless.**
+  The question is written *before* the provider is called, so the second tap
+  collides on the constraint instead of buying a second answer. If the
+  provider then fails, that reservation is removed — a question with no
+  answer reads like the tutor ignored the child.
+- **Only the transcript replay is trimmed, and the opening turn always
+  survives.** Every replayed turn is billed again on every question, so an
+  unbounded transcript gets quadratically expensive; but the first turn is
+  what states the topic, and dropping it is exactly how a tutor forty
+  questions in ends up cheerfully discussing something else.
+- `AiService` grew `generateText` alongside `generateJson`. A tutoring reply
+  is prose, and the "reply with JSON only" instruction has to be absent
+  rather than merely ignored — a reply that arrives wrapped in an object is
+  a bug the student sees.
+
+Two things this cost that are worth not re-learning. `z.coerce.number()` on
+an untouched optional number input receives `""`, coerces it to `0`, and then
+fails `.min(1)` — so an optional field rejects being left alone.
+`z.preprocess` fixes the validation but makes the schema's input type diverge
+from its output, which react-hook-form's resolver rejects; keeping the field
+a string and converting at submit is the version that stays simple. And the
+Docker-on-Windows watcher gap applies to **edits inside a newly created
+directory**, not just to the directory's first appearance: the first build of
+`app/(dashboard)/ai-teacher/` was served happily and then three subsequent
+edits to it were not, which reads exactly like a bug in the code being edited.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was
@@ -1017,7 +1073,8 @@ hook problem, not a logic problem.
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
 per-country curriculum-standard databases, subdomain-based tenant routing,
-custom domains, per-school branding, the AI Teacher / live classroom,
+custom domains, per-school branding, live voice/video classroom (the AI
+Teacher above is text; speech is its own phase),
 2FA/lockout/real CSRF double-submit, messaging, automated backups,
 **live charging through a school's payment gateway** (the keys are stored,
 encrypted and testable, but nothing is ever charged — a fee payment with
