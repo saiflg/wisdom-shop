@@ -138,10 +138,22 @@ export function buildTutorPrompt(
  */
 export const DIAGRAM_INSTRUCTION = [
   "",
-  "If — and only if — a picture would genuinely help, add one after your reply as inline SVG.",
+  "If a picture would help — shapes, fractions, number lines, graphs, anything with a",
+  "size or a position — add one after your reply as inline SVG. Skip it for a topic that",
+  "is purely verbal; a picture of a definition is clutter.",
   "It must be a single <svg> element with a viewBox, using only these elements:",
   "svg, g, title, desc, path, rect, circle, ellipse, line, polyline, polygon, text, tspan.",
-  "No script, style, image, use, href, animation, gradients, ids, classes or CSS of any kind.",
+  "Give it a <title> and a <desc> so a student who cannot see it still gets the picture.",
+  "",
+  // Every line below names something that silently binned a whole diagram
+  // before anyone knew it was happening. The sanitiser drops the entire
+  // document on any one of them, so a single stray comment costs the picture.
+  "These will cause the diagram to be discarded, so do not use them:",
+  "- XML or HTML comments of any kind (<!-- ... -->).",
+  "- id or class attributes, <defs>, <marker>, or anything referring to another element.",
+  "  For an arrowhead, draw a small <polygon> at the end of the line instead.",
+  "- script, style, image, use, href, xlink, animation, gradients, or CSS.",
+  "- entities such as &#8212; — write the character itself, or a plain word.",
   "Keep it simple and label it clearly: a number line, a bar split into parts, a labelled shape.",
 ].join("\n");
 

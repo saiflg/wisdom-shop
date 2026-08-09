@@ -123,24 +123,57 @@ const ATTRIBUTE = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^
 const BARE_ATTRIBUTE = /(^|\s)([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?=\s|$)(?!\s*=)/;
 
 /**
- * Returns the diagram if every element, attribute and value is permitted,
- * and `null` otherwise. Never returns modified markup: the input is either
- * safe as written or it is not stored.
+ * The outcome of checking a diagram, with a reason when it was refused.
+ *
+ * The reason exists because "no diagram" had two indistinguishable causes —
+ * the model drew nothing, or it drew something we dropped — and no way to
+ * tell them apart. That is fine for safety and useless for improving the
+ * prompt: a model that keeps adding `<!-- labels -->` or arrowhead markers
+ * would fail silently forever, and every lesson would simply be missing its
+ * picture with nobody any the wiser.
+ *
+ * The reason is for the log, never for the student.
  */
-export function sanitizeSvg(input: string | null | undefined): string | null {
-  if (typeof input !== "string") return null;
+export type SvgCheck = { ok: true; svg: string } | { ok: false; reason: string };
 
-  const svg = input.trim();
-  if (svg.length === 0 || svg.length > MAX_LENGTH) return null;
+/**
+ * Returns the diagram if every element, attribute and value is permitted,
+ * and says why not otherwise. Never returns modified markup: the input is
+ * either safe as written or it is not stored.
+ */
+export function checkSvg(input: string | null | undefined): SvgCheck {
+  if (typeof input !== "string") return { ok: false, reason: "not a string" };
+
+  // Comments are stripped rather than treated as grounds for rejection.
+  //
+  // This is the one place the "never modify, only accept or reject" rule is
+  // relaxed, and it is worth it: an `<!-- the base -->` label is the single
+  // commonest thing a model puts in a diagram, it renders nothing, and it was
+  // costing every picture in the lesson. Telling the model not to was tried
+  // and it kept doing it anyway.
+  //
+  // Safe because stripping happens *before* validation, not after: anything a
+  // comment was concealing — the classic `<!--<script>-->` — is revealed to
+  // the allowlist rather than hidden from it, and rejected there. Removing
+  // text can only ever expose more to the checks below, never less.
+  const svg = stripComments(input).trim();
+  if (svg.length === 0) return { ok: false, reason: "empty" };
+  if (svg.length > MAX_LENGTH) return { ok: false, reason: `longer than ${MAX_LENGTH} characters` };
 
   const lower = svg.toLowerCase();
-  if (!lower.startsWith("<svg") || !lower.endsWith("</svg>")) return null;
+  if (!lower.startsWith("<svg") || !lower.endsWith("</svg>")) {
+    return { ok: false, reason: "does not start with <svg and end with </svg>" };
+  }
   // Without a viewBox the diagram cannot be scaled to a phone, and a fixed
   // enormous width is its own denial of readability.
-  if (!lower.includes("viewbox")) return null;
+  if (!lower.includes("viewbox")) return { ok: false, reason: "no viewBox" };
 
   for (const forbidden of FORBIDDEN_SUBSTRINGS) {
-    if (lower.includes(forbidden)) return null;
+    if (lower.includes(forbidden)) {
+      // Named, because "<!" is nearly always an ordinary SVG comment rather
+      // than an attack, and that is worth knowing when reading the log.
+      return { ok: false, reason: `contains forbidden "${forbidden}"` };
+    }
   }
 
   let match: RegExpExecArray | null;
@@ -152,27 +185,67 @@ export function sanitizeSvg(input: string | null | undefined): string | null {
     const [tag, rawName, rawAttributes = ""] = match;
     const name = rawName.toLowerCase();
 
-    if (!ALLOWED_ELEMENTS.has(name)) return null;
+    if (!ALLOWED_ELEMENTS.has(name)) return { ok: false, reason: `disallowed element <${name}>` };
     if (name === "svg") sawRoot = true;
 
     // Text outside tags is inert once every tag is known-good, but a stray
     // "<" that failed to parse as a tag would be skipped silently here, so
     // account for every character.
-    if (svg.slice(consumed, match.index).includes("<")) return null;
+    if (svg.slice(consumed, match.index).includes("<")) {
+      return { ok: false, reason: "a '<' that did not parse as a tag" };
+    }
     consumed = match.index + tag.length;
 
-    if (!checkAttributes(rawAttributes)) return null;
+    const attributes = checkAttributes(rawAttributes);
+    if (attributes) return { ok: false, reason: `<${name}>: ${attributes}` };
   }
 
-  if (!sawRoot) return null;
-  if (svg.slice(consumed).includes("<")) return null;
+  if (!sawRoot) return { ok: false, reason: "no <svg> root" };
+  if (svg.slice(consumed).includes("<")) return { ok: false, reason: "trailing '<' after the last tag" };
 
-  return svg;
+  return { ok: true, svg };
 }
 
-function checkAttributes(raw: string): boolean {
+/**
+ * Returns the diagram if it is safe, and `null` otherwise.
+ *
+ * Kept as the plain answer for callers that only need yes or no; anything
+ * wanting to know *why* uses `checkSvg`.
+ */
+export function sanitizeSvg(input: string | null | undefined): string | null {
+  const result = checkSvg(input);
+  return result.ok ? result.svg : null;
+}
+
+/**
+ * Removes `<!-- ... -->` comments, including unterminated ones.
+ *
+ * An unterminated comment is cut to the end of the document rather than left
+ * alone: a browser treats `<!--` with no close as swallowing everything after
+ * it, so leaving it in place would mean the validator and the browser
+ * disagreed about where the markup ends — which is exactly how a sanitiser
+ * gets bypassed. Cutting it makes them agree, and anything real that gets
+ * removed with it simply fails the "must end in </svg>" check.
+ */
+function stripComments(input: string): string {
+  let output = "";
+  let index = 0;
+
+  for (;;) {
+    const start = input.indexOf("<!--", index);
+    if (start === -1) return output + input.slice(index);
+
+    output += input.slice(index, start);
+    const end = input.indexOf("-->", start + 4);
+    if (end === -1) return output;
+    index = end + 3;
+  }
+}
+
+/** Null when every attribute is permitted, otherwise the reason it is not. */
+function checkAttributes(raw: string): string | null {
   const attributes = raw.trim();
-  if (attributes.length === 0) return true;
+  if (attributes.length === 0) return null;
 
   let matched = "";
   let match: RegExpExecArray | null;
@@ -182,11 +255,11 @@ function checkAttributes(raw: string): boolean {
     const name = match[1].toLowerCase();
     const value = match[2] ?? match[3] ?? match[4] ?? "";
 
-    if (!ALLOWED_ATTRIBUTES.has(name)) return false;
+    if (!ALLOWED_ATTRIBUTES.has(name)) return `disallowed attribute "${name}"`;
 
     const lowerValue = value.toLowerCase();
     for (const forbidden of FORBIDDEN_IN_VALUE) {
-      if (lowerValue.includes(forbidden)) return false;
+      if (lowerValue.includes(forbidden)) return `"${name}" contains forbidden "${forbidden}"`;
     }
 
     matched += match[0];
@@ -196,10 +269,13 @@ function checkAttributes(raw: string): boolean {
   // a valueless flag, or something stranger. Either way, not understood is
   // not allowed.
   const leftover = attributes.replace(ATTRIBUTE, "").trim();
-  if (leftover.length > 0 && BARE_ATTRIBUTE.test(leftover)) return false;
-  if (leftover.replace(/[\s/]/g, "").length > 0) return false;
+  if (leftover.length > 0 && BARE_ATTRIBUTE.test(leftover)) return "an attribute with no value";
+  if (leftover.replace(/[\s/]/g, "").length > 0) return "an attribute that could not be parsed";
 
-  return matched.length > 0 || attributes.replace(/[\s/]/g, "").length === 0;
+  if (matched.length === 0 && attributes.replace(/[\s/]/g, "").length > 0) {
+    return "an attribute that could not be parsed";
+  }
+  return null;
 }
 
 /**
@@ -214,12 +290,23 @@ export function splitReplyAndDiagram(reply: string): {
   text: string;
   diagram: string | null;
   diagramAlt: string | null;
+  /**
+   * Why a diagram that *was* offered did not survive — null when none was
+   * offered at all. The caller logs it. Without this the two cases are
+   * indistinguishable, and a prompt that keeps producing rejected diagrams
+   * looks exactly like a model that never draws.
+   */
+  rejected: string | null;
 } {
   const start = reply.search(/<svg[\s>]/i);
-  if (start === -1) return { text: reply.trim(), diagram: null, diagramAlt: null };
+  if (start === -1) return { text: reply.trim(), diagram: null, diagramAlt: null, rejected: null };
 
   const endMarker = reply.toLowerCase().lastIndexOf("</svg>");
-  if (endMarker === -1) return { text: reply.trim(), diagram: null, diagramAlt: null };
+  if (endMarker === -1) {
+    // An opening tag with no close: the model started a diagram and was cut
+    // off, which is a truncated reply rather than an unsafe one.
+    return { text: reply.trim(), diagram: null, diagramAlt: null, rejected: "unclosed <svg>" };
+  }
 
   const candidate = reply.slice(start, endMarker + "</svg>".length);
   const text = (reply.slice(0, start) + reply.slice(endMarker + "</svg>".length))
@@ -228,8 +315,10 @@ export function splitReplyAndDiagram(reply: string): {
     .replace(/```(?:svg|xml|html)?/gi, "")
     .trim();
 
-  const diagram = sanitizeSvg(candidate);
-  return { text, diagram, diagramAlt: diagram ? describeSvg(diagram) : null };
+  const result = checkSvg(candidate);
+  if (!result.ok) return { text, diagram: null, diagramAlt: null, rejected: result.reason };
+
+  return { text, diagram: result.svg, diagramAlt: describeSvg(result.svg), rejected: null };
 }
 
 /**

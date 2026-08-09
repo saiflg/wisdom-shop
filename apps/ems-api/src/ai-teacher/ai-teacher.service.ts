@@ -1,4 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import type { RoleName, TutorTurnRole } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
@@ -43,6 +49,8 @@ interface SchemeWeek {
 
 @Injectable()
 export class AiTeacherService {
+  private readonly logger = new Logger(AiTeacherService.name);
+
   constructor(
     private readonly tenantPrisma: TenantPrismaService,
     private readonly curriculumSettings: CurriculumSettingsService,
@@ -363,7 +371,13 @@ export class AiTeacherService {
     // The diagram is model-written markup bound for a child's browser, so it
     // is sanitised before it is stored, not on the way out. Anything that
     // fails is dropped and the lesson text kept.
-    const { text, diagram, diagramAlt } = splitReplyAndDiagram(reply);
+    const { text, diagram, diagramAlt, rejected } = splitReplyAndDiagram(reply);
+
+    // Logged, never shown: a student does not need to hear that their picture
+    // was refused. But a prompt that reliably produces diagrams we drop is
+    // invisible otherwise — every lesson simply arrives without one, which
+    // looks identical to a model that chose not to draw.
+    if (rejected) this.logger.warn(`Diagram rejected (${rejected}) in session ${session.id}`);
 
     const answer = await client.tutorTurn.create({
       data: {

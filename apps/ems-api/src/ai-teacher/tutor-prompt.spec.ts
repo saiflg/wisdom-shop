@@ -180,9 +180,24 @@ describe("buildTutorPrompt", () => {
     expect(prompt).toMatch(/inline SVG/);
     expect(prompt).toMatch(/viewBox/);
     // Asking for anything the sanitiser drops on arrival would only waste it.
-    expect(prompt).toMatch(/No script, style, image, use, href/);
-    // And a picture of a definition is clutter.
-    expect(prompt).toMatch(/only if/);
+    expect(prompt).toMatch(/script, style, image, use, href/);
+    // A picture of a definition is clutter.
+    expect(prompt).toMatch(/purely verbal/);
+  });
+
+  it("names the constructs that silently cost a whole diagram", () => {
+    // The sanitiser drops the entire document on any one of these, so a
+    // single stray comment or arrowhead marker loses the picture. Each line
+    // here is something that actually happened before anyone could see it.
+    const prompt = buildTutorPrompt(CONTEXT, [], "Hi");
+    expect(prompt).toMatch(/comments/i);
+    expect(prompt).toMatch(/<defs>/);
+    expect(prompt).toMatch(/polygon/);
+    expect(prompt).toMatch(/&#/);
+  });
+
+  it("asks for a title and description, which is what the alt text is built from", () => {
+    expect(buildTutorPrompt(CONTEXT, [], "Hi")).toMatch(/<title>.*<desc>|<desc>/);
   });
 });
 

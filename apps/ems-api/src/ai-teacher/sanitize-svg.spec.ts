@@ -1,4 +1,94 @@
-import { describeSvg, sanitizeSvg, splitReplyAndDiagram } from "./sanitize-svg";
+import { checkSvg, describeSvg, sanitizeSvg, splitReplyAndDiagram } from "./sanitize-svg";
+
+describe("saying why a diagram was refused", () => {
+  // "No diagram" had two causes that looked identical from outside: the model
+  // drew nothing, or it drew something we dropped. A prompt that reliably
+  // produced rejected diagrams would have failed silently forever.
+
+  it("names a disallowed element", () => {
+    const svg = '<svg viewBox="0 0 10 10"><defs></defs></svg>';
+    const result = checkSvg(svg);
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toContain("defs");
+  });
+
+  it("names a document type declaration", () => {
+    const result = checkSvg('<svg viewBox="0 0 10 10"><rect x="1" /></svg><!DOCTYPE svg>');
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe("comments in a diagram", () => {
+  // The commonest thing a model puts in a diagram, worth nothing on screen,
+  // and it was costing every picture in the lesson. Stripped rather than
+  // rejected — but stripped *before* validation, so nothing can hide behind
+  // one.
+
+  it("keeps a diagram that carries an ordinary comment", () => {
+    const result = checkSvg('<svg viewBox="0 0 10 10"><!-- the base --><rect x="1" y="1" /></svg>');
+    expect(result.ok).toBe(true);
+    expect(result.ok === true && result.svg).not.toContain("<!--");
+    expect(result.ok === true && result.svg).toContain("<rect");
+  });
+
+  it("still rejects what a comment was concealing", () => {
+    // The classic mutation trick: a browser that closes the comment early
+    // would run this. Stripping first hands it to the allowlist rather than
+    // hiding it, and the allowlist refuses it.
+    const result = checkSvg('<svg viewBox="0 0 10 10"><!--<script>alert(1)</script>--></svg>');
+    expect(result.ok).toBe(true);
+    expect(result.ok === true && result.svg).not.toContain("script");
+  });
+
+  it("refuses an unterminated comment rather than guessing where it ends", () => {
+    // Cut to the end of the document, so the closing </svg> goes with it and
+    // the "must end in </svg>" check fails. The validator and a browser must
+    // not disagree about where the markup stops.
+    const result = checkSvg('<svg viewBox="0 0 10 10"><rect x="1" /><!-- oops </svg>');
+    expect(result.ok).toBe(false);
+  });
+
+  it("handles several comments and empty ones", () => {
+    const result = checkSvg('<svg viewBox="0 0 10 10"><!----><rect x="1" /><!-- a --><!-- b --></svg>');
+    expect(result.ok).toBe(true);
+  });
+
+  it("leaves a diagram with no comments byte-for-byte unchanged", () => {
+    const svg = '<svg viewBox="0 0 10 10"><rect x="1" y="1" /></svg>';
+    const result = checkSvg(svg);
+    expect(result.ok === true && result.svg).toBe(svg);
+  });
+
+  it("names a disallowed attribute", () => {
+    const result = checkSvg('<svg viewBox="0 0 10 10"><rect id="a" x="1" /></svg>');
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toContain("id");
+  });
+
+  it("distinguishes a truncated diagram from an unsafe one", () => {
+    const split = splitReplyAndDiagram('Here you go: <svg viewBox="0 0 10 10"><rect x="1"');
+    expect(split.diagram).toBeNull();
+    expect(split.rejected).toContain("unclosed");
+  });
+
+  it("reports no rejection when the model simply did not draw", () => {
+    const split = splitReplyAndDiagram("A parallelogram has two pairs of parallel sides.");
+    expect(split.diagram).toBeNull();
+    expect(split.rejected).toBeNull();
+  });
+
+  it("reports no rejection when the diagram was fine", () => {
+    const svg = '<svg viewBox="0 0 10 10"><title>A square</title><rect x="1" y="1" /></svg>';
+    const split = splitReplyAndDiagram(`Look: ${svg}`);
+    expect(split.diagram).toBe(svg);
+    expect(split.rejected).toBeNull();
+  });
+
+  it("still answers plain yes or no through sanitizeSvg", () => {
+    expect(sanitizeSvg('<svg viewBox="0 0 10 10"><rect x="1" /></svg>')).not.toBeNull();
+    expect(sanitizeSvg('<svg viewBox="0 0 10 10"><script>x</script></svg>')).toBeNull();
+  });
+});
 
 const SAFE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40"><rect x="0" y="0" width="50" height="20" fill="#4f46e5"/><text x="10" y="35" font-size="8" fill="#111">1/2</text></svg>`;
 
@@ -55,10 +145,21 @@ describe("sanitizeSvg", () => {
     expect(sanitizeSvg(`<svg viewBox="0 0 1 1"><set attributeName="x" to="5"/></svg>`)).toBeNull();
   });
 
-  it("rejects comments, CDATA and processing instructions", () => {
-    expect(sanitizeSvg(`<svg viewBox="0 0 1 1"><!-- <script>alert(1)</script> --></svg>`)).toBeNull();
+  it("rejects CDATA and processing instructions", () => {
     expect(sanitizeSvg(`<svg viewBox="0 0 1 1"><![CDATA[<script>x</script>]]></svg>`)).toBeNull();
     expect(sanitizeSvg(`<?xml version="1.0"?><svg viewBox="0 0 1 1"></svg>`)).toBeNull();
+  });
+
+  it("removes a comment rather than rejecting the diagram, but keeps nothing from inside it", () => {
+    // Changed deliberately. Rejecting on comments cost every diagram in every
+    // lesson, because models label their drawings and would not stop when
+    // asked. The security property is unchanged and arguably stronger: the
+    // comment is removed *before* the allowlist runs, so a concealed
+    // <script> is handed to the checks rather than hidden behind them.
+    const cleaned = sanitizeSvg(`<svg viewBox="0 0 1 1"><!-- <script>alert(1)</script> --></svg>`);
+    expect(cleaned).not.toBeNull();
+    expect(cleaned).not.toContain("script");
+    expect(cleaned).not.toContain("<!--");
   });
 
   it("rejects an unlisted element even when it looks harmless", () => {
@@ -113,6 +214,8 @@ describe("splitReplyAndDiagram", () => {
       text: "A denominator is the number underneath.",
       diagram: null,
       diagramAlt: null,
+      // Null, not a reason: nothing was offered, so nothing was refused.
+      rejected: null,
     });
   });
 
