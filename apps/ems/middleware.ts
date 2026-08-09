@@ -48,10 +48,20 @@ export function middleware(request: NextRequest) {
   const slug = [fromQuery, fromCookie].find((value) => value && SLUG.test(value));
 
   const headers = new Headers(request.headers);
-  if (slug) headers.set(HEADER, slug);
-  // Deleted when absent, so nothing a client sent under this name is ever
-  // mistaken for something this middleware resolved.
-  else headers.delete(HEADER);
+  // Always set, never deleted — set to empty when nothing resolved.
+  //
+  // `delete` looks like it should work and does nothing. Next forwards only
+  // the headers it sees *change*, listed in `x-middleware-override-headers`;
+  // deleting one leaves that list empty, so a header the client sent under
+  // this name travels straight through to the layout, which would then trust
+  // it. Setting it — even to "" — puts it in the override list and replaces
+  // whatever arrived.
+  //
+  // The exposure was small, since branding is public and the worst case is a
+  // login page wearing the wrong school's name. It was still a surface this
+  // file created, and the comment that used to sit here claimed a protection
+  // it did not provide. Its own test caught that.
+  headers.set(HEADER, slug ?? "");
 
   const response = NextResponse.next({ request: { headers } });
 

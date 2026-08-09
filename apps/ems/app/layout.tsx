@@ -27,7 +27,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // lifts the slug out of `?schoolSlug=` — which a layout cannot read — or
   // out of the cookie it set on a previous request, so the console keeps the
   // school's colours after navigating away from the link that named it.
-  const { branding } = await getBranding(headers().get("x-school-slug") ?? undefined);
+  // `||`, not `??`: the middleware sets this to "" when nothing resolved, so
+  // that an empty value overrides anything a client sent under the same name.
+  const { branding } = await getBranding(headers().get("x-school-slug") || undefined);
 
   return (
     <html lang="en" suppressHydrationWarning>

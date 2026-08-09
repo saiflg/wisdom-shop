@@ -24,7 +24,7 @@ export default async function LoginPage({
   // different schools — that mismatch is exactly what produced a page
   // wearing one school's name in the platform's default colours.
   const { branding } = await getBranding(
-    headers().get("x-school-slug") ?? searchParams.schoolSlug,
+    headers().get("x-school-slug") || searchParams.schoolSlug,
   );
 
   return (
