@@ -93,13 +93,19 @@ export interface RequestPlan {
 }
 
 /**
- * Builds the HTTP call for a JSON-returning prompt.
+ * Builds the HTTP call.
  *
- * The instruction to answer with JSON is put in the prompt for *every*
- * provider, not only those without a structured-output flag. Not every model
- * behind OpenRouter honours `response_format`, and a model that ignores it
- * returns prose — which is indistinguishable from a broken key unless the
- * prompt itself asked for JSON.
+ * `expects` decides whether the provider is put into JSON mode, and it is not
+ * optional on purpose. Forcing JSON mode on a prose request does not produce
+ * prose with a wasted flag: the model obeys, and a *lesson* comes back wrapped
+ * in `{"lesson": "...", "worked_example": "..."}` — which the student then
+ * reads, braces and all. That shipped once, and only a live provider revealed
+ * it, since a fake returns whatever the test told it to.
+ *
+ * When JSON *is* wanted, the instruction also goes into the prompt rather than
+ * relying on this flag alone. Not every model behind OpenRouter honours
+ * `response_format`, and one that ignores it returns prose — which is
+ * indistinguishable from a broken key unless the prompt itself asked.
  */
 export function buildRequest(options: {
   provider: ProviderProfile;
@@ -108,14 +114,16 @@ export function buildRequest(options: {
   baseUrl?: string | null;
   prompt: string;
   maxTokens?: number;
+  expects: "json" | "text";
 }): RequestPlan {
-  const { provider, apiKey, model, prompt } = options;
+  const { provider, apiKey, model, prompt, expects } = options;
   const base = (options.baseUrl?.trim() || provider.baseUrl).replace(/\/+$/, "");
   // Generous because reasoning models bill their thinking to this same
   // budget, and a truncated scheme of work is a failed generation rather
   // than a shorter one. Unused headroom costs nothing — only tokens actually
   // produced are charged.
   const maxTokens = options.maxTokens ?? 8192;
+  const wantsJson = expects === "json";
 
   if (provider.shape === "gemini") {
     return {
@@ -124,7 +132,10 @@ export function buildRequest(options: {
       headers: { "Content-Type": "application/json" },
       body: {
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json", maxOutputTokens: maxTokens },
+        generationConfig: {
+          ...(wantsJson ? { responseMimeType: "application/json" } : {}),
+          maxOutputTokens: maxTokens,
+        },
       },
     };
   }
@@ -158,7 +169,7 @@ export function buildRequest(options: {
     body: {
       model,
       max_tokens: maxTokens,
-      response_format: { type: "json_object" },
+      ...(wantsJson ? { response_format: { type: "json_object" } } : {}),
       // No attempt to switch reasoning off.
       //
       // Reasoning tokens are drawn from `max_tokens`, so a thinking model can

@@ -135,7 +135,7 @@ export class AiService {
         )}`
       : `${prompt}\n\nReply with JSON only — no prose, no markdown fences.`;
 
-    const { text, profile } = await this.complete(shaped);
+    const { text, profile } = await this.complete(shaped, undefined, "json");
     const parsed = extractJson<T>(text);
 
     if (parsed === null) {
@@ -159,12 +159,16 @@ export class AiService {
    * student sees.
    */
   async generateText(prompt: string, maxTokens?: number): Promise<string> {
-    const { text } = await this.complete(prompt, maxTokens);
+    // "text", emphatically. Leaving the provider in JSON mode does not give
+    // prose with a stray flag — the model complies and returns a lesson
+    // wrapped in `{"lesson": "..."}`, which a child then reads. The absence
+    // of the instruction was never enough on its own.
+    const { text } = await this.complete(prompt, maxTokens, "text");
     return text.trim();
   }
 
   /** Resolves settings, builds the request, calls the provider. Shared by both public generators. */
-  private async complete(prompt: string, maxTokens?: number) {
+  private async complete(prompt: string, maxTokens?: number, expects: "json" | "text" = "json") {
     const settings = await this.getSettings();
     const apiKey = this.secrets.tryDecrypt(settings.apiKeyEncrypted);
 
@@ -185,6 +189,7 @@ export class AiService {
       baseUrl: settings.baseUrl,
       prompt,
       maxTokens,
+      expects,
     });
 
     return { text: await this.call(plan, profile.shape), profile };
@@ -229,6 +234,7 @@ export class AiService {
         // connection test that fails on exactly the models people pick. Only
         // tokens actually produced are charged, so the headroom is free.
         maxTokens: 4096,
+        expects: "json",
       });
       const text = await this.call(plan, profile.shape);
       const parsed = extractJson<{ ok?: boolean }>(text);

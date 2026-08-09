@@ -35,7 +35,7 @@ describe("the provider list", () => {
 });
 
 describe("buildRequest", () => {
-  const common = { apiKey: "test-key", model: "some-model", prompt: "Say hi as JSON" };
+  const common = { apiKey: "test-key", model: "some-model", prompt: "Say hi as JSON", expects: "json" as const };
 
   it("builds an OpenAI-style call for OpenRouter", () => {
     const plan = buildRequest({ provider: findProvider("OPENROUTER"), ...common });
@@ -91,6 +91,51 @@ describe("buildRequest", () => {
         baseUrl: provider.needsBaseUrl ? "https://example.com/v1" : undefined,
       });
       expect(JSON.stringify(plan.body)).not.toContain("test-key");
+    }
+  });
+});
+
+describe("asking for prose rather than JSON", () => {
+  // This is the bug that reached a child's screen: a lesson arrived as
+  // `{"lesson": "...", "worked_example": "..."}` and was rendered braces and
+  // all. Removing the JSON *instruction* from the prompt was not enough,
+  // because the transport still put the provider in JSON mode, and the model
+  // did as it was told.
+  const common = { apiKey: "k", model: "m", prompt: "Teach the lesson" };
+
+  it("leaves JSON mode off for an OpenAI-shaped prose request", () => {
+    for (const id of ["OPENROUTER", "OPENAI", "OPENAI_COMPATIBLE"] as const) {
+      const plan = buildRequest({
+        ...common,
+        provider: findProvider(id),
+        expects: "text",
+        baseUrl: id === "OPENAI_COMPATIBLE" ? "https://example.com/v1" : undefined,
+      });
+      expect("response_format" in (plan.body as object)).toBe(false);
+    }
+  });
+
+  it("leaves JSON mode off for a Gemini prose request", () => {
+    const plan = buildRequest({ ...common, provider: findProvider("GOOGLE_GEMINI"), expects: "text" });
+    const config = (plan.body as { generationConfig: Record<string, unknown> }).generationConfig;
+    expect("responseMimeType" in config).toBe(false);
+    // The budget must survive the change.
+    expect(config.maxOutputTokens).toBeGreaterThan(0);
+  });
+
+  it("still turns JSON mode on when JSON is what is wanted", () => {
+    const openai = buildRequest({ ...common, provider: findProvider("OPENROUTER"), expects: "json" });
+    expect((openai.body as { response_format: unknown }).response_format).toEqual({ type: "json_object" });
+
+    const gemini = buildRequest({ ...common, provider: findProvider("GOOGLE_GEMINI"), expects: "json" });
+    const config = (gemini.body as { generationConfig: Record<string, unknown> }).generationConfig;
+    expect(config.responseMimeType).toBe("application/json");
+  });
+
+  it("carries the prompt through either way", () => {
+    for (const expects of ["json", "text"] as const) {
+      const plan = buildRequest({ ...common, provider: findProvider("OPENROUTER"), expects });
+      expect(JSON.stringify(plan.body)).toContain("Teach the lesson");
     }
   });
 });
@@ -281,7 +326,7 @@ describe("wasTruncated", () => {
 });
 
 describe("reasoning and the token budget", () => {
-  const base = { apiKey: "k", model: "m", prompt: "p" };
+  const base = { apiKey: "k", model: "m", prompt: "p", expects: "json" as const };
 
   it("never asks any provider to turn reasoning off", () => {
     // Tried, and it does not work: some endpoints mandate reasoning and
