@@ -1329,6 +1329,79 @@ is for: `/my`, the first thing a student or parent sees after signing in.
   link to everyone because a parent must be able to find it, so the page
   itself has to explain when it is not for you.
 
+**Examinations and CBT (done).** A Quiz was always a teaching artefact — a
+paper a teacher prints. An Exam is a paper a student *sits*, on screen,
+against a clock, marked by the machine where the machine can be trusted and
+by a person where it cannot.
+
+- **The machine never guesses.** Where an answer is unambiguous — a chosen
+  option, a short answer matching one the teacher wrote down — it marks it.
+  Everywhere else it awards nothing *and says so*, flagging the answer for
+  review. A zero nobody looks at is indistinguishable from a zero the student
+  earned, and that is the failure worth engineering against.
+- **A paper cannot be released while anything on it is unmarked.** Release
+  skips those attempts and reports the count. Releasing a paper where the
+  essay scored nothing because nobody read it is exactly what the marking
+  rules exist to prevent.
+- **An essay is never machine-marked, not even an empty one** — "they wrote
+  nothing" is still a judgement a teacher makes, sometimes generously.
+- **A short answer that doesn't match is recorded as zero *and* flagged.**
+  "5cm" against an accepted "5 cm", or a right answer spelt a way the teacher
+  didn't list, both land there. The total stays honest and a person confirms
+  it before it stands. No fuzzy matching, ever: marking a wrong answer right
+  is worse than sending a right one to a teacher.
+- **Multiple choice is all-or-nothing**, because partial credit needs a
+  policy the teacher chose — how much for three of four, what a wrong tick
+  costs — and inventing one here would apply it silently to every school.
+- **The paper is a snapshot**, copied out of the bank when the exam is built.
+  Same rule as a published TermResult and a Payslip: a teacher fixing a typo
+  next term must not change the questions a student already answered, or the
+  marks given for them. Retiring a bank question is a soft delete and the
+  link from the paper is SET NULL, so removing a question cannot delete
+  evidence.
+- **Two clocks, kept apart.** The window (`opensAt`/`closesAt`) is the
+  school's; the duration is the student's, counted from the moment they
+  start. A student who starts five minutes before close gets five minutes,
+  not their full hour — the deadline is the earlier of the two, computed once
+  at start and *stored*, so an administrator editing the duration mid-morning
+  cannot shorten a clock already running.
+- **The countdown on screen is advisory.** It counts down from a number the
+  server sent; the server decides what was in time. A clock a student could
+  change by editing their own machine must never be the one that matters.
+- **Answers save as they are given**, one request each, so a dropped
+  connection costs one question rather than a paper. Starting again resumes
+  the same attempt rather than refusing — a laptop dying mid-exam must not
+  cost a child their work — and the clock is not restarted.
+- **A late submit is accepted, not refused.** The work is already saved;
+  throwing it away would punish a child for a slow browser. `autoSubmitted`
+  records what happened. "Collect expired" marks papers whose time ran out
+  while nobody was looking, so a student who closed the lid doesn't sit
+  unmarked forever.
+- **`@@unique([examId, studentProfileId])`** — one attempt per student per
+  paper, enforced by the database rather than a check the service could race
+  with itself on.
+- **The answer key has exactly one exit route and it strips it.** Every
+  student-facing view goes through `toStudentPaper`, which *rebuilds* each
+  question from named fields rather than deleting the key — so a column added
+  to the model later is invisible to students until somebody decides it
+  should not be. The student's own released result shows their marks and
+  feedback but still no key, because papers get reused.
+- **AI-drafted questions land in the bank for a teacher to read**, never on a
+  paper automatically, and anything internally inconsistent is thrown away
+  with a reason the teacher is shown — an answer key naming an option that
+  isn't there would mark every student wrong whatever they chose.
+
+**The browser found two things the tests could not, again.** All 33 e2e tests
+and 88 unit tests passed before the walkthrough. The walkthrough then found
+(a) that an exam could not be linked to a gradebook assessment from the UI at
+all — the backend supported it, an e2e test proved it worked, and there was
+simply no control for it, so no teacher could ever have reached it; and
+(b) that a student returning for their released result was shown "You have
+already sat this exam" in red above a perfectly good mark. Neither is
+detectable from a green test run. This is now the third phase in a row where
+walking the actual screens found a real defect after everything passed, which
+is why the walkthrough is a required step and not a formality.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was

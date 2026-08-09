@@ -75,6 +75,8 @@ model User {
   accessibilityProfile AccessibilityProfile?
   accessibilityEdits   AccessibilityProfile[] @relation("AccessibilityProfileUpdatedBy")
   assignmentsSet       Assignment[]           @relation("AssignmentSetBy")
+  questionBankItems    QuestionBankItem[]     @relation("QuestionBankItemCreatedBy")
+  examsCreated         Exam[]                 @relation("ExamCreatedBy")
 
   @@map("users")
 }
@@ -118,6 +120,7 @@ model Class {
   timetableEntries    TimetableEntry[]
   teachingAssignments TeachingAssignment[]
   assignments         Assignment[]
+  exams               Exam[]
 
   @@index([academicYear])
   @@map("classes")
@@ -145,6 +148,7 @@ model StudentProfile {
   messages          Message[]
   tutorSessions     TutorSession[]
   submissions       Submission[]
+  examAttempts      ExamAttempt[]
 
   @@map("student_profiles")
 }
@@ -245,6 +249,8 @@ model Subject {
   tutorSessions    TutorSession[]
   lessonResources  LessonResource[]
   assignments      Assignment[]
+  questionBankItems QuestionBankItem[]
+  exams             Exam[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -1142,6 +1148,7 @@ model Assessment {
 
   marks       Mark[]
   assignments Assignment[]
+  exams       Exam[]
 
   @@unique([subjectId, classId, academicYear, term, name])
   @@index([classId, academicYear, term])
@@ -1660,4 +1667,219 @@ model LessonResource {
 
   @@index([subjectId])
   @@map("lesson_resources")
+}
+
+// ── Examinations and CBT ─────────────────────────────────────────────
+// A Quiz (above) is a teaching artefact: a paper a teacher prints or
+// walks a class through. An Exam is a paper a student *sits* on screen,
+// against a clock, marked by the machine where the machine can be
+// trusted and by a human where it cannot.
+
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTI_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+  /// Never auto-marked. Present so a paper can mix objective and written
+  /// questions instead of forcing a school to run two systems.
+  ESSAY
+}
+
+enum ExamStatus {
+  DRAFT
+  /// Visible to the class and sittable inside its window.
+  PUBLISHED
+  /// No new attempts. Existing in-progress attempts are still allowed to
+  /// finish — closing a paper must not destroy work in front of a child.
+  CLOSED
+}
+
+enum ExamAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  MARKED
+  RELEASED
+}
+
+/// A reusable question. Editing or deleting one never changes a paper that
+/// has already been built from it — see ExamQuestion.
+model QuestionBankItem {
+  id         String  @id @default(cuid())
+  subjectId  String
+  subject    Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  /// Free text, same convention as Class.gradeLevel and Subject.gradeLevel.
+  gradeLevel String?
+  topic      String?
+
+  type   QuestionType
+  prompt String
+  /// `[{ key: "A", text: "..." }]` for the choice types; `[]` otherwise.
+  options Json
+  /// Choice types: the correct keys, e.g. `["A"]` or `["A", "C"]`.
+  /// SHORT_ANSWER: every accepted spelling, e.g. `["4", "four"]`.
+  /// ESSAY: `[]` — there is no key, and pretending there is one would
+  /// invite the marker to auto-mark it.
+  answer Json
+  /// Hundredths of a mark, like Mark.scoreHundredths — teachers award
+  /// half marks and a total assembled out of floats drifts.
+  marksHundredths Int           @default(100)
+  source          ContentSource @default(MANUAL)
+
+  createdById String?
+  createdBy   User?   @relation("QuestionBankItemCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  examQuestions ExamQuestion[]
+
+  @@index([subjectId, gradeLevel])
+  @@map("question_bank_items")
+}
+
+model Exam {
+  id        String  @id @default(cuid())
+  classId   String
+  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  title        String
+  instructions String?
+  academicYear String
+  term         String
+
+  /// Minutes from the moment a student starts. Their own deadline is
+  /// computed once at that point and stored on the attempt, so this
+  /// changing afterwards cannot move a clock already running.
+  durationMinutes Int
+  /// The window the paper may be started in. Null means no bound on that
+  /// side — a take-anytime paper is legitimate.
+  opensAt  DateTime?
+  closesAt DateTime?
+
+  /// Per-student question order, seeded on the attempt so it is stable
+  /// across a refresh but different between neighbours.
+  shuffleQuestions Boolean @default(true)
+
+  status ExamStatus @default(DRAFT)
+
+  /// Optional link into the gradebook, same shape as Assignment: most
+  /// exams count towards a term result, but a mock or a practice paper
+  /// does not, and inventing a gradebook entry for one would be wrong.
+  assessmentId String?
+  assessment   Assessment? @relation(fields: [assessmentId], references: [id])
+
+  createdById String?
+  createdBy   User?   @relation("ExamCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  questions ExamQuestion[]
+  attempts  ExamAttempt[]
+
+  @@index([classId, status])
+  @@index([subjectId, academicYear, term])
+  @@map("exams")
+}
+
+/// A question **as it appeared on this paper**, copied out of the bank when
+/// the exam was built.
+///
+/// The same snapshot rule as a published TermResult and a Payslip: a
+/// student sat a specific paper, and a teacher correcting a typo in the
+/// bank next term must not silently change the questions that student
+/// answered, or the marks they were given for them. `sourceItem` is kept
+/// only so a teacher can trace where it came from, and is SetNull on
+/// delete — removing a question from the bank cannot delete evidence.
+model ExamQuestion {
+  id     String @id @default(cuid())
+  examId String
+  exam   Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  orderIndex   Int
+  sourceItemId String?
+  sourceItem   QuestionBankItem? @relation(fields: [sourceItemId], references: [id], onDelete: SetNull)
+
+  type            QuestionType
+  prompt          String
+  options         Json
+  answer          Json
+  marksHundredths Int
+
+  answers ExamAnswer[]
+
+  @@unique([examId, orderIndex])
+  @@map("exam_questions")
+}
+
+model ExamAttempt {
+  id               String         @id @default(cuid())
+  examId           String
+  exam             Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  status    ExamAttemptStatus @default(IN_PROGRESS)
+  startedAt DateTime          @default(now())
+  /// Computed once, at start, and stored. A duration edited mid-sitting
+  /// must not shorten the clock of a student already writing.
+  expiresAt   DateTime
+  submittedAt DateTime?
+  /// True when the paper was submitted by the deadline passing rather than
+  /// by the student. Recorded because it is the honest description of what
+  /// happened, and a teacher looking at a short paper deserves to know.
+  autoSubmitted Boolean @default(false)
+
+  /// Seeds this student's question order. Stored so a refresh, or a
+  /// resumed attempt on another device, shows the same paper.
+  shuffleSeed Int
+
+  autoScoreHundredths   Int?
+  manualScoreHundredths Int?
+  totalScoreHundredths  Int?
+  /// Set when any answer could not be marked by machine. The paper is not
+  /// finished until a human has looked at those.
+  needsReview Boolean @default(false)
+
+  markedAt       DateTime?
+  markedByUserId String?
+  markedByName   String?
+  /// Marks reach the student only when a teacher releases them, exactly as
+  /// with homework.
+  releasedAt DateTime?
+
+  answers ExamAnswer[]
+
+  @@unique([examId, studentProfileId])
+  @@index([studentProfileId])
+  @@map("exam_attempts")
+}
+
+model ExamAnswer {
+  id             String       @id @default(cuid())
+  attemptId      String
+  attempt        ExamAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  examQuestionId String
+  examQuestion   ExamQuestion @relation(fields: [examQuestionId], references: [id], onDelete: Cascade)
+
+  /// Choice types: the chosen keys, `["A"]`. Written types: `["the text"]`.
+  /// One shape for every type so the marker has no special cases.
+  response Json
+
+  awardedHundredths Int?
+  /// Whether the machine awarded this, as opposed to a person. Kept so a
+  /// student querying a mark can be told which it was.
+  autoMarked  Boolean @default(false)
+  needsReview Boolean @default(false)
+  feedback    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([attemptId, examQuestionId])
+  @@map("exam_answers")
 }

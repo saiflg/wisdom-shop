@@ -141,10 +141,13 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: "examination",
     items: [
       { key: "nav.examination.setup", href: "/assessments", roles: STAFF },
-      { key: "nav.examination.questionBank", roles: STAFF },
+      { key: "nav.examination.questionBank", href: "/question-bank", roles: STAFF },
       { key: "nav.examination.quizzes", href: "/quizzes" },
-      { key: "nav.examination.cbt" },
-      { key: "nav.examination.aiExamination", roles: STAFF },
+      // Everyone: staff build and mark here, students sit here.
+      { key: "nav.examination.cbt", href: "/exams" },
+      // The AI drafting tool lives on the question bank screen — a separate
+      // page would be the same list with one extra button.
+      { key: "nav.examination.aiExamination", href: "/question-bank", roles: STAFF },
       { key: "nav.examination.results", href: "/results", roles: STAFF },
       { key: "nav.examination.resultTemplates", roles: ADMIN_ONLY },
       { key: "nav.examination.reportCards", href: "/report-cards" },
