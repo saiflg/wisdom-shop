@@ -1402,6 +1402,49 @@ detectable from a green test run. This is now the third phase in a row where
 walking the actual screens found a real defect after everything passed, which
 is why the walkthrough is a required step and not a formality.
 
+**Turning on a real AI provider, and the five things that fell out.** Every
+generation path had been built and tested against fakes. Configuring one live
+OpenRouter key found five defects in an afternoon, none of which any test
+could have caught, because a fake returns whatever the test told it to.
+
+- **The default model had been retired.** It was a `:free` one, chosen so a
+  new operator could prove the wiring without paying. Free tiers are the
+  first thing a vendor drops, and when it went the default started handing
+  every new install "no endpoints found for that model" — which reads exactly
+  like a broken key. A default that stops working on someone else's schedule
+  is worse than one costing a fraction of a penny.
+- **Prose requests were being forced into JSON mode.** `generateText` exists
+  precisely so a tutoring reply is not wrapped in an object — the comment on
+  it said so — but `buildRequest` set `response_format: json_object` on
+  every call regardless. The model complied, and a child was shown
+  `{"lesson": "Welcome to lesson 1! A parallelogram is...", "worked_example":`
+  on screen, braces and all. The instruction was absent from the prompt; the
+  flag was not, and the flag won. `expects` is now a required argument, so
+  the question cannot be left unanswered at a call site.
+- **Truncated answers travelled downstream.** A reply cut off at `{"ok":`
+  failed JSON parsing and surfaced as "replied but not with usable JSON, try
+  a different model" — advice that sends somebody chasing models when the
+  token budget was the problem. Truncation is now fatal where it happens,
+  and says so.
+- **Reasoning models broke the connection test.** It allowed 64 tokens, which
+  is plenty for the answer and nothing for the thinking that precedes it, so
+  the test failed on exactly the models an operator is most likely to pick.
+  Asking providers to disable reasoning was tried and reverted: some
+  endpoints mandate it and reject the request outright, and an operator may
+  point this at any model anywhere. The budget absorbs it instead.
+- **Every lesson diagram was being silently discarded.** Covered in its own
+  entry below; the short version is that models label their drawings, `<!` is
+  on the forbidden list, and the sanitiser fails closed on the whole
+  document.
+
+Four of the five presented as the same symptom — a feature that quietly did
+nothing — and the fix that mattered most was not any of the individual
+corrections but **making the failures say why**. `explainEmptyResponse` and
+`checkSvg`'s reason turned three unfalsifiable guesses into one log line
+each. The lesson for later phases: when a path can only fail against a real
+provider, the error text *is* the diagnostic tooling, and "returned an empty
+response" is not error text, it is a shrug.
+
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
 which was every test in all three), while each passed alone. The cause was
@@ -1418,11 +1461,100 @@ The general rule: any e2e suite that provisions a school needs an explicit
 hook timeout, and a whole-suite failure with zero assertion failures is a
 hook problem, not a logic problem.
 
+**Per-school branding and host-based tenant routing (done).** A school
+stopped having to type its own name to reach its own console, and stopped
+looking like everyone else's once it got there.
+
+- **A hostname is not authority, and this is the whole design.**
+  `<slug>.<EMS_BASE_DOMAIN>` and a school's own `customDomain` both resolve
+  to a school, but resolving only decides *whose login page to draw*.
+  Credentials are still checked against that school's database, every
+  authenticated request still takes its tenant from the JWT, and the login
+  call still carries the slug explicitly — the UI stops *asking* for it, the
+  API does not stop *requiring* it. The worst a forged Host achieves is
+  showing an attacker somebody else's logo.
+- **`resolveHost` refuses more than it accepts**: the apex, IPs (v4 and
+  bracketed v6), nested labels, non-slug-shaped labels, and a reserved set
+  (`www`, `api`, `app`, `admin`, `platform`, …) that a school must never be
+  able to claim. `evilcampus.example.com` against a base domain of
+  `campus.example.com` is a *custom-domain candidate*, not a subdomain —
+  matching with `endsWith` and no leading dot hands an attacker any school
+  they like, which is why there is a test named after it.
+- **Empty `EMS_BASE_DOMAIN` turns the whole feature off** and the console
+  behaves exactly as it did before. That is the point: the slug field is
+  the fallback, not a legacy path waiting to be deleted.
+- **The brand colour reaches ~164 existing `bg-brand-600`/`text-brand-500`
+  usages across 48 files without one of them being edited.** The Tailwind
+  palette now reads CSS custom properties (`rgb(var(--brand-600) /
+  <alpha-value>)` — the space-separated triplet form, because it is the only
+  one `<alpha-value>` can work with, and `#rrggbb` there would silently kill
+  every `bg-brand-600/40` in the app). Defaults live in globals.css and are
+  byte-for-byte the colours that used to be literals in the Tailwind config;
+  a branded school overrides them with one server-rendered `<style>`.
+- **The ramp anchors the school's colour at 600, not 500**, because 600 is
+  what the primary buttons and sidebar already use — anchoring anywhere else
+  means the exact colour a school picked never appears in its own console.
+- **Text on a brand colour is computed, not assumed white.** `readableTextOn`
+  picks black or white, whichever wins, and a sweep of the colour cube in the
+  unit tests proves the result always clears 4.5:1. Pure black and pure white
+  specifically: a softer near-black (#111827, the tasteful choice) drops the
+  worst case to about 3.5:1, and there is a test that fails if someone
+  substitutes one.
+- **The public endpoint rebuilds its payload field by field**, same rule as
+  the exam paper's `toStudentPaper`. It sits in a module beside settings
+  holding SMTP passwords, and it is served to anyone who can open a login
+  page; `{ ...branding }` minus a few keys is the shape that leaks quietly
+  the day a column is added.
+- **Logos are stored under `schools/<schoolId>/branding/<uuid>.<ext>`.** One
+  storage root serves every tenant, so isolation here is a property of the
+  keys, not of the directory tree — the per-school *database* isolation the
+  rest of the app leans on does not extend to the filesystem. The public
+  route takes a slug and a bare filename and rebuilds the key from the
+  resolved school, then checks it against the key that school actually
+  records: a real filename under another school's slug is a 404, and so is a
+  logo that has been removed.
+- **SVG is refused**, exactly as in the shop. A school crest is the most
+  natural thing in the world to have as an SVG, which is what makes it the
+  tempting exception — and it is XML that can carry `<script>`, served from
+  our own origin, on the unauthenticated login page of every school on the
+  platform.
+- **A miss in the host cache expires in 5s, a hit in 60s.** The asymmetry is
+  deliberate: a miss only ever means "no school answers to this name *yet*",
+  and the case that matters is somebody watching a school's address while it
+  provisions. Suspension is immediate through `invalidateSchool`, and the
+  e2e test proves it by suspending through the platform endpoint rather than
+  writing the status row directly — which is what the first version of that
+  test did, and it failed for the right reason.
+
+**The browser found it again — fourth phase running.** `lib/branding.ts`
+held both the colour maths and a `next/headers` import. The settings page is
+a client component and imports `brandRamp` for its live preview, which
+dragged a server-only module into the client bundle and broke the build.
+`tsc --noEmit` passed, ESLint passed, all 43 frontend tests passed. Opening
+the page was the only thing that found it. The fix is the split into
+`branding.ts` (client-safe) and `branding-server.ts`; the `server-only`
+package would turn this class of mistake into a clear error naming the
+offending import, and is worth adding the next time this app takes a
+dependency for another reason — it is not pulled in for this alone because
+the repo root is not bind-mounted into the dev container, so a lockfile
+written in there never reaches the host's, and CI installs `--frozen-lockfile`.
+
+**A stale image, not a broken lockfile.** Recreating `ems-api` (needed for
+the new env vars — `restart` does not re-read them) gave it a fresh
+anonymous `node_modules` volume from the image, which predates `exceljs` and
+`pdfkit`; the container then reported an out-of-date lockfile. The host's
+`pnpm-lock.yaml` is correct and has both. The cause is that only
+`./apps/ems-api` is bind-mounted, so `/workspace/pnpm-lock.yaml` inside the
+container is the image's own copy. `pnpm install --no-frozen-lockfile` in
+the container fixes it without touching the host's lockfile — but the
+generated Prisma clients live under `node_modules` and are wiped by that
+install, so `pnpm prisma:generate` has to follow it or the app boots with
+`Cannot find module 'ems-tenant-client'`.
+
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
-per-country curriculum-standard databases, subdomain-based tenant routing,
-custom domains, per-school branding, live voice/video classroom (the AI
-Teacher above is text; speech is its own phase),
+per-country curriculum-standard databases, live voice/video classroom (the
+AI Teacher above is text; speech is its own phase),
 2FA/lockout/real CSRF double-submit, messaging, automated backups,
 **live charging through a school's payment gateway** (the keys are stored,
 encrypted and testable, but nothing is ever charged — a fee payment with
