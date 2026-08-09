@@ -33,10 +33,17 @@ enum PlatformRoleName {
 model School {
   id           String       @id @default(cuid())
   name         String
-  /// Used both as the onboarding-time database-name seed and as the
-  /// explicit tenant selector at school-user login (no subdomain routing
-  /// yet — see PROGRESS.md).
+  /// The onboarding-time database-name seed, the school's subdomain under
+  /// EMS_BASE_DOMAIN, and the tenant selector a school user can still type
+  /// at login when the host doesn't identify a school. See
+  /// tenancy/resolve-host.ts.
   slug         String       @unique
+  /// A domain the school owns and points at us, e.g. "portal.stmarys.sch.ng".
+  /// Unique because a hostname resolves to exactly one school; null for the
+  /// schools — currently all of them — that use their subdomain instead.
+  /// Certificates for these are the deployment's problem, not this app's:
+  /// see docs/DEPLOYMENT.md.
+  customDomain String?      @unique
   databaseName String       @unique
   status       SchoolStatus @default(PROVISIONING)
   /// Set only for schools created via the shop's "Complete Your School

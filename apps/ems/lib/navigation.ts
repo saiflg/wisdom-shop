@@ -190,7 +190,7 @@ export const NAV_GROUPS: NavGroup[] = [
     roles: ADMIN_ONLY,
     items: [
       { key: "nav.settings.schoolProfile" },
-      { key: "nav.settings.branding" },
+      { key: "nav.settings.branding", href: "/settings/branding" },
       { key: "nav.settings.users" },
       { key: "nav.settings.roles" },
       { key: "nav.settings.permissions" },

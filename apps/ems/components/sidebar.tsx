@@ -9,7 +9,9 @@ import { useNavStore } from "@/store/nav-store";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
 import { findActiveLeaf, flattenLeaves, visibleGroups, type NavGroup, type NavLeaf } from "@/lib/navigation";
+import { useBranding } from "@/lib/branding-context";
 import { NavIconGlyph, ChevronIcon, StarIcon } from "./nav-icon";
+import { SchoolMark } from "./school-mark";
 
 /** Nav keys are authored in navigation.ts and always exist in the dictionary. */
 function asKey(key: string): TranslationKey {
@@ -22,6 +24,7 @@ export function Sidebar() {
   // Kept nullable rather than `?? []` here: defaulting outside the memo
   // would build a fresh array every render and recompute the whole tree.
   const userRoles = useAuthStore((s) => s.user?.roles);
+  const branding = useBranding();
 
   const collapsed = useNavStore((s) => s.collapsed);
   const expandedGroups = useNavStore((s) => s.expandedGroups);
@@ -78,11 +81,21 @@ export function Sidebar() {
       aria-label={t("app.name")}
     >
       <div className="flex h-16 items-center gap-2 border-b border-slate-200 px-3 dark:border-slate-800">
-        {!collapsed && (
-          <Link href="/dashboard" className="truncate text-base font-bold tracking-tight">
-            Wisdom <span className="text-brand-500">Campus</span>
-          </Link>
-        )}
+        {/* A school's own mark stays visible when the sidebar is collapsed —
+            it is the one thing in the rail that says whose console this is,
+            and it is exactly what an admin looks for to check they are in
+            the right school. */}
+        {branding && <SchoolMark branding={branding} size="sm" className="shrink-0" />}
+        {!collapsed &&
+          (branding ? (
+            <Link href="/dashboard" className="truncate text-base font-bold tracking-tight">
+              {branding.schoolName}
+            </Link>
+          ) : (
+            <Link href="/dashboard" className="truncate text-base font-bold tracking-tight">
+              Wisdom <span className="text-brand-500">Campus</span>
+            </Link>
+          ))}
         <button
           type="button"
           onClick={toggleCollapsed}

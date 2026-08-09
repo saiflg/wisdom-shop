@@ -201,6 +201,50 @@ model GuardianLink {
   @@map("guardian_links")
 }
 
+// ─────────────────────────── Per-school branding ───────────────────────────
+
+/// How a school's console and login page present themselves.
+///
+/// Lazily created rather than seeded at provisioning, unlike
+/// CurriculumSettings: every field has a sensible default, so a school that
+/// never opens the branding page must render identically to one that did
+/// not have the feature — and every school provisioned before this model
+/// existed has to work without a backfill. The service treats "no row" and
+/// "row with defaults" as the same thing (see branding.service.ts).
+///
+/// Lives in the tenant database, not the control database, because it is
+/// the school's own data, edited by the school's own admin. The public
+/// login-page endpoint reaches it by resolving the host to a school first
+/// and then reading that school's database — the ordinary tenant path, one
+/// step earlier than usual.
+model BrandingSettings {
+  id String @id @default(cuid())
+
+  /// What the school calls itself, if that differs from the name on the
+  /// platform's registry (which an admin cannot edit — it identifies the
+  /// customer, not the brand).
+  displayName String?
+  tagline     String?
+
+  /// Storage key, never a URL and never shown to a client: the public URL
+  /// is built from the school's slug and the bare filename so that one
+  /// school's key can't address another's file. See storage/storage.ts.
+  logoKey String?
+
+  /// Hex, normalised to six lowercase digits before it is stored — these
+  /// land in CSS custom properties, and validation is what keeps a colour
+  /// from being a stylesheet. Defaults are the console's existing blue and
+  /// teal.
+  primaryColor String @default("#1d4ed8")
+  accentColor  String @default("#0f766e")
+
+  updatedByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("branding_settings")
+}
+
 // ── AI Curriculum Engine — Phase 1: settings, subjects, schemes of work ──
 // See PROGRESS.md for the phased scope: lesson plans, quizzes, exams,
 // worksheets, and exports all follow this same shape in later phases.

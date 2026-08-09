@@ -4,6 +4,32 @@
 
 :root {
   color-scheme: light dark;
+
+  /* ── Brand palette ────────────────────────────────────────────────────
+     The Wisdom Campus default, and the exact colours that used to be
+     literals in tailwind.config.ts — a school with no branding of its own
+     must look identical to how it looked before branding existed.
+
+     A school that has chosen a colour overrides these from the server (see
+     lib/branding.ts), which is why they are here rather than in the
+     Tailwind config: a custom property can be replaced per response, a
+     compiled utility class cannot. */
+  --brand-50: 242 246 255;
+  --brand-100: 224 233 255;
+  --brand-200: 194 211 255;
+  --brand-300: 148 177 255;
+  --brand-400: 95 133 255;
+  --brand-500: 56 96 255;
+  --brand-600: 33 62 235;
+  --brand-700: 26 47 189;
+  --brand-800: 26 44 148;
+  --brand-900: 27 42 116;
+
+  /* Text drawn on a brand-coloured surface. Not always white once a school
+     picks its own colour — see readableTextOn in the API. */
+  --on-brand: 255 255 255;
+
+  --brand-gradient: linear-gradient(135deg, #3860ff 0%, #7c3aed 50%, #db2777 100%);
 }
 
 body {

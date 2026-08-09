@@ -112,6 +112,39 @@ the exact bytes sent, so nothing in the path may re-encode the body.
 
 ---
 
+## Wisdom Campus: school hostnames
+
+`EMS_BASE_DOMAIN` is the domain schools live under. Setting it to
+`campus.example.com` makes `st-marys.campus.example.com` resolve to the
+school whose slug is `st-marys`. Leaving it empty turns subdomain routing
+off, and the login form goes on asking which school you mean — that is a
+supported configuration, not a broken one.
+
+Turning it on needs two things this repo cannot do for you:
+
+- **A wildcard DNS record** (`*.campus.example.com`) pointing at the proxy.
+- **A wildcard certificate** for the same name. A per-school certificate
+  would mean issuing one at onboarding time, which is a different and much
+  larger piece of work.
+
+A school may also point a domain it owns at the platform, recorded as
+`School.customDomain` in the control database. That one **is** a per-hostname
+certificate problem, and there is no automation for it here — issue the
+certificate as part of whatever process sets `customDomain`.
+
+`TRUST_PROXY_HOPS` must be set to the number of proxies actually in front of
+`ems-api`, and it must not be zero once one exists: Express only reads
+`X-Forwarded-Host` when it trusts a proxy, and without it every school
+resolves to "no school" because the API sees the proxy's own hostname. Do
+not publish the API's port directly while this is set — a caller reaching it
+without going through the proxy could then spoof `X-Forwarded-For` and evade
+the rate limiter.
+
+School logos are written under `EMS_STORAGE_ROOT` and carry the same
+single-node caveat as the shop's own storage, below.
+
+---
+
 ## Backups
 
 `docker compose down -v` deletes the `postgres-data` volume and every order,
@@ -163,3 +196,8 @@ Stated plainly rather than left to be discovered:
 - **Only Stripe and Paystack are implemented.** Flutterwave and PayPal are in
   the env schema and the UI gates on what is configured, but there are no
   providers behind them.
+- **`docker-compose.prod.yml` covers the shop only.** `ems`, `ems-api` and
+  `platform` have production Dockerfiles' worth of work still ahead of them —
+  the file defines `api`, `web` and `proxy` and nothing else. The school
+  hostname requirements above describe what a Wisdom Campus deployment needs;
+  they do not describe something this repo can currently stand up.

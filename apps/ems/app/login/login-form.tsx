@@ -18,7 +18,16 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-export function LoginForm({ defaultSchoolSlug }: { defaultSchoolSlug?: string } = {}) {
+/**
+ * `schoolKnown` means the page already identified the school — from the
+ * hostname, or from a slug in the link that brought you here. The field is
+ * then carried as a hidden value rather than dropped: the API still requires
+ * it, because a hostname is not something it will take anyone's word for.
+ */
+export function LoginForm({
+  defaultSchoolSlug,
+  schoolKnown = false,
+}: { defaultSchoolSlug?: string; schoolKnown?: boolean } = {}) {
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
   const [formError, setFormError] = useState<string | null>(null);
@@ -51,13 +60,17 @@ export function LoginForm({ defaultSchoolSlug }: { defaultSchoolSlug?: string } 
 
   return (
     <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
-      <FormField
-        label="School identifier"
-        autoComplete="organization"
-        hint="The identifier your school was given at setup"
-        error={form.formState.errors.schoolSlug?.message}
-        {...form.register("schoolSlug")}
-      />
+      {schoolKnown ? (
+        <input type="hidden" {...form.register("schoolSlug")} />
+      ) : (
+        <FormField
+          label="School identifier"
+          autoComplete="organization"
+          hint="The identifier your school was given at setup"
+          error={form.formState.errors.schoolSlug?.message}
+          {...form.register("schoolSlug")}
+        />
+      )}
       <FormField
         label="Email"
         type="email"

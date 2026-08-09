@@ -40,6 +40,8 @@ import { PdfModule } from "./pdf/pdf.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { TenantSecretsModule } from "./common/crypto/tenant-secrets.module";
 import { SettingsModule } from "./settings/settings.module";
+import { StorageModule } from "./storage/storage.module";
+import { BrandingModule } from "./branding/branding.module";
 
 @Module({
   imports: [
@@ -94,6 +96,8 @@ import { SettingsModule } from "./settings/settings.module";
     DataExchangeModule,
     PdfModule,
     MessagingModule,
+    StorageModule,
+    BrandingModule,
   ],
   providers: [
     // Order matters: throttling first, then auth (populates req.user), then

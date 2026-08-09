@@ -49,6 +49,22 @@ export const envSchema = z.object({
 
   COOKIE_DOMAIN: z.string().optional(),
 
+  // The domain schools live under, e.g. "campus.example.com" makes
+  // "st-marys.campus.example.com" resolve to the school with slug
+  // "st-marys". Empty (the default) turns subdomain routing off and the
+  // login form goes on asking which school you mean — see
+  // tenancy/resolve-host.ts. In dev this is "localhost", because browsers
+  // resolve every *.localhost name to the loopback address without anyone
+  // having to edit a hosts file.
+  EMS_BASE_DOMAIN: z.string().default(""),
+
+  // Where uploaded school logos are written. Local disk, single node — the
+  // same caveat the shop's STORAGE_ROOT carries, recorded in
+  // docs/DEPLOYMENT.md rather than left to be discovered behind a load
+  // balancer.
+  EMS_STORAGE_ROOT: z.string().default(".storage"),
+  EMS_MAX_LOGO_MB: z.coerce.number().positive().max(25).default(2),
+
   SEED_PLATFORM_ADMIN_EMAIL: z.string().email().optional(),
   SEED_PLATFORM_ADMIN_PASSWORD: z.string().min(12).optional(),
 

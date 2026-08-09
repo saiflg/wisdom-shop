@@ -156,6 +156,22 @@ services:
       TENANT_DB_USER: wisdom
       TENANT_DB_PASSWORD: wisdom
       PORT: 4001
+      # Schools live at <slug>.localhost in dev. Browsers resolve every
+      # *.localhost name to loopback with no hosts-file edit, so
+      # http://demo-academy.localhost:3001 just works.
+      EMS_BASE_DOMAIN: localhost
+      # apps/ems forwards the browser's hostname as X-Forwarded-Host on its
+      # server-side branding lookup — Next's rewrite proxy replaces the real
+      # Host with `ems-api:4001`, so without this every school would resolve
+      # to none. Express only reads X-Forwarded-Host when it trusts a proxy.
+      #
+      # The cost: port 4001 is published in dev, so a direct caller can also
+      # spoof X-Forwarded-For and dodge the rate limiter. That is a dev-only
+      # exposure and the production topology (nginx in front, API not
+      # published) is the one this setting actually describes — see
+      # docs/DEPLOYMENT.md.
+      TRUST_PROXY_HOPS: "1"
+      EMS_STORAGE_ROOT: /workspace/apps/ems-api/.storage
     ports:
       - "4001:4001"
     depends_on:

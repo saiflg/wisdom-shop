@@ -62,6 +62,36 @@ describe("LoginForm", () => {
     expect(useAuthStore.getState().user?.schoolSlug).toBe(SCHOOL_SLUG);
   });
 
+  describe("when the host already identifies the school", () => {
+    it("stops asking for the school identifier", () => {
+      render(<LoginForm defaultSchoolSlug={SCHOOL_SLUG} schoolKnown />);
+      expect(screen.queryByLabelText(/school identifier/i)).not.toBeInTheDocument();
+    });
+
+    it("still sends the slug, because the API does not take the hostname's word for it", async () => {
+      mockApiFetch.mockResolvedValue({
+        accessToken: "token",
+        user: { id: "u1", schoolId: "s1", schoolSlug: SCHOOL_SLUG, roles: ["SCHOOL_ADMIN"] },
+      } as never);
+
+      render(<LoginForm defaultSchoolSlug={SCHOOL_SLUG} schoolKnown />);
+      await userEvent.type(screen.getByLabelText(/^email$/i), EMAIL);
+      await userEvent.type(screen.getByLabelText(/^password$/i), PASSWORD);
+      await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+      await waitFor(() => expect(mockApiFetch).toHaveBeenCalled());
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        "/v1/auth/login",
+        expect.objectContaining({ body: { schoolSlug: SCHOOL_SLUG, email: EMAIL, password: PASSWORD } }),
+      );
+    });
+
+    it("goes on asking when the host resolved nothing, even with a slug to prefill", () => {
+      render(<LoginForm defaultSchoolSlug={SCHOOL_SLUG} />);
+      expect(screen.getByLabelText(/school identifier/i)).toHaveValue(SCHOOL_SLUG);
+    });
+  });
+
   it("shows an error message on invalid credentials", async () => {
     const { ApiError } = jest.requireActual("@/lib/api");
     mockApiFetch.mockRejectedValue(new ApiError(401, "Invalid school, email or password"));
