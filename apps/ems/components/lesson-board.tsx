@@ -73,6 +73,16 @@ export function wordAt(tokens: Token[], charIndex: number): number {
  * simply is not highlighted and the reading still works.
  */
 export function BoardText({ text, alt }: { text: string; alt?: string | null }) {
+  // What is spoken includes the diagram's description; what is highlighted is
+  // only the lesson, because the description is not on screen as words.
+  //
+  // The offsets still line up: `spoken` *begins* with `text`, so every
+  // charIndex within the lesson indexes the same character in both. Once the
+  // voice runs on into the description, charIndex passes the end of `text`
+  // and `wordAt` clamps to the last word — so the highlight rests on the
+  // final word while the picture is described, which is where a reader's eye
+  // would be anyway. Building `tokens` from `spoken` instead would look more
+  // consistent and would light up words that are not there.
   const spoken = useMemo(() => [text, alt].filter(Boolean).join(". "), [text, alt]);
   const tokens = useMemo(() => tokenise(text), [text]);
 

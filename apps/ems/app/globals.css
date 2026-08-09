@@ -144,11 +144,32 @@ html[data-reduce-motion] *::after {
     0 6px 16px -8px rgba(0, 0, 0, 0.5);
 }
 
+/* The board's own content sits above the dust layer below.
+ *
+ * Without this the ::after paints over everything — it comes later in the
+ * document and nothing else establishes a stacking context — and the white
+ * card the diagram sits on picks up a faint wash. `pointer-events-none`
+ * keeps clicks and text selection working either way, so the only symptom
+ * was a slightly milky diagram, which is exactly the sort of thing nobody
+ * reports and everybody notices.
+ *
+ * `:not(.sr-only)` is not tidiness. Tailwind's `sr-only` works by taking the
+ * element out of flow with `position: absolute` and clipping it to nothing;
+ * `.chalk-board > *` is the more specific selector, so setting `relative`
+ * here would put it back in flow and print "Teacher:" on the board for
+ * everyone to see. The screen-reader label is a direct child of exactly this
+ * element. */
+.chalk-board > *:not(.sr-only) {
+  @apply relative;
+  z-index: 1;
+}
+
 /* Chalk dust: the faint smear a board keeps after it is wiped. Behind the
    text, and non-interactive. */
 .chalk-board::after {
   content: "";
   @apply pointer-events-none absolute inset-0;
+  z-index: 0;
   background-image:
     radial-gradient(circle at 12% 78%, rgba(255, 255, 255, 0.05) 0 22%, transparent 60%),
     radial-gradient(circle at 62% 22%, rgba(255, 255, 255, 0.04) 0 18%, transparent 55%);
