@@ -1,10 +1,12 @@
 import {
   PROVIDERS,
   buildRequest,
+  explainEmptyResponse,
   explainProviderError,
   extractJson,
   extractText,
   findProvider,
+  wasTruncated,
 } from "./providers";
 
 describe("the provider list", () => {
@@ -181,5 +183,131 @@ describe("explainProviderError", () => {
     for (const status of [400, 418, 500, 503]) {
       expect(explainProviderError(status, undefined).length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("explainEmptyResponse", () => {
+  // A 200 that carries no text is the confusing case: it reads like a broken
+  // key when it almost never is. These assert the message names the actual
+  // cause, because "empty response" sends people to re-check the key.
+
+  it("names the token limit when an OpenAI-shaped reply stopped on length", () => {
+    // The real one: a reasoning model spends its budget thinking and never
+    // reaches the answer. This is what a 64-token connection test provoked.
+    const message = explainEmptyResponse("openai", {
+      choices: [{ finish_reason: "length", message: { content: "" } }],
+    });
+    expect(message).toContain("ran out of room");
+    expect(message).toContain("reasoning model");
+  });
+
+  it("falls back to native_finish_reason when the normalised one is absent", () => {
+    // OpenRouter passes the upstream vendor's own reason through under this
+    // name when it has nothing to map it onto.
+    expect(explainEmptyResponse("openai", { choices: [{ native_finish_reason: "length" }] })).toContain(
+      "ran out of room",
+    );
+  });
+
+  it("says so when the response was filtered", () => {
+    expect(
+      explainEmptyResponse("openai", { choices: [{ finish_reason: "content_filter" }] }),
+    ).toContain("filtered");
+  });
+
+  it("distinguishes no choices at all from an empty one", () => {
+    expect(explainEmptyResponse("openai", { choices: [] })).toContain("no choices");
+    expect(explainEmptyResponse("openai", {})).toContain("no choices");
+  });
+
+  it("reads Gemini's own finish reasons", () => {
+    expect(explainEmptyResponse("gemini", { candidates: [{ finishReason: "MAX_TOKENS" }] })).toContain(
+      "ran out of room",
+    );
+    expect(explainEmptyResponse("gemini", { candidates: [{ finishReason: "SAFETY" }] })).toContain(
+      "declined",
+    );
+  });
+
+  it("reports a blocked Gemini prompt rather than blaming the answer", () => {
+    // No candidates at all means the *prompt* was rejected, which is a
+    // different fix from anything about the model's reply.
+    expect(explainEmptyResponse("gemini", { promptFeedback: { blockReason: "SAFETY" } })).toContain(
+      "blocked the prompt",
+    );
+  });
+
+  it("reads Anthropic's stop reason", () => {
+    expect(explainEmptyResponse("anthropic", { stop_reason: "max_tokens" })).toContain("ran out of room");
+  });
+
+  it("never returns an empty string, whatever arrives", () => {
+    for (const shape of ["openai", "anthropic", "gemini"] as const) {
+      expect(explainEmptyResponse(shape, undefined).length).toBeGreaterThan(0);
+      expect(explainEmptyResponse(shape, null).length).toBeGreaterThan(0);
+      expect(explainEmptyResponse(shape, "nonsense").length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("wasTruncated", () => {
+  // A partial answer is worse than none: `{"ok":` parses as nothing and gets
+  // reported as "not usable JSON", which blames the model for what was a
+  // token budget. The caller refuses truncated output outright.
+
+  it("spots an OpenAI-shaped answer cut off on length", () => {
+    expect(wasTruncated("openai", { choices: [{ finish_reason: "length" }] })).toBe(true);
+    expect(wasTruncated("openai", { choices: [{ native_finish_reason: "length" }] })).toBe(true);
+  });
+
+  it("is false for a complete answer", () => {
+    expect(wasTruncated("openai", { choices: [{ finish_reason: "stop" }] })).toBe(false);
+    expect(wasTruncated("anthropic", { stop_reason: "end_turn" })).toBe(false);
+    expect(wasTruncated("gemini", { candidates: [{ finishReason: "STOP" }] })).toBe(false);
+  });
+
+  it("spots Gemini and Anthropic hitting their caps", () => {
+    expect(wasTruncated("gemini", { candidates: [{ finishReason: "MAX_TOKENS" }] })).toBe(true);
+    expect(wasTruncated("anthropic", { stop_reason: "max_tokens" })).toBe(true);
+  });
+
+  it("says false rather than throwing on junk", () => {
+    for (const shape of ["openai", "anthropic", "gemini"] as const) {
+      expect(wasTruncated(shape, undefined)).toBe(false);
+      expect(wasTruncated(shape, null)).toBe(false);
+      expect(wasTruncated(shape, "nonsense")).toBe(false);
+    }
+  });
+});
+
+describe("reasoning and the token budget", () => {
+  const base = { apiKey: "k", model: "m", prompt: "p" };
+
+  it("never asks any provider to turn reasoning off", () => {
+    // Tried, and it does not work: some endpoints mandate reasoning and
+    // reject the request outright ("Reasoning is mandatory for this
+    // endpoint"). An operator can point this at any model anywhere, so
+    // there is no knowing in advance which will accept the flag. The budget
+    // absorbs the thinking instead, which works on every model.
+    for (const id of ["OPENROUTER", "OPENAI", "OPENAI_COMPATIBLE"] as const) {
+      const plan = buildRequest({
+        ...base,
+        provider: findProvider(id),
+        baseUrl: id === "OPENAI_COMPATIBLE" ? "https://api.groq.com/openai/v1" : undefined,
+      });
+      expect("reasoning" in (plan.body as object)).toBe(false);
+    }
+  });
+
+  it("leaves room for a model that thinks before it answers", () => {
+    // A truncated scheme of work is a failed generation, not a shorter one,
+    // and unused headroom is not billed.
+    const plan = buildRequest({ ...base, provider: findProvider("OPENROUTER") });
+    expect((plan.body as { max_tokens: number }).max_tokens).toBeGreaterThanOrEqual(8192);
+  });
+
+  it("still honours an explicit budget when the caller sets one", () => {
+    const plan = buildRequest({ ...base, provider: findProvider("OPENROUTER"), maxTokens: 500 });
+    expect((plan.body as { max_tokens: number }).max_tokens).toBe(500);
   });
 });

@@ -34,9 +34,16 @@ export const PROVIDERS: ProviderProfile[] = [
     label: "OpenRouter",
     shape: "openai",
     baseUrl: "https://openrouter.ai/api/v1",
-    // A free model by default, so a new operator can prove the wiring works
-    // before deciding what to pay for.
-    defaultModel: "google/gemini-2.0-flash-exp:free",
+    // Cheap and fast, and dependable at holding a JSON schema — which is what
+    // every generation path here asks for.
+    //
+    // This used to name a `:free` model so a new operator could prove the
+    // wiring without paying. That backfired: free tiers are the first thing a
+    // vendor retires, and when `google/gemini-2.0-flash-exp:free` went away
+    // the default sent everyone a "no endpoints found for that model" error
+    // that reads like a broken key. A default that stops working on someone
+    // else's schedule is worse than one that costs a fraction of a penny.
+    defaultModel: "google/gemini-3.6-flash",
     keyUrl: "https://openrouter.ai/keys",
   },
   {
@@ -52,7 +59,7 @@ export const PROVIDERS: ProviderProfile[] = [
     label: "Anthropic",
     shape: "anthropic",
     baseUrl: "https://api.anthropic.com/v1",
-    defaultModel: "claude-sonnet-4-5",
+    defaultModel: "claude-sonnet-5",
     keyUrl: "https://console.anthropic.com/settings/keys",
   },
   {
@@ -104,7 +111,11 @@ export function buildRequest(options: {
 }): RequestPlan {
   const { provider, apiKey, model, prompt } = options;
   const base = (options.baseUrl?.trim() || provider.baseUrl).replace(/\/+$/, "");
-  const maxTokens = options.maxTokens ?? 4096;
+  // Generous because reasoning models bill their thinking to this same
+  // budget, and a truncated scheme of work is a failed generation rather
+  // than a shorter one. Unused headroom costs nothing — only tokens actually
+  // produced are charged.
+  const maxTokens = options.maxTokens ?? 8192;
 
   if (provider.shape === "gemini") {
     return {
@@ -148,9 +159,44 @@ export function buildRequest(options: {
       model,
       max_tokens: maxTokens,
       response_format: { type: "json_object" },
+      // No attempt to switch reasoning off.
+      //
+      // Reasoning tokens are drawn from `max_tokens`, so a thinking model can
+      // spend the whole budget deliberating and return a fragment. The
+      // obvious fix — asking for reasoning to be disabled — turns out to be
+      // unavailable: some endpoints mandate it and reject the request
+      // outright ("Reasoning is mandatory for this endpoint"). Since an
+      // operator can point this at any model on any provider, there is no
+      // way to know in advance which will accept it.
+      //
+      // So the budget absorbs it instead. Costs a few more tokens on models
+      // that think; works on every model either way, which the flag did not.
       messages: [{ role: "user", content: prompt }],
     },
   };
+}
+
+/**
+ * Whether the model was cut off mid-answer.
+ *
+ * Worth checking separately from emptiness, because a *partial* answer is the
+ * more dangerous case: `{"ok":` parses as nothing and surfaces as "replied but
+ * not with JSON", which sends someone off to change models when the real
+ * problem was the token budget. Truncated output is never usable, so the
+ * caller should refuse it outright rather than pass the fragment downstream.
+ */
+export function wasTruncated(shape: ApiShape, payload: unknown): boolean {
+  const data = (payload ?? {}) as Record<string, unknown>;
+
+  if (shape === "gemini") {
+    return (data.candidates as { finishReason?: string }[] | undefined)?.[0]?.finishReason === "MAX_TOKENS";
+  }
+  if (shape === "anthropic") {
+    return data.stop_reason === "max_tokens";
+  }
+
+  const choice = (data.choices as { finish_reason?: string; native_finish_reason?: string }[] | undefined)?.[0];
+  return (choice?.finish_reason ?? choice?.native_finish_reason) === "length";
 }
 
 /** Pulls the assistant's text out of whichever response shape came back. */
@@ -169,6 +215,60 @@ export function extractText(shape: ApiShape, payload: unknown): string | null {
 
   const choices = data.choices as { message?: { content?: string } }[] | undefined;
   return choices?.[0]?.message?.content || null;
+}
+
+/**
+ * Why a successful response carried no text.
+ *
+ * "The provider returned an empty response" is true and useless: it reads
+ * like a broken key when it usually is not. A 200 with no content nearly
+ * always means one of three things, and each needs a different fix —
+ * a bigger token budget, a different model, or different wording — so the
+ * message says which.
+ *
+ * The commonest by far is a reasoning model hitting its cap: it spends the
+ * budget thinking and never reaches the answer, which is exactly what a
+ * 64-token connection test used to provoke.
+ */
+export function explainEmptyResponse(shape: ApiShape, payload: unknown): string {
+  const data = (payload ?? {}) as Record<string, unknown>;
+
+  if (shape === "gemini") {
+    const candidate = (data.candidates as { finishReason?: string }[] | undefined)?.[0];
+    const reason = candidate?.finishReason;
+    if (reason === "MAX_TOKENS") {
+      return "The model ran out of room before it answered. Raise the token limit or choose a smaller model.";
+    }
+    if (reason === "SAFETY" || reason === "PROHIBITED_CONTENT") {
+      return "The model declined to answer that prompt.";
+    }
+    // No candidates at all usually means the prompt itself was blocked.
+    const blocked = (data.promptFeedback as { blockReason?: string } | undefined)?.blockReason;
+    if (blocked) return `The provider blocked the prompt (${blocked}).`;
+    return "The provider returned an empty response.";
+  }
+
+  if (shape === "anthropic") {
+    const reason = data.stop_reason as string | undefined;
+    if (reason === "max_tokens") {
+      return "The model ran out of room before it answered. Raise the token limit.";
+    }
+    return "The provider returned an empty response.";
+  }
+
+  const choice = (data.choices as { finish_reason?: string; native_finish_reason?: string }[] | undefined)?.[0];
+  const reason = choice?.finish_reason ?? choice?.native_finish_reason;
+
+  if (reason === "length") {
+    // A reasoning model burning its budget on thinking lands here.
+    return (
+      "The model ran out of room before it answered — it may be a reasoning model " +
+      "spending the token budget on thinking. Raise the limit, or pick a non-reasoning model."
+    );
+  }
+  if (reason === "content_filter") return "The provider filtered that response.";
+  if (!choice) return "The provider returned no choices at all.";
+  return "The provider returned an empty response.";
 }
 
 /**

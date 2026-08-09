@@ -4,10 +4,12 @@ import { ControlPrismaService } from "@/control-db/control-prisma.service";
 import { TenantSecretsService } from "@/common/crypto/tenant-secrets.service";
 import {
   buildRequest,
+  explainEmptyResponse,
   explainProviderError,
   extractJson,
   extractText,
   findProvider,
+  wasTruncated,
 } from "./providers";
 
 /** Long enough for a scheme of work, short enough that a hung provider is not a hung request. */
@@ -221,7 +223,12 @@ export class AiService {
         model,
         baseUrl: settings.baseUrl,
         prompt: 'Reply with exactly this JSON and nothing else: {"ok":true}',
-        maxTokens: 64,
+        // The answer needs about a dozen tokens. The rest is headroom for a
+        // reasoning model, which bills its thinking to this same budget and
+        // will otherwise hit the cap mid-thought and return nothing — a
+        // connection test that fails on exactly the models people pick. Only
+        // tokens actually produced are charged, so the headroom is free.
+        maxTokens: 4096,
       });
       const text = await this.call(plan, profile.shape);
       const parsed = extractJson<{ ok?: boolean }>(text);
@@ -267,7 +274,22 @@ export class AiService {
     }
 
     const text = extractText(shape, payload);
-    if (!text) throw new ServiceUnavailableException("The AI provider returned an empty response.");
+    if (!text) {
+      const explained = explainEmptyResponse(shape, payload);
+      this.logger.warn(`AI provider returned no text: ${explained}`);
+      throw new ServiceUnavailableException(explained);
+    }
+
+    // Checked *after* extracting text, and fatal even though there is some.
+    // A cut-off answer is not a usable one: `{"ok":` would otherwise travel
+    // on and surface as "replied but not with usable JSON", which sends
+    // somebody off to change models when the budget was the problem.
+    if (wasTruncated(shape, payload)) {
+      const explained = explainEmptyResponse(shape, payload);
+      this.logger.warn(`AI provider truncated its answer: ${explained}`);
+      throw new ServiceUnavailableException(explained);
+    }
+
     return text;
   }
 }
