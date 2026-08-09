@@ -175,14 +175,29 @@ describe("buildTutorPrompt", () => {
     expect(prompt).toContain("The student now asks: spaced out");
   });
 
-  it("offers a diagram, restricted to what the sanitiser will actually accept", () => {
+  it("asks for a diagram, restricted to what the sanitiser will actually accept", () => {
     const prompt = buildTutorPrompt(CONTEXT, [], "Hi");
     expect(prompt).toMatch(/inline SVG/);
     expect(prompt).toMatch(/viewBox/);
     // Asking for anything the sanitiser drops on arrival would only waste it.
     expect(prompt).toMatch(/script, style, image, use, href/);
-    // A picture of a definition is clutter.
-    expect(prompt).toMatch(/purely verbal/);
+  });
+
+  it("makes a diagram the default rather than something to consider", () => {
+    // A student following a lesson on a screen learns more from seeing a
+    // thing than from reading about it. Asked "if it would help", models
+    // mostly decided it would not.
+    const prompt = buildTutorPrompt(CONTEXT, [], "Hi");
+    expect(prompt).toMatch(/default, not the exception/);
+    expect(prompt).toMatch(/Draw a picture/);
+  });
+
+  it("still names the cases where drawing would be noise", () => {
+    // "Always draw" produces a picture of a definition, and the same picture
+    // twice running.
+    const prompt = buildTutorPrompt(CONTEXT, [], "Hi");
+    expect(prompt).toMatch(/nothing to show/);
+    expect(prompt).toMatch(/never repeat the same diagram/i);
   });
 
   it("names the constructs that silently cost a whole diagram", () => {

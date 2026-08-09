@@ -119,3 +119,160 @@ html[data-reduce-motion] *::after {
 .skip-link:focus {
   @apply not-sr-only fixed left-4 top-4 z-50 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white;
 }
+
+/* ── The AI Teacher's board ───────────────────────────────────────────────
+   A lesson used to arrive as a grey chat bubble, which is what a support
+   ticket looks like. This is a board at the front of a room instead: it
+   tells a child at a glance which part of the page is being taught and
+   which part is them talking.
+
+   Every moving thing below is a CSS animation, never a JS transform, so the
+   reduce-motion rules above neutralise all of it for a student who needs
+   stillness — without this component knowing anything about it. */
+
+.chalk-board {
+  @apply relative overflow-hidden rounded-2xl px-5 py-4;
+  /* Slate-green, unevenly lit the way a real board is. */
+  background-color: #12372a;
+  background-image:
+    radial-gradient(ellipse at 22% 18%, rgba(255, 255, 255, 0.07), transparent 55%),
+    radial-gradient(ellipse at 78% 82%, rgba(255, 255, 255, 0.05), transparent 55%);
+  /* The frame. A shallow inner shadow does the wooden lip without an image. */
+  border: 3px solid #6b4423;
+  box-shadow:
+    inset 0 0 42px rgba(0, 0, 0, 0.45),
+    0 6px 16px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* Chalk dust: the faint smear a board keeps after it is wiped. Behind the
+   text, and non-interactive. */
+.chalk-board::after {
+  content: "";
+  @apply pointer-events-none absolute inset-0;
+  background-image:
+    radial-gradient(circle at 12% 78%, rgba(255, 255, 255, 0.05) 0 22%, transparent 60%),
+    radial-gradient(circle at 62% 22%, rgba(255, 255, 255, 0.04) 0 18%, transparent 55%);
+}
+
+.chalk-text {
+  color: #eefbf3;
+  /* The soft edge chalk has. Not a font swap: a dyslexic student's chosen
+     face must still win, and data-dyslexia-font sets that on <html>. */
+  text-shadow: 0 0 1px rgba(238, 251, 243, 0.55);
+}
+
+/* Each lesson is written onto the board rather than appearing on it. */
+.chalk-in {
+  animation: chalk-in 420ms ease-out both;
+}
+
+@keyframes chalk-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* The word being spoken. Underlined as well as lit, so it does not rely on
+   colour alone — the same rule the rest of the app follows. */
+.chalk-word-active {
+  @apply rounded-sm px-0.5;
+  background-color: rgba(253, 224, 71, 0.28);
+  box-shadow: inset 0 -2px 0 rgba(253, 224, 71, 0.9);
+  color: #fffdf0;
+  transition: background-color 120ms linear;
+}
+
+.chalk-button {
+  @apply mt-1 rounded-md px-2 py-1 text-xs font-semibold transition;
+  color: #a7f3d0;
+  border: 1px solid rgba(167, 243, 208, 0.35);
+}
+
+.chalk-button:hover {
+  background-color: rgba(167, 243, 208, 0.12);
+}
+
+/* The diagram, pinned like a chart rather than drawn on the board. Kept on
+   white because the model chooses its colours for paper. */
+.chalk-pin {
+  @apply relative mt-3 rounded-lg p-2;
+  background-color: rgba(255, 255, 255, 0.08);
+  animation: pin-up 380ms ease-out both;
+}
+
+@keyframes pin-up {
+  from {
+    opacity: 0;
+    transform: scale(0.97) rotate(-0.6deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Three pieces of chalk tapping while the teacher thinks. */
+.chalk-board-thinking {
+  @apply flex items-center gap-3 py-3;
+}
+
+.chalk-dots {
+  @apply inline-flex gap-1.5;
+}
+
+.chalk-dots i {
+  @apply block h-2 w-2 rounded-full;
+  background-color: #a7f3d0;
+  animation: chalk-tap 1s ease-in-out infinite;
+}
+
+.chalk-dots i:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.chalk-dots i:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes chalk-tap {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* High contrast wins over the theme. A student who has asked for maximum
+   contrast has said the green board is not readable for them, and a
+   decorative surface must never override that. */
+html[data-high-contrast] .chalk-board {
+  @apply border-slate-900 bg-white dark:border-slate-100 dark:bg-black;
+  background-image: none;
+  box-shadow: none;
+}
+
+html[data-high-contrast] .chalk-board::after {
+  background-image: none;
+}
+
+html[data-high-contrast] .chalk-text,
+html[data-high-contrast] .chalk-button {
+  @apply text-black dark:text-white;
+  text-shadow: none;
+}
+
+html[data-high-contrast] .chalk-word-active {
+  @apply bg-black text-white dark:bg-white dark:text-black;
+  box-shadow: none;
+}
