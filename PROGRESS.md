@@ -1402,6 +1402,54 @@ detectable from a green test run. This is now the third phase in a row where
 walking the actual screens found a real defect after everything passed, which
 is why the walkthrough is a required step and not a formality.
 
+**Per-school branding, subdomains and custom domains (done).** A school's
+console and login page now wear the school's own name, logo and colours, and a
+school can be reached at `st-marys.campus.example.com` or at its own domain
+rather than by typing a slug into a form.
+
+- **A hostname is not authority.** Everything in `resolve-host.ts` decides
+  which login page to *paint* and nothing else. The Host header is set by
+  whoever made the request, so treating it as proof of identity would let
+  anyone name any tenant. Credentials are still checked against that school's
+  own database and every authenticated request still takes its tenant from the
+  JWT. The worst a forged Host can do is show someone a login page with the
+  wrong school's logo on it.
+- **Every storage key is scoped to one school.** There is a single storage
+  root shared by every tenant, so the per-school database isolation the rest
+  of the system relies on does not extend to the filesystem — this is the one
+  place school A could reach school B's bytes. The extension allowlist *is*
+  the filename regex, so the set of addressable files equals the set of
+  storable ones by construction rather than by two rules agreeing.
+- **SVG logos are refused.** An SVG is XML that may contain `<script>`, and a
+  logo is the most natural thing in the world to have as one — which is
+  exactly what makes it the tempting exception. It would be stored XSS on the
+  unauthenticated login page of every school on the platform.
+- **The text colour is computed, not assumed.** A school picking its colours
+  is not picking legible ones. `readableTextOn` chooses black or white by
+  contrast; the worst case is 4.58:1, above the 4.5:1 the accessibility phase
+  holds the rest of the app to. Substituting a tasteful softer near-black is
+  the obvious tweak and it silently drops that to about 3.5:1.
+- **The public branding object is rebuilt field by field**, the same rule as
+  the exam paper's `toStudentPaper`, because it is served to anyone who can
+  reach a login page from a module that sits beside SMTP passwords.
+
+**Two bugs recorded where they happened**, both invisible to the test suite:
+`next/headers` pulled into the client bundle through a module the settings
+page imported for its colour maths — typecheck, lint and every unit test
+stayed green, and only opening the page found it; and the same-origin rewrite
+replacing the Host header, which would have made every branding lookup ask
+"which school is ems-api?" in every deployment with a proxy.
+
+**A third, found later by the browser:** a school reached by slug rather than
+by hostname got its name, tagline and logo in the *platform's* default
+colours, because a Next layout cannot read search parameters while the login
+page can. Half-branded is worse than unbranded — it reads as the school's own
+page being broken. Middleware now carries the slug into a request header both
+read. Writing the test for that middleware then found a fourth: `delete()` on
+a request header does nothing in Next, which forwards only headers it sees
+*change*, so a client could set `x-school-slug` itself and be believed. Small
+exposure, but the comment beside it claimed a protection that was not there.
+
 **Turning on a real AI provider, and the five things that fell out.** Every
 generation path had been built and tested against fakes. Configuring one live
 OpenRouter key found five defects in an afternoon, none of which any test
@@ -1444,6 +1492,38 @@ corrections but **making the failures say why**. `explainEmptyResponse` and
 each. The lesson for later phases: when a path can only fail against a real
 provider, the error text *is* the diagnostic tooling, and "returned an empty
 response" is not error text, it is a shrug.
+
+**The AI class became a classroom (done).** The teaching was right and the
+presentation was not: a lesson arrived as a grey chat bubble, which is what a
+support ticket looks like, and usually without a picture.
+
+- **A diagram is the default now, not the exception.** Asked "if a picture
+  would help", the model mostly decided it would not, and lessons arrived as
+  walls of text. It is told to draw, with the cases where drawing is *noise*
+  named explicitly — nothing to show, a picture of a definition, the same
+  diagram twice running — because "always draw" produces exactly those.
+- **The teacher writes on a board.** Deep green, chalk-coloured writing, a
+  wooden frame. The student's own questions stay as bubbles: two people
+  saying different things should not look like one voice. It is not
+  decoration — it tells a child at a glance which part of the page is being
+  taught and which part is them.
+- **The diagram is pinned to the board as a chart, on white.** The model
+  picks its colours for paper — a red dashed height line, a blue triangle —
+  and dropping those onto dark green would make half of them invisible. The
+  sanitiser deliberately forbids the `style` attribute that would let us
+  recolour it, and a pinned chart is what a real classroom does anyway.
+- **Read aloud lights the word being spoken**, driven by the synthesiser's own
+  boundary events rather than a timer. A timer drifts within a sentence, and a
+  child following the highlight to keep their place is worse off with a
+  confident wrong answer than with none. Offsets must be lossless or the
+  highlight drifts further out of step with every word, which is why
+  `tokenise` is pure and tested rather than a regex inline.
+- **Everything that moves is a CSS animation, never a JS transform**, so the
+  reduce-motion rules already in globals.css neutralise all of it for a
+  student who has asked for stillness — without the component knowing.
+- **High contrast turns the board plain.** A student who asked for maximum
+  contrast has said the green is not readable for them, and a decorative
+  surface must never win over that.
 
 **A harness hole the fees phase exposed.** Adding a twelfth e2e suite made three
 suites fail at once (`fees`, `onboarding`, `tenant-isolation` — 28 tests,
