@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Providers } from "./providers";
 import { brandingStyle } from "@/lib/branding";
 import { getBranding } from "@/lib/branding-server";
@@ -21,7 +22,12 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { branding } = await getBranding();
+  // The hostname is asked first, inside getBranding. This is the fallback for
+  // a deployment where schools have no subdomain of their own: middleware.ts
+  // lifts the slug out of `?schoolSlug=` — which a layout cannot read — or
+  // out of the cookie it set on a previous request, so the console keeps the
+  // school's colours after navigating away from the link that named it.
+  const { branding } = await getBranding(headers().get("x-school-slug") ?? undefined);
 
   return (
     <html lang="en" suppressHydrationWarning>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { getBranding } from "@/lib/branding-server";
 import { LoginForm } from "./login-form";
 import { SchoolMark } from "@/components/school-mark";
@@ -15,10 +16,16 @@ export default async function LoginPage({
 }: {
   searchParams: { schoolSlug?: string };
 }) {
-  // The host is asked first; the query parameter is the fallback for
-  // deployments with no base domain and for the shop's handoff links, which
-  // carry the slug explicitly. See lib/branding.ts.
-  const { branding } = await getBranding(searchParams.schoolSlug);
+  // The host is asked first; the slug is the fallback for deployments with no
+  // base domain and for the shop's handoff links, which carry it explicitly.
+  //
+  // Taken from the middleware's header rather than straight from
+  // `searchParams`, so this page and the root layout can never resolve
+  // different schools — that mismatch is exactly what produced a page
+  // wearing one school's name in the platform's default colours.
+  const { branding } = await getBranding(
+    headers().get("x-school-slug") ?? searchParams.schoolSlug,
+  );
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md px-6 py-16">
