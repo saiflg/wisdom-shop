@@ -45,23 +45,21 @@ export type ModuleKey = (typeof MODULE_KEYS)[number];
 export const CORE_MODULES: readonly ModuleKey[] = ["STUDENTS", "STAFF", "ACADEMICS", "ACCESSIBILITY"];
 
 /**
- * What a school gets when it has no subscription at all.
+ * What a school gets when it has no subscription at all: everything.
  *
- * Deliberately generous rather than empty. A school lands here while it is
- * being onboarded, or after a plan is deleted, and "your subscription record
- * is missing so attendance has been switched off" is a support ticket rather
- * than a business rule. Suspension is how access is actually withdrawn, and
- * it is a decision someone makes with a reason attached.
+ * This was a shorter list for about an hour, and that hour broke the AI
+ * class in a school that had been using it — because before modules existed
+ * every school had every feature, and a default of "some" silently took the
+ * rest away on the deploy that introduced this file. Nobody asked for that,
+ * no operator decided it, and the only symptom was a 403 on a screen that
+ * worked yesterday.
+ *
+ * So: the default takes nothing away. A school loses a module only when an
+ * operator switches it off with a reason, or when a plan explicitly lists a
+ * narrower set. Withdrawing access is a decision somebody makes, and
+ * suspension already exists for when the decision is "all of it".
  */
-export const DEFAULT_MODULES: readonly ModuleKey[] = [
-  ...CORE_MODULES,
-  "ATTENDANCE",
-  "GRADING",
-  "TIMETABLE",
-  "HOMEWORK",
-  "PORTAL",
-  "DOCUMENTS",
-];
+export const DEFAULT_MODULES: readonly ModuleKey[] = MODULE_KEYS;
 
 export interface ModuleDefinition {
   key: ModuleKey;

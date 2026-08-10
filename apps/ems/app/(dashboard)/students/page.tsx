@@ -39,18 +39,20 @@ export default function StudentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Students</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Students</h1>
+
+      {/* One toolbar: sample spreadsheet, export, bulk upload and "add one",
+          in that order. Somebody enrolling a new intake should not have to
+          discover that bulk import lives on a different screen. */}
+      <DataExchangeBar entity="students">
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
-          className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+          className="rounded-full bg-brand-gradient px-4 py-1.5 text-sm font-semibold text-white transition hover:opacity-90"
         >
           {showForm ? "Cancel" : "New student"}
         </button>
-      </div>
-
-      <DataExchangeBar entity="students" />
+      </DataExchangeBar>
 
       {showForm && (
         <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">

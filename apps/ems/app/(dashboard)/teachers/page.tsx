@@ -42,18 +42,17 @@ export default function TeachersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Teachers</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Teachers</h1>
+
+      <DataExchangeBar entity="staff">
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
-          className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+          className="rounded-full bg-brand-gradient px-4 py-1.5 text-sm font-semibold text-white transition hover:opacity-90"
         >
           {showForm ? "Cancel" : "New teacher"}
         </button>
-      </div>
-
-      <DataExchangeBar entity="staff" />
+      </DataExchangeBar>
 
       {showForm && (
         <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">

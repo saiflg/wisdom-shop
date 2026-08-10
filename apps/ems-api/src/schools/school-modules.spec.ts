@@ -43,19 +43,21 @@ describe("resolveModules", () => {
     ]);
   });
 
-  it("falls back to the default set when a school has no subscription", () => {
-    expect(resolveModules({ planModules: null })).toEqual([
-      "STUDENTS",
-      "STAFF",
-      "ACADEMICS",
-      "ACCESSIBILITY",
-      "ATTENDANCE",
-      "GRADING",
-      "TIMETABLE",
-      "HOMEWORK",
-      "PORTAL",
-      "DOCUMENTS",
-    ]);
+  it("gives a school with no subscription everything, taking nothing away", () => {
+    // Regression test with a date on it. This returned a shorter list for
+    // about an hour, and that hour broke the AI class in a school that had
+    // been using it: before modules existed every school had every feature,
+    // so any default short of "all" silently withdraws one on deploy.
+    expect(resolveModules({ planModules: null })).toEqual([...MODULE_KEYS]);
+  });
+
+  it("keeps the AI modules in that default specifically", () => {
+    // Named because these are the ones that went missing, and a future
+    // tidy-up of the list would take them out again without this.
+    const modules = resolveModules({ planModules: null });
+    expect(modules).toContain("AI_TEACHER");
+    expect(modules).toContain("AI_CURRICULUM");
+    expect(modules).toContain("EXAMS");
   });
 
   it("treats an empty plan list as 'no opinion', not 'nothing'", () => {

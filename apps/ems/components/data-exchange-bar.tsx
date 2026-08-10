@@ -27,7 +27,7 @@ import {
  * the whole safety story, and five near-identical implementations is how one
  * of them quietly loses it.
  */
-export function DataExchangeBar({ entity }: { entity: string }) {
+export function DataExchangeBar({ entity, children }: { entity: string; children?: React.ReactNode }) {
   const { t } = useTranslation();
   const { data: entities } = useDataEntities();
   const definition = entities?.find((candidate) => candidate.name === entity);
@@ -46,7 +46,13 @@ export function DataExchangeBar({ entity }: { entity: string }) {
 
   // Only administrators can import or export, and the entities list is the
   // route that says so — if it did not load, the bar simply is not offered.
-  if (!definition) return null;
+  //
+  // `children` still renders, though: the page passes its own "add one"
+  // button through here so the two live in one toolbar, and a teacher who
+  // cannot bulk-import must not lose the ability to add a single student.
+  if (!definition) {
+    return children ? <div className="flex flex-wrap items-center justify-end gap-2">{children}</div> : null;
+  }
 
   const reset = () => {
     setFile(null);
@@ -116,6 +122,12 @@ export function DataExchangeBar({ entity }: { entity: string }) {
         >
           {open ? t("data.cancelUpload") : t("data.uploadMany")}
         </button>
+
+        {/* The page's own "add one" button, last and to the right: adding a
+            hundred and adding one belong in the same toolbar, and the one
+            people reach for most often should be the one that reads as
+            primary. */}
+        {children && <div className="ml-auto flex flex-wrap items-center gap-2">{children}</div>}
       </div>
 
       {open && (
