@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ApiError } from "@/lib/api";
 import { useClasses, useCreateClass } from "@/lib/use-classes";
+import { useIsSchoolAdmin } from "@/lib/use-can-author";
 import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
 
@@ -21,6 +22,7 @@ type CreateClassValues = z.infer<typeof createClassSchema>;
 export default function ClassesPage() {
   const { data: classes, isLoading, error } = useClasses();
   const createClass = useCreateClass();
+  const isSchoolAdmin = useIsSchoolAdmin();
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -41,18 +43,22 @@ export default function ClassesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Classes</h1>
-        <button
-          type="button"
-          onClick={() => setShowForm((v) => !v)}
-          className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-        >
-          {showForm ? "Cancel" : "New class"}
-        </button>
+        {/* A student opens this page to find their own class and its
+            classmates. Creating one is an administrator's job. */}
+        {isSchoolAdmin && (
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            {showForm ? "Cancel" : "New class"}
+          </button>
+        )}
       </div>
 
       <DataExchangeBar entity="classes" />
 
-      {showForm && (
+      {isSchoolAdmin && showForm && (
         <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <FormField label="Name" placeholder="Grade 5A" error={form.formState.errors.name?.message} {...form.register("name")} />
           <FormField

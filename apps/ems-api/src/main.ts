@@ -7,7 +7,11 @@ import { configureApp } from "./bootstrap";
 import type { EnvConfig } from "./config/env.validation";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody is required for fee-payment webhook signature verification: the
+  // signature covers the exact bytes the provider sent, so anything that
+  // re-encodes the body — including JSON.parse followed by stringify —
+  // invalidates it. Same reason the shop's own API sets this.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   configureApp(app);
 
   const config = app.get(ConfigService<EnvConfig, true>);

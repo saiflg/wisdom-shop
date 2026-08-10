@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import type { FeeInvoiceStatus, RoleName } from "ems-tenant-client";
+import type { FeeInvoiceStatus, PrismaClient as TenantPrismaClient, RoleName } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import { MessagingService } from "@/messaging/messaging.service";
 // A generic minor-units formatter rather than billing policy — reused so
@@ -397,6 +397,66 @@ export class FeesService {
     }
 
     return this.getInvoice(invoiceId, viewer);
+  }
+
+  /**
+   * Records money that arrived through a payment gateway.
+   *
+   * Separate from `recordPayment` because there is no viewer: nobody in the
+   * school took this money, so it cannot be attributed to a person who was
+   * not there. Everything else — the balance arithmetic, the status
+   * transition, the unique reference — goes through the same code, because a
+   * second way of crediting an invoice is a second way of getting it wrong.
+   *
+   * Returns "duplicate" rather than throwing on a replayed webhook: that is
+   * the expected case, not an error, and a provider that receives an error
+   * will keep retrying.
+   */
+  async creditGatewayPayment(input: {
+    client: TenantPrismaClient;
+    invoiceId: string;
+    amountCents: number;
+    reference: string;
+    note: string;
+    recordedByName: string;
+  }): Promise<"recorded" | "duplicate" | { refused: string }> {
+    const invoice = await input.client.feeInvoice.findFirst({ where: { id: input.invoiceId } });
+    if (!invoice) return { refused: "no such invoice" };
+
+    let outcome: { paidCents: number; status: FeeInvoiceStatus };
+    try {
+      outcome = applyPayment(invoice.totalCents, invoice.paidCents, invoice.status, input.amountCents);
+    } catch (error) {
+      return { refused: (error as Error).message };
+    }
+
+    try {
+      await input.client.$transaction([
+        input.client.feePayment.create({
+          data: {
+            invoiceId: input.invoiceId,
+            amountCents: input.amountCents,
+            method: "GATEWAY",
+            reference: input.reference,
+            note: input.note,
+            // No school user was involved. Recording one would be a lie in
+            // the one table that answers "who took the money".
+            recordedByUserId: "gateway",
+            recordedByName: input.recordedByName,
+          },
+        }),
+        input.client.feeInvoice.update({
+          where: { id: input.invoiceId },
+          data: { paidCents: outcome.paidCents, status: outcome.status },
+        }),
+      ]);
+    } catch (error) {
+      // The unique index on (invoiceId, reference) IS the idempotency here.
+      if ((error as { code?: string }).code === UNIQUE_VIOLATION) return "duplicate";
+      throw error;
+    }
+
+    return "recorded";
   }
 
   /**

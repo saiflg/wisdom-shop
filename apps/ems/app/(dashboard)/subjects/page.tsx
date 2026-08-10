@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ApiError } from "@/lib/api";
 import { useSubjects, useCreateSubject } from "@/lib/use-subjects";
+import { useIsSchoolAdmin } from "@/lib/use-can-author";
 import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
 
@@ -20,6 +21,7 @@ type CreateSubjectValues = z.infer<typeof createSubjectSchema>;
 export default function SubjectsPage() {
   const { data: subjects, isLoading, error } = useSubjects();
   const createSubject = useCreateSubject();
+  const isSchoolAdmin = useIsSchoolAdmin();
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -40,6 +42,9 @@ export default function SubjectsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Subjects</h1>
+        {/* Subjects are set up by an administrator. A teacher teaches them
+            and a student studies them; neither creates one. */}
+        {isSchoolAdmin && (
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
@@ -47,11 +52,12 @@ export default function SubjectsPage() {
         >
           {showForm ? "Cancel" : "New subject"}
         </button>
+        )}
       </div>
 
       <DataExchangeBar entity="subjects" />
 
-      {showForm && (
+      {isSchoolAdmin && showForm && (
         <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <FormField label="Name" placeholder="Mathematics" error={form.formState.errors.name?.message} {...form.register("name")} />
           <FormField

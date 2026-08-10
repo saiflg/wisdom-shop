@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api";
 import { useSchemesOfWork } from "@/lib/use-schemes-of-work";
 import { useCurriculumSettings } from "@/lib/use-curriculum-settings";
 import { useLessonPlans, useCreateLessonPlan, useGenerateLessonPlan } from "@/lib/use-lesson-plans";
+import { useCanAuthor } from "@/lib/use-can-author";
 import { FormField } from "@/components/form-field";
 
 const createSchema = z.object({
@@ -52,7 +53,13 @@ export default function LessonPlansPage() {
   const [mode, setMode] = useState<"none" | "manual" | "generate">(weekNumberParam ? "manual" : "none");
   const [formError, setFormError] = useState<string | null>(null);
 
-  const canGenerate = settings ? settings.mode !== "MANUAL" : false;
+  // Students and guardians read teaching material; they never write it. The
+  // API has always refused them — this stops the console offering anyway,
+  // which is the same "control that looks real and does nothing" this
+  // project refuses elsewhere, aimed at the people least able to interpret
+  // the failure.
+  const canAuthor = useCanAuthor();
+  const canGenerate = canAuthor && (settings ? settings.mode !== "MANUAL" : false);
 
   const createForm = useForm<CreateValues>({ resolver: zodResolver(createSchema) });
   const generateForm = useForm<GenerateValues>({ resolver: zodResolver(generateSchema) });
@@ -106,16 +113,18 @@ export default function LessonPlansPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Lesson plans</h1>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setFormError(null);
-              setMode(mode === "manual" ? "none" : "manual");
-            }}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
-          >
-            {mode === "manual" ? "Cancel" : "Create manually"}
-          </button>
+          {canAuthor && (
+            <button
+              type="button"
+              onClick={() => {
+                setFormError(null);
+                setMode(mode === "manual" ? "none" : "manual");
+              }}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
+            >
+              {mode === "manual" ? "Cancel" : "Create manually"}
+            </button>
+          )}
           {canGenerate && (
             <button
               type="button"
