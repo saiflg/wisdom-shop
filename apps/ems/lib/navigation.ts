@@ -190,7 +190,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "nav.messaging.templates", href: "/messaging/templates", roles: ADMIN_ONLY },
       { key: "nav.messaging.outbox", href: "/messaging/outbox", roles: ADMIN_ONLY },
-      { key: "nav.messaging.internal" },
+      { key: "nav.messaging.internal", href: "/parent-messages", roles: STAFF, module: "MESSAGING" },
       { key: "nav.messaging.email", roles: ADMIN_ONLY },
       { key: "nav.messaging.sms", roles: ADMIN_ONLY },
       { key: "nav.messaging.whatsapp", roles: ADMIN_ONLY },

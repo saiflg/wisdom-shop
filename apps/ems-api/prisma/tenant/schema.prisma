@@ -71,7 +71,8 @@ model User {
   photoKey String?
 
   homeroomFor          Class[]        @relation("HomeroomTeacher")
-  classMessages        ClassMessage[] @relation("ClassMessageAuthor")
+  classMessages        ClassMessage[]  @relation("ClassMessageAuthor")
+  parentMessages       ParentMessage[] @relation("ParentMessageAuthor")
   createdSchemesOfWork SchemeOfWork[]
   createdLessonPlans   LessonPlan[]
   createdQuizzes       Quiz[]
@@ -122,6 +123,61 @@ enum SchoolLeadership {
 /// this system, and that is a safeguarding decision rather than a missing
 /// feature: a group their teacher sits in can be supervised, and a private
 /// channel between two children cannot.
+/// One conversation between a family and the school, about one child.
+///
+/// Keyed on the child rather than on a (parent, teacher) pair, and that is
+/// the whole design: teachers change, both parents belong in the same thread,
+/// and a private channel between one adult and one child's parent is the
+/// arrangement safeguarding policy exists to prevent. See
+/// parent-message-rules.ts.
+///
+/// The student is not a participant. A parent raising a worry about their
+/// child is not writing to the child.
+model ParentThread {
+  id               String         @id @default(cuid())
+  studentProfileId String         @unique
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Denormalised so an inbox can be sorted without reading every message.
+  lastMessageAt DateTime?
+  lastSide      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages ParentMessage[]
+
+  @@index([lastMessageAt])
+  @@map("parent_threads")
+}
+
+model ParentMessage {
+  id       String       @id @default(cuid())
+  threadId String
+  thread   ParentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  authorUserId String
+  author       User   @relation("ParentMessageAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  /// Snapshotted: a thread must still read correctly after the teacher has
+  /// left and the guardian link has been removed.
+  authorName   String
+  /// "FAMILY" or "SCHOOL". A plain string because this is history, and it
+  /// outlives whoever wrote it.
+  side         String
+
+  body String
+
+  /// Withdrawn, not erased: the other person saw it. Unlike a class message,
+  /// staff cannot read the original back — this is two adults talking.
+  deletedAt       DateTime?
+  deletedByUserId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([threadId, createdAt])
+  @@map("parent_messages")
+}
+
 model ClassConversation {
   id      String @id @default(cuid())
   classId String @unique
@@ -245,6 +301,7 @@ model StudentProfile {
 
   enrollments       Enrollment[]
   guardianLinks     GuardianLink[]
+  parentThread      ParentThread?
   attendanceRecords AttendanceRecord[]
   feeInvoices       FeeInvoice[]
   marks             Mark[]

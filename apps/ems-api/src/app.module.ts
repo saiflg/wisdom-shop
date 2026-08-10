@@ -14,6 +14,7 @@ import { PlatformAuthModule } from "./platform-auth/platform-auth.module";
 import { SchoolsModule } from "./schools/schools.module";
 import { ClassChatModule } from "./class-chat/class-chat.module";
 import { PeopleModule } from "./people/people.module";
+import { ParentMessagesModule } from "./parent-messages/parent-messages.module";
 import { AuthModule } from "./auth/auth.module";
 import { ClassesModule } from "./classes/classes.module";
 import { StudentsModule } from "./students/students.module";
@@ -72,6 +73,7 @@ import { BrandingModule } from "./branding/branding.module";
     SchoolsModule,
     ClassChatModule,
     PeopleModule,
+    ParentMessagesModule,
     AuthModule,
     ClassesModule,
     StudentsModule,

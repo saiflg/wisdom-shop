@@ -191,6 +191,30 @@ export function useRecordPayment(invoiceId: string) {
   });
 }
 
+export interface CheckoutStart {
+  url: string;
+  reference: string;
+  provider: string;
+  amountCents: number;
+}
+
+/**
+ * Starts an online payment and hands back where to send the payer.
+ *
+ * Not a query: it creates a transaction at the provider, so it must never be
+ * fired by a component re-render or a refetch on window focus.
+ */
+export function useStartCheckout(invoiceId: string) {
+  const { accessToken } = useAuthQueryState();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<CheckoutStart>(`/v1/fees/invoices/${invoiceId}/checkout`, {
+        method: "POST",
+        headers: authHeaders(accessToken),
+      }),
+  });
+}
+
 export function useVoidInvoice(invoiceId: string) {
   const accessToken = useAuthQueryState().accessToken;
   const queryClient = useQueryClient();

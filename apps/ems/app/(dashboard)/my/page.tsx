@@ -10,12 +10,15 @@ import {
   type PortalHomeworkItem,
 } from "@/lib/use-portal";
 import { PersonPhoto } from "@/components/person-photo";
+import { ParentThread } from "@/components/parent-thread";
+import { useAuthStore } from "@/store/auth-store";
 
 const CARD = "rounded-xl border border-slate-200 p-4 dark:border-slate-800";
 
 export default function MyPage() {
   const [childId, setChildId] = useState<string | null>(null);
   const { data, isLoading, error } = usePortalHome(childId);
+  const isGuardian = useAuthStore((state) => state.user?.roles.includes("GUARDIAN")) ?? false;
 
   if (isLoading) return <p className="text-sm text-slate-500">Loading…</p>;
   if (error || !data) {
@@ -183,6 +186,20 @@ export default function MyPage() {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {/* Guardians only. A student's portal should not carry a channel
+            their parent uses to raise concerns about them. */}
+        {isGuardian && (
+          <section className={`${CARD} lg:col-span-2`} aria-labelledby="school-messages-heading">
+            <h2
+              id="school-messages-heading"
+              className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500"
+            >
+              Message the school
+            </h2>
+            <ParentThread studentProfileId={data.child.studentProfileId} />
           </section>
         )}
 

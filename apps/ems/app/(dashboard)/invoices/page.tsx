@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import clsx from "clsx";
-import { ApiError } from "@/lib/api";
+import { ApiError, errorMessage } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import { PdfButton } from "@/components/pdf-button";
 import type { TranslationKey } from "@/lib/i18n";
@@ -12,6 +12,7 @@ import {
   parseMoneyToCents,
   useInvoices,
   useRecordPayment,
+  useStartCheckout,
   type FeeInvoice,
   type FeeInvoiceStatus,
   type FeePaymentMethod,
@@ -136,6 +137,56 @@ function InvoiceCard({ invoice, open, onToggle }: { invoice: FeeInvoice; open: b
   );
 }
 
+/**
+ * Paying online.
+ *
+ * Offered to everyone who can see the invoice — a parent paying their own
+ * child's fees is the point, and a bursar taking a card payment at the desk
+ * is the same button.
+ *
+ * When the school has not configured a gateway the API says so in words a
+ * parent can act on, and that sentence is shown as-is: "online payment is not
+ * set up, pay the office" is useful, "payment failed" is not.
+ */
+function PayOnline({ invoice }: { invoice: FeeInvoice }) {
+  const startCheckout = useStartCheckout(invoice.id);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const pay = async () => {
+    setProblem(null);
+    try {
+      const { url } = await startCheckout.mutateAsync();
+      // A full navigation, not a new tab: the family is leaving to pay and
+      // comes back through the callback URL. A popup here is what gets
+      // blocked on the phone most of them will use.
+      window.location.href = url;
+    } catch (err) {
+      setProblem(errorMessage(err, "Couldn't start that payment."));
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
+      <button
+        type="button"
+        onClick={() => void pay()}
+        disabled={startCheckout.isPending}
+        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
+      >
+        {startCheckout.isPending
+          ? "Opening the payment page…"
+          : `Pay ${formatMoney(invoice.balanceCents, invoice.currency)} online`}
+      </button>
+      <span className="text-xs text-slate-500">You will be taken to the school&apos;s payment provider.</span>
+      {problem && (
+        <p role="alert" className="w-full text-sm text-amber-700 dark:text-amber-300">
+          {problem}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function InvoiceDetail({ invoice }: { invoice: FeeInvoice }) {
   const { t } = useTranslation();
   const recordPayment = useRecordPayment(invoice.id);
@@ -173,6 +224,8 @@ function InvoiceDetail({ invoice }: { invoice: FeeInvoice }) {
 
   return (
     <div className="mt-4 space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+      {!settled && <PayOnline invoice={invoice} />}
+
       <div>
         <p className="text-sm font-medium">{t("fees.invoices.lines")}</p>
         <ul className="mt-1 space-y-1 text-sm">
