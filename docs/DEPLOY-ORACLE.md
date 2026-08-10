@@ -393,34 +393,48 @@ git clone git@github.com:<your-username>/wisdom-shop.git ~/wisdom-shop
 
 ---
 
-## Part 7 — What is missing from the repository (my work, not yours)
+## Part 7 — The production build (done — here is what it does)
 
-Do not start Part 8 until this is done — there is nothing to deploy yet.
+This part used to be a list of things I had not written yet. They are written.
+You do not have to do anything in this section; read it so the commands in
+Part 9 are not magic.
 
-`docker-compose.prod.yml` today covers the **shop only**: `api`, `web`,
-`postgres`, `redis`, `meilisearch` and an nginx that expects certificates you
-create by hand. The school ERP has no production build at all — `ems`,
-`ems-api` and `platform` have only `Dockerfile.dev`, which watches source
-files and runs a development server. A development server must never face the
-internet: it is slower, it leaks stack traces, and it recompiles on every
-request.
+- `apps/ems-api/Dockerfile` — compiles once, generates **both** Prisma clients,
+  runs as a non-root user. It deliberately keeps the Prisma CLI and the tenant
+  `migrations/` folder in the final image: onboarding a school shells out to
+  `prisma migrate deploy` against that school's brand-new database. An image
+  without them boots perfectly and then fails the first time you create a
+  school.
+- `apps/ems/Dockerfile`, `apps/platform/Dockerfile` — Next.js standalone
+  output, so the image carries only the modules actually used rather than the
+  whole workspace.
+- `docker-compose.prod.yml` — extended with `ems-api`, `ems`, `platform` and
+  `ems-migrate`. Nothing but the proxy publishes a port; everything else is
+  reachable only on the internal Docker network.
+- `deploy/caddy/Caddyfile` — **Caddy replaces nginx.** It obtains and renews
+  Let's Encrypt certificates itself for all three hostnames. No certbot
+  container, no cron job, no renewal hook that fails silently until a
+  certificate expires on a Sunday. This closes the known gap named in
+  `docs/DEPLOYMENT.md`.
+- `.env.production.example` — every secret, each with a note on what breaks if
+  it is wrong.
+- `deploy/deploy.sh` — build, migrate, restart, in that order, refusing to
+  start if `.env` still has placeholder values.
+- `deploy/backup.sh` — every database, both apps' uploaded files, `.env` and
+  Caddy's certificates; keeps 14 days.
 
-To be written:
-
-- [ ] `apps/ems-api/Dockerfile` — production build, both Prisma clients
-      generated at build time, non-root user
-- [ ] `apps/ems/Dockerfile` and `apps/platform/Dockerfile` — `next build`,
-      then `next start`
-- [ ] `docker-compose.prod.yml` extended with the four ERP services and the
-      control-plane migration one-shot
-- [ ] **Caddy replacing nginx** — automatic Let's Encrypt certificates for all
-      three hostnames, renewed forever with no cron job. The current nginx
-      setup needs you to obtain and renew certificates by hand, which is the
-      known gap named in `docs/DEPLOYMENT.md`.
-- [ ] `.env.production.example` — every secret, with a comment on what breaks
-      if it is wrong
-- [ ] `deploy.sh` — pull, build, migrate, restart, in the right order
-- [ ] `backup.sh` — nightly `pg_dump` of both databases, kept 14 days
+**One deliberate omission: per-school subdomains are off.**
+`st-marys.campus.yourdomain.com` needs a certificate per school hostname,
+which means either a wildcard certificate (a DNS-01 challenge, a custom Caddy
+build and an API token for your whole DNS zone) or Caddy's on-demand TLS.
+On-demand TLS is the right answer for multi-tenant SaaS, but it must be paired
+with an endpoint that answers "is this hostname a real school?" — without one,
+anyone who points a DNS record at your server can make it request
+certificates until Let's Encrypt rate-limits your domain. The API has no such
+endpoint yet, so rather than wire it to something that might answer yes to
+everything, schools pick their school on the login form. That is a supported
+configuration, not a broken one, and switching later is a DNS change plus that
+one endpoint.
 
 **One thing that must be true and is easy to get wrong:** the images must be
 built **on the server**. It is ARM, your laptop is Intel, and Prisma compiles

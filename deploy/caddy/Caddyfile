@@ -1,0 +1,137 @@
+# Reverse proxy and TLS termination for the production stack.
+#
+# Caddy rather than nginx + certbot: it obtains and renews Let's Encrypt
+# certificates itself, with no cron job, no renewal hook, and no separate
+# certbot container whose failure is invisible until a certificate expires.
+# The previous nginx config needed a mounted certs directory that something
+# else had to keep populated; here the only prerequisite is that the DNS names
+# below already point at this machine before the container starts.
+#
+# THREE separate origins, on purpose:
+#
+#   {$SHOP_DOMAIN}     the storefront
+#   {$CAMPUS_DOMAIN}   the school portal (staff, students, families)
+#   {$ADMIN_DOMAIN}    the Super Admin console
+#
+# The admin console is a different hostname from the school portal so that a
+# platform-operator token is unreachable from school-portal JavaScript. Same
+# reason apps/platform is its own Next app rather than a route inside apps/ems
+# — the separation is only real if the origin is separate too.
+#
+# Within each origin, everything is served from one hostname. The refresh
+# token is an httpOnly cookie scoped to Path=/v1/auth with SameSite=Strict;
+# splitting the app and its API across two hostnames would stop the browser
+# sending it, and the usual fix (SameSite=None) is exactly the protection that
+# cookie exists to provide.
+
+{
+	email {$ACME_EMAIL}
+	# Caddy writes access logs to stdout; `docker compose logs proxy` is the
+	# whole story rather than a file inside a container nobody remembers to
+	# rotate.
+}
+
+# Applied to every site below.
+(common) {
+	encode zstd gzip
+
+	header {
+		# HSTS belongs at the TLS termination point. The apps set their own
+		# headers via helmet, but helmet only sees requests that already
+		# arrived over TLS.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Caddy advertises itself in Server: by default.
+		-Server
+	}
+
+	request_body {
+		# Large enough for a school logo, a bulk-import spreadsheet or a
+		# child's photograph; small enough that an unauthenticated POST
+		# cannot buffer arbitrary gigabytes.
+		max_size 10MB
+	}
+}
+
+# ---- the storefront ----
+{$SHOP_DOMAIN} {
+	import common
+
+	# Webhooks go straight to the API rather than through Next's rewrite: the
+	# signature is computed over the exact bytes the provider sent, so nothing
+	# in the path may re-encode the body.
+	handle /v1/payments/webhooks/* {
+		reverse_proxy api:4000
+	}
+
+	handle /v1/* {
+		reverse_proxy api:4000
+	}
+
+	handle /health {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# ---- the school portal ----
+{$CAMPUS_DOMAIN} {
+	import common
+
+	# School fee payments come back from Paystack/Flutterwave to this origin.
+	# Same raw-body reasoning as the shop's webhooks above.
+	handle /v1/fees/webhooks/* {
+		reverse_proxy ems-api:4001
+	}
+
+	handle /v1/* {
+		reverse_proxy ems-api:4001
+	}
+
+	handle /health {
+		reverse_proxy ems-api:4001
+	}
+
+	handle {
+		reverse_proxy ems:3001
+	}
+}
+
+# ---- the Super Admin console ----
+{$ADMIN_DOMAIN} {
+	import common
+
+	handle /v1/* {
+		reverse_proxy ems-api:4001
+	}
+
+	handle {
+		reverse_proxy platform:3002
+	}
+}
+
+# ---- per-school subdomains: not enabled here, and why ----
+#
+# EMS_BASE_DOMAIN makes st-marys.campus.example.com resolve to the school with
+# slug "st-marys" (see tenancy/resolve-host.ts). Serving that needs a
+# certificate per school hostname, and there are two ways to get one:
+#
+#   * A wildcard certificate, which Let's Encrypt only issues over the DNS-01
+#     challenge. That needs a Caddy binary built with the DNS plugin for the
+#     specific registrar and an API token for the whole zone.
+#
+#   * On-demand TLS, where Caddy issues a certificate the first time each
+#     hostname is requested. This is the better fit for multi-tenant SaaS, but
+#     it MUST be paired with an `ask` endpoint that answers "is this a real
+#     school?" — without one, anybody who points a DNS record at this server
+#     can make it request certificates on their behalf until Let's Encrypt
+#     rate-limits the domain.
+#
+# The API has no endpoint that answers that question yet: /v1/branding/public
+# resolves a host but is not a membership check. Rather than wire on-demand
+# TLS to an endpoint that might answer 200 for unknown hosts, subdomain
+# routing stays off until that endpoint exists. Schools reach the portal at
+# {$CAMPUS_DOMAIN} and choose their school on the login form, which is exactly
+# what EMS_BASE_DOMAIN="" already does.

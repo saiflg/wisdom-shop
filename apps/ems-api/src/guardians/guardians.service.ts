@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import * as argon2 from "argon2";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { CreateGuardianDto } from "./dto/create-guardian.dto";
+import { groupGuardians } from "./guardian-directory";
 
 @Injectable()
 export class GuardiansService {
@@ -51,6 +52,41 @@ export class GuardiansService {
       data: { guardianUserId: guardianUser.id, studentProfileId: student.id, relationship: dto.relationship },
       include: { guardianUser: { select: { id: true, firstName: true, lastName: true, email: true } } },
     });
+  }
+
+  /**
+   * Every family in the school, one entry per guardian.
+   *
+   * Deliberately the whole school rather than only the families of children a
+   * given teacher teaches — the same call already made for the parent-message
+   * inbox. A parent who telephones needs whoever picks up to find them, and a
+   * per-teacher view means the office cannot answer the phone.
+   *
+   * Children of soft-deleted students are excluded: the link outlives the
+   * student record, and a directory that lists withdrawn pupils invites
+   * somebody to contact a family about a child who has left.
+   */
+  async list() {
+    const client = await this.tenantPrisma.getClient();
+
+    const links = await client.guardianLink.findMany({
+      where: { studentProfile: { deletedAt: null } },
+      include: {
+        guardianUser: { select: { id: true, firstName: true, lastName: true, email: true } },
+        studentProfile: {
+          select: {
+            id: true,
+            user: { select: { firstName: true, lastName: true } },
+            enrollments: {
+              orderBy: { createdAt: "asc" },
+              select: { class: { select: { name: true } } },
+            },
+          },
+        },
+      },
+    });
+
+    return groupGuardians(links);
   }
 
   async remove(linkId: string) {

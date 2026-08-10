@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Roles } from "@/auth/decorators/roles.decorator";
 import { GuardiansService } from "./guardians.service";
@@ -10,6 +10,17 @@ import { CreateGuardianDto } from "./dto/create-guardian.dto";
 @Controller("guardians")
 export class GuardiansController {
   constructor(private readonly guardians: GuardiansService) {}
+
+  // Readable by teachers as well as admins, unlike everything else on this
+  // controller. Linking and unlinking a guardian decides who may see a child's
+  // record and stays with the office; looking a parent up to telephone them is
+  // ordinary teaching work.
+  @Get()
+  @Roles("SCHOOL_ADMIN", "TEACHER")
+  @ApiOperation({ summary: "Every family in the school, one entry per guardian" })
+  list() {
+    return this.guardians.list();
+  }
 
   @Post()
   @ApiOperation({ summary: "Link a guardian (existing or new) to a student" })

@@ -109,33 +109,154 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        NEXT_PUBLIC_APP_URL: ${APP_URL:?APP_URL is required}
+        # Derived from SHOP_DOMAIN rather than read from APP_URL so the
+        # certificate Caddy requests and the URL baked into the bundle cannot
+        # disagree — two sources of truth for the same hostname is how you get
+        # a site that loads over one name and calls an API on another.
+        NEXT_PUBLIC_APP_URL: https://${SHOP_DOMAIN:?SHOP_DOMAIN is required}
+        # A BUILD arg, not a runtime variable, even though it never reaches the
+        # browser. Next resolves rewrites() into routes-manifest.json at build
+        # time; set at runtime it is ignored and the localhost fallback is
+        # baked in, which fails only once a browser calls the API.
+        API_URL: http://api:4000
     restart: always
     environment:
       NODE_ENV: production
-      # Server-side rewrite target; the browser never sees this host.
-      API_URL: http://api:4000
     depends_on:
       - api
 
+  # ---- Wisdom Campus (the school ERP) ----
+  #
+  # Shares the Postgres server with the shop but not its database. The control
+  # database holds the school registry; each school gets its own
+  # wisdom_ems_school_<slug> database created at onboarding time. That is why
+  # ems-api needs POSTGRES_ADMIN_URL: it runs CREATE DATABASE, which ordinary
+  # application credentials cannot.
+  ems-api:
+    build:
+      context: .
+      dockerfile: apps/ems-api/Dockerfile
+    restart: always
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 4001
+      APP_URL: https://${CAMPUS_DOMAIN:?CAMPUS_DOMAIN is required}
+      CONTROL_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${EMS_CONTROL_DB:-wisdom_ems_control}?schema=public
+      POSTGRES_ADMIN_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      TENANT_DB_HOST: postgres
+      TENANT_DB_PORT: 5432
+      TENANT_DB_USER: ${POSTGRES_USER}
+      TENANT_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      EMS_STORAGE_ROOT: /var/lib/wisdom-campus/storage
+      # One proxy (Caddy) sits in front, so exactly one X-Forwarded-For hop is
+      # trustworthy. Leaving this at 0 would make the rate limiter see every
+      # request as coming from Caddy's own address and throttle the whole
+      # school as if it were one person.
+      TRUST_PROXY_HOPS: 1
+      SWAGGER_ENABLED: "false"
+    volumes:
+      # Photographs of children and staff, school logos, generated PDFs.
+      # Without this a rebuild silently discards every photograph.
+      - ems-storage:/var/lib/wisdom-campus/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ems-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Control-database migrations plus the first platform operator. A one-shot
+  # container for the same reason as the shop's `migrate`: with more than one
+  # api replica, migrating from the entrypoint means every replica races to
+  # migrate the same database on every deploy.
+  #
+  # Tenant migrations are NOT run here. Each school's database is migrated when
+  # that school is onboarded, and again by `deploy.sh --migrate-tenants` after
+  # a release that changes the tenant schema — there is no single connection
+  # string that reaches them all.
+  ems-migrate:
+    build:
+      context: .
+      dockerfile: apps/ems-api/Dockerfile
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      CONTROL_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${EMS_CONTROL_DB:-wisdom_ems_control}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # `migrate deploy` applies committed migrations and never generates or
+    # resets — `migrate dev` would happily drop the production database when it
+    # found drift. The seed is idempotent and skips itself unless
+    # SEED_PLATFORM_ADMIN_* are set.
+    command: ["sh", "-c", "pnpm prisma:deploy:control && pnpm prisma:seed:control"]
+
+  ems:
+    build:
+      context: .
+      dockerfile: apps/ems/Dockerfile
+      args:
+        NEXT_PUBLIC_SHOP_URL: https://${SHOP_DOMAIN:?SHOP_DOMAIN is required}
+        # See the API_URL note on the web service: this is a BUILD arg because
+        # Next bakes rewrite destinations into the routes manifest.
+        EMS_API_URL: http://ems-api:4001
+    restart: always
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - ems-api
+
+  platform:
+    build:
+      context: .
+      dockerfile: apps/platform/Dockerfile
+      args:
+        EMS_API_URL: http://ems-api:4001
+    restart: always
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - ems-api
+
+  # Caddy rather than nginx + certbot: it obtains and renews certificates
+  # itself. The certs volume is the only state that matters — losing it means
+  # re-issuing, which Let's Encrypt rate-limits, so back it up (backup.sh
+  # does).
   proxy:
-    image: nginx:1.27-alpine
+    image: caddy:2-alpine
     restart: always
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      SHOP_DOMAIN: ${SHOP_DOMAIN:?SHOP_DOMAIN is required}
+      CAMPUS_DOMAIN: ${CAMPUS_DOMAIN:?CAMPUS_DOMAIN is required}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?ADMIN_DOMAIN is required}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
     volumes:
-      - ./deploy/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./deploy/nginx/proxy_params:/etc/nginx/proxy_params_wisdom:ro
-      - ./deploy/nginx/certs:/etc/nginx/certs:ro
-      - certbot-webroot:/var/www/certbot
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
     depends_on:
       - web
       - api
+      - ems
+      - platform
 
 volumes:
   postgres-data:
   storage-data:
   redis-data:
   meili-data:
-  certbot-webroot:
+  ems-storage:
+  caddy-data:
+  caddy-config:

@@ -54,20 +54,31 @@ what you want — the schema describes every route, DTO and auth requirement.
 
 ## First deploy
 
+**Certificates are no longer your job.** The proxy is Caddy
+(`deploy/caddy/Caddyfile`), which obtains and renews Let's Encrypt
+certificates itself. There is nothing to put in `deploy/nginx/certs` — that
+directory and the nginx config are dead, kept only until the next cleanup.
+The one prerequisite is that `SHOP_DOMAIN`, `CAMPUS_DOMAIN` and
+`ADMIN_DOMAIN` already resolve to the server *before* you start the stack: a
+name that does not point here yet fails its challenge and counts against a
+Let's Encrypt rate limit.
+
 ```bash
-cp .env.example .env   # then replace every value in the table above
-mkdir -p deploy/nginx/certs
+cp .env.production.example .env   # then replace every CHANGE_ME value
+chmod 600 .env
+./deploy/deploy.sh
 ```
 
-Put `fullchain.pem` and `privkey.pem` in `deploy/nginx/certs`. For Let's
-Encrypt, the HTTP-01 challenge path is already served from the
-`certbot-webroot` volume on port 80.
+`deploy.sh` builds, migrates both the shop and the ERP control database,
+seeds the first platform operator, starts everything and waits for the health
+checks. It refuses to run while `.env` still contains placeholder values.
 
-```bash
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml run --rm migrate
-docker compose -f docker-compose.prod.yml up -d
-```
+For a release that changes the *tenant* schema, add `--migrate-tenants` —
+each school has its own database, so there is no single connection string
+that reaches them all.
+
+The full server-from-scratch walkthrough, including firewalls and DNS, is
+[`DEPLOY-ORACLE.md`](DEPLOY-ORACLE.md).
 
 Migrations run as their **own one-shot container**, not from the API's
 entrypoint. With more than one API replica an entrypoint migration means

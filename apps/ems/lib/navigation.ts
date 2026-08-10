@@ -99,9 +99,16 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "nav.parents.dashboard" },
       { key: "nav.parents.portal" },
-      { key: "nav.parents.list" },
-      { key: "nav.parents.communication" },
-      { key: "nav.parents.payments" },
+      { key: "nav.parents.list", href: "/guardians" },
+      // Both of these were built and then only linked from the section they
+      // technically belong to (Messaging, Finance). Somebody looking for
+      // "how do I contact a parent" looks under Parents, so they are linked
+      // from here too rather than being discoverable only by knowing where
+      // the feature was filed.
+      { key: "nav.parents.communication", href: "/parent-messages", module: "MESSAGING" },
+      // Admin-only, unlike the rest of this section: the group allows
+      // teachers, and a teacher has no business in a family's fee account.
+      { key: "nav.parents.payments", href: "/invoices", roles: ADMIN_ONLY, module: "FEES" },
     ],
   },
   {

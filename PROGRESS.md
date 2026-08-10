@@ -1804,6 +1804,46 @@ exception, and it's self-service by design, not an admin UI).
   Keep `--frozen-lockfile` rather than reaching for `--no-frozen-lockfile`:
   a frozen install succeeding is the proof that CI will succeed too.
 
+## Production deployment (built 2026-08-10, never yet run on a real server)
+
+The whole stack — shop and campus — now has a production build. See
+[`docs/DEPLOY-ORACLE.md`](docs/DEPLOY-ORACLE.md) for the step-by-step guide.
+
+- `apps/ems-api/Dockerfile`, `apps/ems/Dockerfile`, `apps/platform/Dockerfile`
+- `docker-compose.prod.yml` — extended with `ems-api`, `ems`, `platform`,
+  `ems-migrate`
+- `deploy/caddy/Caddyfile` — **Caddy replaces nginx + certbot.** Automatic
+  Let's Encrypt for three hostnames, no cron job. `deploy/nginx/` is left in
+  the tree but is no longer referenced by any compose file.
+- `.env.production.example`, `deploy/deploy.sh`, `deploy/backup.sh`
+
+Things that will bite whoever runs this first:
+
+- **Build on the server, not on Windows.** Oracle's free tier is ARM; this
+  laptop is x86. Prisma compiles a query-engine binary for whichever
+  architecture generated it, so an image built here fails at boot there with
+  a missing-query-engine error.
+- **The ems-api image must keep the Prisma CLI and the tenant `migrations/`
+  folder.** Onboarding a school shells out to `prisma migrate deploy` against
+  the school's new database (`provisioning/migration-runner.ts` resolves the
+  binary at `process.cwd()/node_modules/.bin/prisma`). Strip either and the
+  API boots fine, then fails the first time somebody creates a school.
+- **Tenant migrations are not part of an ordinary deploy.** There is no single
+  connection string that reaches every school. `deploy.sh --migrate-tenants`
+  loops the schools listed in the control database; it collects failures
+  rather than stopping at the first one, and refuses to restart the stack if
+  any school failed.
+- **`EMS_SETTINGS_ENCRYPTION_KEY` must be backed up with the database.**
+  Restoring rows without it leaves every school's gateway credentials
+  undecryptable, and each school has to re-enter secrets it may not still
+  have.
+- **Per-school subdomains are deliberately off.** Wildcard certificates need
+  DNS-01; on-demand TLS needs an `ask` endpoint answering "is this hostname a
+  real school?", which the API does not have. Without one, anybody pointing
+  DNS at the server can burn the domain's Let's Encrypt rate limit. Until
+  that endpoint exists, `EMS_BASE_DOMAIN` stays empty and schools choose their
+  school on the login form.
+
 ## Things intentionally deferred (not bugs, just not built yet)
 
 - **"Add to cart" button** — omitted on purpose until the Phase 4 cart API

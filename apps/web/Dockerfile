@@ -20,6 +20,18 @@ COPY apps/web ./apps/web
 # at container start. It is a public URL, not a secret.
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+
+# API_URL likewise, which is easy to miss because it has no NEXT_PUBLIC_
+# prefix and looks like a server-side runtime value. next.config.mjs reads it
+# inside rewrites(), and Next resolves rewrites at BUILD time into
+# .next/routes-manifest.json rather than re-running the config at startup.
+# Supplied only as a runtime environment variable — as docker-compose.prod.yml
+# used to do — the fallback http://localhost:4000 is baked in, the site serves
+# every page with a 200, and only the browser's API calls fail, with
+# ECONNREFUSED to 127.0.0.1 inside the container.
+ARG API_URL=http://api:4000
+ENV API_URL=${API_URL}
+
 ENV NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /workspace/apps/web
