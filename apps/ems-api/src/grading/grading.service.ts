@@ -485,6 +485,36 @@ export class GradingService {
     return result;
   }
 
+  /**
+   * Every term result a family may see for one child, newest first.
+   *
+   * The portal needs "which report cards exist" before it can offer one, and
+   * asking for a specific year and term you have to already know is not that
+   * question. Same visibility rule as `reportCard`: PUBLISHED only for a
+   * family, and a 404 for somebody else's child rather than a 403.
+   */
+  async resultsForStudent(studentProfileId: string, viewer: AuthenticatedUser) {
+    const client = await this.tenantPrisma.getClient();
+
+    if (!isStaff(viewer)) {
+      const visible = await this.visibleStudentProfileIds(viewer);
+      if (!visible.has(studentProfileId)) throw new NotFoundException("No results found for that student");
+    }
+
+    return client.termResult.findMany({
+      where: {
+        studentProfileId,
+        ...(isStaff(viewer) ? {} : { status: "PUBLISHED" }),
+      },
+      include: {
+        class: { select: { id: true, name: true } },
+        subjects: { include: { subject: { select: { id: true, name: true } } } },
+      },
+      orderBy: [{ academicYear: "desc" }, { term: "desc" }],
+      take: 8,
+    });
+  }
+
   private async visibleStudentProfileIds(viewer: AuthenticatedUser): Promise<Set<string>> {
     const client = await this.tenantPrisma.getClient();
 

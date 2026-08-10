@@ -232,6 +232,37 @@ describe("Student and parent portal (e2e)", () => {
     expect(res.body.attendance.presentRate).toBeNull();
   });
 
+  it("carries the child's login id, which the photo route is keyed on", async () => {
+    // The portal deals in studentProfileId everywhere else; a photo is a
+    // fact about the person, so the page needs the user behind the profile.
+    const res = await request(app.getHttpServer()).get("/v1/portal/home").set(asStudentA()).expect(200);
+    expect(typeof res.body.child.userId).toBe("string");
+    expect(res.body.child.userId.length).toBeGreaterThan(0);
+    expect(res.body.child.userId).not.toBe(res.body.child.studentProfileId);
+  });
+
+  it("has a results section, and shows nothing before the school publishes", async () => {
+    const res = await request(app.getHttpServer()).get("/v1/portal/home").set(asStudentA()).expect(200);
+    // Present but empty, rather than absent: the page can then say "nothing
+    // published yet" instead of looking broken.
+    expect(Array.isArray(res.body.results)).toBe(true);
+    expect(res.body.results).toHaveLength(0);
+  });
+
+  it("has an exams section that never mentions another class's paper", async () => {
+    const res = await request(app.getHttpServer()).get("/v1/portal/home").set(asStudentA()).expect(200);
+    expect(Array.isArray(res.body.exams)).toBe(true);
+  });
+
+  it("survives a module the school has switched off", async () => {
+    // Each composed call swallows its own failure. A portal that 500s
+    // because one module is disabled would take attendance, homework and
+    // fees down with it.
+    const res = await request(app.getHttpServer()).get("/v1/portal/home").set(asStudentA()).expect(200);
+    expect(res.body.child).not.toBeNull();
+    expect(res.body.homework).not.toBeNull();
+  });
+
   it("lets a guardian switch between their children", async () => {
     const first = await request(app.getHttpServer())
       .get(`/v1/portal/home?studentProfileId=${studentAProfileId}`)

@@ -7,6 +7,8 @@ import { FeesService } from "@/fees/fees.service";
 import { HomeworkService } from "@/homework/homework.service";
 import { TimetableService } from "@/timetable/timetable.service";
 import { AiTeacherService } from "@/ai-teacher/ai-teacher.service";
+import { GradingService } from "@/grading/grading.service";
+import { ExamsService } from "@/exams/exams.service";
 import { bucketByDue, weekdayOf } from "./portal-dates";
 
 const STAFF_ROLES: RoleName[] = ["SCHOOL_ADMIN", "TEACHER"];
@@ -17,6 +19,8 @@ function isStaff(viewer: AuthenticatedUser): boolean {
 
 export interface PortalChild {
   studentProfileId: string;
+  /** The login behind the profile — what the photo route is keyed on. */
+  userId: string;
   name: string;
   studentCode: string | null;
   className: string | null;
@@ -46,6 +50,8 @@ export class PortalService {
     private readonly homework: HomeworkService,
     private readonly timetable: TimetableService,
     private readonly aiTeacher: AiTeacherService,
+    private readonly grading: GradingService,
+    private readonly exams: ExamsService,
   ) {}
 
   /** The students this viewer may look at: themselves, or their children. */
@@ -69,6 +75,7 @@ export class PortalService {
       const enrolment = profile.enrollments[0];
       return {
         studentProfileId: profile.id,
+        userId: profile.userId,
         name: `${profile.user.firstName} ${profile.user.lastName}`,
         studentCode: profile.studentCode,
         className: (enrolment?.class as { name?: string } | undefined)?.name ?? null,
@@ -100,11 +107,17 @@ export class PortalService {
     // Each of these already returns its own summary; recomputing them here
     // would be a second definition of "attendance rate" free to drift from
     // the one the attendance page shows.
-    const [attendance, fees, allHomework, lessons] = await Promise.all([
+    const [attendance, fees, allHomework, lessons, results, exams] = await Promise.all([
       this.attendance.forStudent(child.studentProfileId, viewer).catch(() => null),
       this.fees.listInvoices(viewer, child.studentProfileId).catch(() => null),
       this.homework.list(viewer).catch(() => []),
       this.aiTeacher.list(viewer).catch(() => []),
+      this.grading.resultsForStudent(child.studentProfileId, viewer).catch(() => []),
+      // A module a school has not bought throws here rather than returning
+      // nothing, so every one of these swallows its own failure — the portal
+      // showing four sections instead of six is right, a portal that fails
+      // entirely because one module is off is not.
+      this.exams.listExams(viewer, child.classId ?? undefined).catch(() => []),
     ]);
 
     const today = child.classId
@@ -131,7 +144,52 @@ export class PortalService {
         status: lesson.status,
         percent: lesson.percent ?? 0,
       })),
+      // The formal record, distinct from the "recently marked" list above:
+      // one is a running total the school is still working on, the other is
+      // what it has decided and stands behind.
+      results: (results as TermResultRow[]).map((result) => ({
+        id: result.id,
+        academicYear: result.academicYear,
+        term: result.term,
+        className: result.class?.name ?? null,
+        overallPercent: result.overallPercentHundredths,
+        grade: result.overallGrade ?? null,
+        subjectCount: result.subjects?.length ?? 0,
+      })),
+      exams: this.summariseExams(exams as ExamRow[], now),
     };
+  }
+
+  /**
+   * The papers this student can actually do something about.
+   *
+   * Sitting one is time-critical in a way nothing else on this page is, so
+   * the portal says which are open now and which are coming — and stops
+   * mentioning a paper once it has been sat, because "you have an exam" for
+   * something already submitted is alarming for no reason.
+   */
+  private summariseExams(exams: ExamRow[], now: Date) {
+    const iso = (value: Date | string | null | undefined) =>
+      value ? new Date(value).toISOString() : null;
+
+    return exams
+      .filter((exam) => exam.status === "PUBLISHED" && !exam.attempt?.submittedAt)
+      .map((exam) => {
+        const opensAt = iso(exam.opensAt);
+        const closesAt = iso(exam.closesAt);
+        return {
+          id: exam.id,
+          title: exam.title,
+          subject: exam.subject?.name ?? null,
+          opensAt,
+          closesAt,
+          open:
+            (!opensAt || new Date(opensAt) <= now) && (!closesAt || new Date(closesAt) > now),
+          started: Boolean(exam.attempt),
+        };
+      })
+      .sort((a, b) => (a.closesAt ?? "￿").localeCompare(b.closesAt ?? "￿"))
+      .slice(0, 5);
   }
 
   private async todaysLessons(classId: string, viewer: AuthenticatedUser, now: Date) {
@@ -201,6 +259,27 @@ function brief(assignment: HomeworkRow & { dueAt: Date | null }) {
     subject: assignment.subject?.name ?? null,
     dueAt: assignment.dueAt,
   };
+}
+
+interface TermResultRow {
+  id: string;
+  academicYear: string;
+  term: string;
+  overallPercentHundredths: number;
+  overallGrade?: string | null;
+  class?: { name: string } | null;
+  subjects?: unknown[];
+}
+
+interface ExamRow {
+  id: string;
+  title: string;
+  status: string;
+  opensAt?: Date | string | null;
+  closesAt?: Date | string | null;
+  subject?: { name: string } | null;
+  /** Present only on the student-facing shape — see presentAttemptForStudent. */
+  attempt?: { submittedAt?: Date | string | null } | null;
 }
 
 interface HomeworkRow {

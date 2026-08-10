@@ -6,10 +6,34 @@ import { authHeaders, useAuthQueryState } from "./api-auth";
 
 export interface PortalChild {
   studentProfileId: string;
+  /** The login behind the profile — what the photo route is keyed on. */
+  userId: string;
   name: string;
   studentCode: string | null;
   className: string | null;
   classId: string | null;
+}
+
+export interface PortalResult {
+  id: string;
+  academicYear: string;
+  term: string;
+  className: string | null;
+  /** Hundredths, like every other percentage in this system. */
+  overallPercent: number;
+  grade: string | null;
+  subjectCount: number;
+}
+
+export interface PortalExam {
+  id: string;
+  title: string;
+  subject: string | null;
+  opensAt: string | null;
+  closesAt: string | null;
+  /** True when it can be sat right now. */
+  open: boolean;
+  started: boolean;
 }
 
 export interface PortalLesson {
@@ -50,6 +74,10 @@ export interface PortalHome {
   attendance: { total: number; presentRate: number | null; counts: Record<string, number> } | null;
   fees: { invoiced: number; collected: number; outstanding: number; invoiceCount: number } | null;
   lessons: Array<{ id: string; topic: string; subject: string | null; status: string; percent: number }>;
+  /** Published term results only — a draft is not a family's business. */
+  results?: PortalResult[];
+  /** Papers still to sit; anything submitted drops off. */
+  exams?: PortalExam[];
 }
 
 export function usePortalHome(studentProfileId?: string | null) {

@@ -9,6 +9,7 @@ import {
   usePortalHome,
   type PortalHomeworkItem,
 } from "@/lib/use-portal";
+import { PersonPhoto } from "@/components/person-photo";
 
 const CARD = "rounded-xl border border-slate-200 p-4 dark:border-slate-800";
 
@@ -59,14 +60,26 @@ export default function MyPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {data.children.length > 1 ? data.child.name : "My school"}
-          </h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {data.child.className ?? "Not in a class yet"}
-            {data.child.studentCode ? ` · ${data.child.studentCode}` : ""}
-          </p>
+        <div className="flex items-center gap-3">
+          <PersonPhoto userId={data.child.userId} name={data.child.name} size="lg" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {data.children.length > 1 ? data.child.name : "My school"}
+            </h1>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              {/* The class name is a link now: it is the way to the class
+                  list and the class conversation, and a child looking for
+                  their classmates looks for their class. */}
+              {data.child.classId ? (
+                <Link href={`/classes/${data.child.classId}`} className="font-medium text-brand-600 hover:underline">
+                  {data.child.className}
+                </Link>
+              ) : (
+                "Not in a class yet"
+              )}
+              {data.child.studentCode ? ` · ${data.child.studentCode}` : ""}
+            </p>
+          </div>
         </div>
 
         {/* Only shown to a family with more than one child — a switcher with
@@ -137,6 +150,77 @@ export default function MyPage() {
           </Link>
         </section>
 
+        {/* Exams first among the new sections, and only when there are any:
+            sitting a paper is time-critical in a way nothing else on this
+            page is. An empty "no exams" card would push the things that do
+            need attention further down for no reason. */}
+        {(data.exams?.length ?? 0) > 0 && (
+          <section className={CARD} aria-labelledby="exams-heading">
+            <h2 id="exams-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Exams to sit
+            </h2>
+            <ul className="mt-2 space-y-2">
+              {data.exams?.map((exam) => (
+                <li key={exam.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                  <Link href={`/exams/${exam.id}`} className="font-medium text-brand-600 hover:underline">
+                    {exam.title}
+                  </Link>
+                  {exam.subject && <span className="text-slate-500">{exam.subject}</span>}
+                  {exam.open ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      {exam.started ? "carry on" : "open now"}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-500">
+                      {exam.opensAt ? `opens ${new Date(exam.opensAt).toLocaleString()}` : "not open yet"}
+                    </span>
+                  )}
+                  {exam.closesAt && exam.open && (
+                    <span className="w-full text-xs text-slate-500">
+                      closes {new Date(exam.closesAt).toLocaleString()}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section className={CARD} aria-labelledby="results-heading">
+          <h2 id="results-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Report cards
+          </h2>
+          {(data.results?.length ?? 0) === 0 ? (
+            // Says why rather than looking broken: a family whose school has
+            // not published yet should know that is the reason.
+            <p className="mt-2 text-sm text-slate-500">
+              Nothing published yet. Results appear here once the school releases them.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {data.results?.map((result) => (
+                <li key={result.id} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                  <span>
+                    <span className="font-medium">{result.term}</span>
+                    <span className="ml-1 text-slate-500">{result.academicYear}</span>
+                    {result.className && <span className="ml-1 text-slate-500">· {result.className}</span>}
+                  </span>
+                  <span className="tabular-nums">
+                    {(result.overallPercent / 100).toFixed(2)}%
+                    {result.grade && <span className="ml-2 font-semibold">{result.grade}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link
+            href="/report-cards"
+            className="mt-3 inline-block text-xs font-semibold text-brand-600 hover:underline"
+          >
+            Open report cards
+          </Link>
+        </section>
+
         <section className={CARD} aria-labelledby="marks-heading">
           <h2 id="marks-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             Recent marks
@@ -158,12 +242,6 @@ export default function MyPage() {
               ))}
             </ul>
           )}
-          <Link
-            href="/report-cards"
-            className="mt-3 inline-block text-xs font-semibold text-brand-600 hover:underline"
-          >
-            Report cards
-          </Link>
         </section>
 
         <section className={CARD} aria-labelledby="school-heading">
