@@ -103,11 +103,15 @@ export const NAV_GROUPS: NavGroup[] = [
     roles: STAFF,
     items: [
       { key: "nav.staff.dashboard" },
-      { key: "nav.staff.registration", roles: ADMIN_ONLY },
-      { key: "nav.staff.directory" },
+      { key: "nav.staff.registration", href: "/staff/new", roles: ADMIN_ONLY },
+      { key: "nav.staff.directory", href: "/staff", roles: ADMIN_ONLY },
       { key: "nav.staff.teachers", href: "/teachers" },
-      { key: "nav.staff.nonTeaching" },
-      { key: "nav.staff.hr", roles: ADMIN_ONLY },
+      // The same directory with the filter already applied, rather than a
+      // near-identical second page. Employment records are admin-only, so a
+      // teacher sees the teacher list above and neither of these.
+      { key: "nav.staff.nonTeaching", href: "/staff?group=non-teaching", roles: ADMIN_ONLY },
+      // HR is where somebody goes to ask who has read whose bank details.
+      { key: "nav.staff.hr", href: "/staff/access-log", roles: ADMIN_ONLY },
       { key: "nav.staff.payroll", href: "/payroll", roles: ADMIN_ONLY },
       { key: "nav.staff.welfare", roles: ADMIN_ONLY },
       { key: "nav.staff.loans", roles: ADMIN_ONLY },

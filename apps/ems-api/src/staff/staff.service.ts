@@ -1,11 +1,18 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import * as argon2 from "argon2";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import { TenantSecretsService } from "@/common/crypto/tenant-secrets.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { toMaskedBankDetails, validateBankDetails } from "./bank-details";
-import type { RevealAccountNumberDto, UpsertStaffProfileDto } from "./dto/staff.dto";
+import type { RegisterStaffDto, RevealAccountNumberDto, UpsertStaffProfileDto } from "./dto/staff.dto";
 
 const UNIQUE_VIOLATION = "P2002";
+
+/** Which column collided, so the message names the field the user must change. */
+function collidedOn(error: unknown, field: string): boolean {
+  const target = (error as { meta?: { target?: unknown } }).meta?.target;
+  return Array.isArray(target) ? target.includes(field) : String(target ?? "").includes(field);
+}
 
 @Injectable()
 export class StaffService {
@@ -31,6 +38,60 @@ export class StaffService {
     });
 
     return staff.map((user) => this.present(user));
+  }
+
+  /**
+   * Creates a staff login, with the employment record in the same breath.
+   *
+   * Until this existed the only way to make a staff account was
+   * `POST /v1/teachers`, which always produced a TEACHER — so a school had
+   * exactly one administrator, the one seeded at provisioning, and no way to
+   * register a bursar, a registrar, or a second head. Losing that one login
+   * meant losing the school.
+   *
+   * Both halves go in one `create`, so a duplicate staff number cannot leave
+   * behind a login nobody asked for.
+   */
+  async register(dto: RegisterStaffDto) {
+    const client = await this.tenantPrisma.getClient();
+
+    const passwordHash = await argon2.hash(dto.password);
+    const employment =
+      dto.staffNumber || dto.jobTitle || dto.employmentType || dto.startDate
+        ? {
+            staffProfile: {
+              create: {
+                staffNumber: dto.staffNumber?.trim() || null,
+                jobTitle: dto.jobTitle ?? null,
+                employmentType: dto.employmentType ?? null,
+                startDate: dto.startDate ? new Date(dto.startDate) : null,
+              },
+            },
+          }
+        : {};
+
+    try {
+      const user = await client.user.create({
+        data: {
+          email: dto.email,
+          passwordHash,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          roles: [dto.role],
+          ...employment,
+        },
+        include: { staffProfile: true },
+      });
+      return this.present(user);
+    } catch (error) {
+      if ((error as { code?: string }).code === UNIQUE_VIOLATION) {
+        if (collidedOn(error, "staffNumber")) {
+          throw new ConflictException("Another staff member already has that staff number");
+        }
+        throw new ConflictException("Someone already has a login with that email address");
+      }
+      throw error;
+    }
   }
 
   async findOne(userId: string) {
@@ -79,15 +140,18 @@ export class StaffService {
           ? null
           : this.secrets.encrypt(dto.accountNumber.trim());
 
+    // A cleared field arrives as an empty string from a browser, and storing
+    // that would leave a record that reads as filled in — a bank name of ""
+    // renders as a bank nobody can name. Empty means nothing on file.
     const data = {
       staffNumber: dto.staffNumber?.trim() || null,
-      jobTitle: dto.jobTitle ?? null,
+      jobTitle: dto.jobTitle?.trim() || null,
       employmentType: dto.employmentType ?? null,
       startDate: dto.startDate ? new Date(dto.startDate) : null,
       endDate: dto.endDate ? new Date(dto.endDate) : null,
-      bankName: dto.bankName ?? null,
-      bankCode: dto.bankCode ?? null,
-      accountName: dto.accountName ?? null,
+      bankName: dto.bankName?.trim() || null,
+      bankCode: dto.bankCode?.trim() || null,
+      accountName: dto.accountName?.trim() || null,
       ...(accountNumberEncrypted === undefined ? {} : { accountNumberEncrypted }),
     };
 

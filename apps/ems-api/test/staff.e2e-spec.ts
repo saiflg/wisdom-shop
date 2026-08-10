@@ -117,6 +117,132 @@ describe("Staff records and bank details (e2e)", () => {
     if (app) await app.close();
   }, 180000);
 
+  describe("registration", () => {
+    it("registers a non-teaching staff member with their employment record", async () => {
+      const email = `${FIXTURE_PREFIX}bursar-${Date.now()}@example.com`;
+      const res = await request(app.getHttpServer())
+        .post("/v1/staff")
+        .set(asAdmin())
+        .send({
+          email,
+          password,
+          firstName: "Halima",
+          lastName: "Sani",
+          role: "SCHOOL_ADMIN",
+          jobTitle: "Bursar",
+          employmentType: "FULL_TIME",
+          startDate: "2026-09-01",
+        })
+        .expect(201);
+
+      expect(res.body.jobTitle).toBe("Bursar");
+      expect(res.body.roles).toEqual(["SCHOOL_ADMIN"]);
+      // Registered with no bank details, which is a state the record must be
+      // able to hold rather than a half-filled form.
+      expect(res.body.bank.hasAccountNumber).toBe(false);
+
+      // A staff login is only real if it can be used.
+      await expect(login(email)).resolves.toEqual(expect.any(String));
+    });
+
+    it("never accepts bank details at registration", async () => {
+      // Whitelist validation, so a field that looks plausible is still
+      // refused rather than quietly dropped.
+      await request(app.getHttpServer())
+        .post("/v1/staff")
+        .set(asAdmin())
+        .send({
+          email: `${FIXTURE_PREFIX}sneaky-${Date.now()}@example.com`,
+          password,
+          firstName: "Sneaky",
+          lastName: "Field",
+          role: "TEACHER",
+          accountNumber: ACCOUNT_NUMBER,
+        })
+        .expect(400);
+    });
+
+    it("refuses to mint a student or guardian through the staff door", async () => {
+      // Those accounts carry an enrollment or a family behind them. One made
+      // here would have a login and none of that.
+      for (const role of ["STUDENT", "GUARDIAN", "PLATFORM_ADMIN"]) {
+        await request(app.getHttpServer())
+          .post("/v1/staff")
+          .set(asAdmin())
+          .send({
+            email: `${FIXTURE_PREFIX}role-${role}-${Date.now()}@example.com`,
+            password,
+            firstName: "Wrong",
+            lastName: "Role",
+            role,
+          })
+          .expect(400);
+      }
+    });
+
+    it("refuses a weak password, the same as every other login here", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/staff")
+        .set(asAdmin())
+        .send({
+          email: `${FIXTURE_PREFIX}weak-${Date.now()}@example.com`,
+          password: "password",
+          firstName: "Weak",
+          lastName: "Pass",
+          role: "TEACHER",
+        })
+        .expect(400);
+    });
+
+    it("refuses an email that already has a login", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/staff")
+        .set(asAdmin())
+        .send({ email: teacherEmail, password, firstName: "Second", lastName: "Ade", role: "TEACHER" })
+        .expect(409);
+    });
+
+    it("leaves no orphan login behind when the staff number collides", async () => {
+      // Both halves are one create. A rejected registration must not leave a
+      // login nobody asked for, which would then block the retry as a
+      // duplicate email.
+      const email = `${FIXTURE_PREFIX}collide-${Date.now()}@example.com`;
+      const body = {
+        email,
+        password,
+        firstName: "Collide",
+        lastName: "Number",
+        role: "TEACHER" as const,
+        staffNumber: "STF-DUP",
+      };
+
+      await request(app.getHttpServer()).post("/v1/staff").set(asAdmin()).send(body).expect(201);
+      await request(app.getHttpServer())
+        .post("/v1/staff")
+        .set(asAdmin())
+        .send({ ...body, email: `${FIXTURE_PREFIX}collide2-${Date.now()}@example.com` })
+        .expect(409);
+
+      const list = await request(app.getHttpServer()).get("/v1/staff").set(asAdmin()).expect(200);
+      expect(list.body.filter((m: { staffNumber: string | null }) => m.staffNumber === "STF-DUP")).toHaveLength(1);
+      expect(list.body.filter((m: { lastName: string }) => m.lastName === "Number")).toHaveLength(1);
+    });
+
+    it("does not let a teacher register colleagues", async () => {
+      await request(app.getHttpServer())
+        .post("/v1/staff")
+        .set("Authorization", `Bearer ${teacherToken}`)
+        .send({
+          email: `${FIXTURE_PREFIX}selfmade-${Date.now()}@example.com`,
+          password,
+          firstName: "Self",
+          lastName: "Made",
+          role: "SCHOOL_ADMIN",
+        })
+        .expect(403);
+    });
+  });
+
   it("stores an employment record with bank details", async () => {
     const res = await request(app.getHttpServer())
       .put(`/v1/staff/${teacherId}`)

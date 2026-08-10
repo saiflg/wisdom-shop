@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ApiError } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
 import { useSalary, useSetSalary, type PayComponentBasis, type PayComponentKind } from "@/lib/use-payroll";
 
 interface Draft {
@@ -64,7 +64,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
   if (error || !drafts) {
     return (
       <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-        {error instanceof ApiError ? error.message : "Couldn't load this salary."}
+        {errorMessage(error, "Couldn't load this salary.")}
       </p>
     );
   }
@@ -91,7 +91,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
       );
       setMessage({ tone: "ok", text: `Saved. Net pay is ${money(result.preview.netCents)} a month.` });
     } catch (err) {
-      setMessage({ tone: "error", text: err instanceof ApiError ? err.message : "Couldn't save that salary." });
+      setMessage({ tone: "error", text: errorMessage(err, "Couldn't save that salary.") });
     }
   };
 

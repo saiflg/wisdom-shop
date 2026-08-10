@@ -1631,6 +1631,60 @@ generated Prisma clients live under `node_modules` and are wiped by that
 install, so `pnpm prisma:generate` has to follow it or the app boots with
 `Cannot find module 'ems-tenant-client'`.
 
+**Staff records and HR (done).** Payroll had been running against people
+nobody could list, search or edit: the API for staff records was complete and
+had no screen behind it, so the only staff a school could create were teachers,
+and the only administrator it would ever have was the one seeded at
+provisioning. Losing that login meant losing the school.
+
+- **Registration accepts teaching *and* non-teaching staff.** `POST /v1/staff`
+  takes the role explicitly, limited to `TEACHER` and `SCHOOL_ADMIN`. Student
+  and guardian accounts carry an enrollment or a family behind them; one
+  minted through the staff door would have a login and none of that, so the
+  route refuses those roles rather than trusting the caller. Granting
+  `SCHOOL_ADMIN` says on the form what it grants — every screen, fees,
+  payroll, and every colleague's bank details.
+- **The login and the employment record are one `create`.** A rejected
+  registration must not leave behind a login nobody asked for, which would
+  then block the retry as a duplicate email. There is an e2e test that
+  registers a duplicate staff number and then counts the rows.
+- **Bank details are not on the registration form.** They belong on the
+  record, beside the mask and the audited reveal. An account number entered
+  as one box among ten teaches that it is ordinary, and it is not.
+- **The directory never makes the mask searchable.** `matchesStaffQuery`
+  covers name, staff number, job title and email and deliberately not
+  `accountNumberMasked` — a searchable mask is a disclosure oracle, since
+  anyone holding the roster could confirm a colleague's last four digits by
+  typing guesses. The test is named after that, and the live UI was checked
+  the same way.
+- **One record, one draft, one save.** `PUT /v1/staff/:id` replaces the whole
+  employment record, so two forms each sending their own fields would blank
+  each other's. The employment and bank sections look separate and share a
+  draft. The single exception is the account number, which is sent only when
+  somebody has typed one — that field alone means "leave it alone" when
+  absent, and an empty string means "remove it", behind a confirmation.
+- **The revealed number lives in local state and nowhere else.** Not a
+  `useMutation`, whose last result would sit in hook state and in the query
+  devtools for as long as the page is open. It clears on unmount and after
+  sixty seconds, because the realistic risk to a bursar is not an attacker,
+  it is a screen left open in a room people walk through.
+- **The access log gets its own screen**, reachable without asking anyone.
+  An administrator can read any account number in the school; the control
+  that actually protects staff is that they cannot do it unobserved.
+- **Empty strings are stored as null.** A cleared field arrives from a browser
+  as `""`, and a bank name of `""` renders as a bank nobody can name.
+
+**The browser found one more, and it was ours from two phases ago.** The
+salary editor said "Couldn't load this salary." where the API had said "Demo
+Admin has no employment record yet. Add their staff details before setting a
+salary." — the exact instruction, thrown away by an
+`error instanceof ApiError` check that fails whenever the thrown object came
+from a different copy of the module. `errorMessage(error, fallback)` is
+duck-typed for that reason: a message is a message whoever built it, and the
+fallback is for the genuinely silent failures. Same lesson as the AI provider
+phase, arrived at from the opposite direction — there the failures said
+nothing, here something useful was said and the screen discarded it.
+
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
 per-country curriculum-standard databases, live voice/video classroom (the

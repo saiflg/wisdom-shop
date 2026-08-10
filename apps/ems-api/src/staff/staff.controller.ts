@@ -4,7 +4,7 @@ import { Roles } from "@/auth/decorators/roles.decorator";
 import { CurrentUser } from "@/auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { StaffService } from "./staff.service";
-import { RevealAccountNumberDto, UpsertStaffProfileDto } from "./dto/staff.dto";
+import { RegisterStaffDto, RevealAccountNumberDto, UpsertStaffProfileDto } from "./dto/staff.dto";
 
 @ApiTags("staff")
 @ApiBearerAuth()
@@ -20,6 +20,18 @@ export class StaffController {
   })
   list() {
     return this.staff.list();
+  }
+
+  @Post()
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Register a staff member: a login plus their employment record",
+    description:
+      "Teaching or non-teaching. Bank details are not accepted here — they are entered on the staff record, " +
+      "where the masking and the audited reveal sit beside the field.",
+  })
+  register(@Body() dto: RegisterStaffDto) {
+    return this.staff.register(dto);
   }
 
   @Get("access-log")
