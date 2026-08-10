@@ -46,6 +46,30 @@ export interface Conversation {
   hasMore: boolean;
 }
 
+export interface MyClass {
+  id: string;
+  name: string;
+  gradeLevel: string | null;
+  academicYear: string;
+}
+
+/**
+ * The classes this person is in.
+ *
+ * Kept for the session — a student's enrolment does not change while they are
+ * sitting in a lesson, and refetching it on every window focus would be a
+ * request per tab switch to learn nothing.
+ */
+export function useMyClasses() {
+  const { accessToken, enabled } = useAuthQueryState();
+  return useQuery({
+    queryKey: ["classes", "mine"],
+    enabled,
+    staleTime: 5 * 60_000,
+    queryFn: () => apiFetch<MyClass[]>("/v1/classes/mine", { headers: authHeaders(accessToken) }),
+  });
+}
+
 export function useClassMembers(classId: string) {
   const { accessToken, enabled } = useAuthQueryState();
   return useQuery({

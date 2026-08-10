@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Roles } from "@/auth/decorators/roles.decorator";
+import { CurrentUser } from "@/auth/decorators/current-user.decorator";
+import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { ClassesService } from "./classes.service";
 import { CreateClassDto } from "./dto/create-class.dto";
 import { UpdateClassDto } from "./dto/update-class.dto";
@@ -22,6 +24,16 @@ export class ClassesController {
   @ApiOperation({ summary: "List classes" })
   list() {
     return this.classes.list();
+  }
+
+  // Before `:id`, or "mine" is read as a class id.
+  @Get("mine")
+  @ApiOperation({
+    summary: "The classes you are in — enrolled in, or teaching",
+    description: "Empty for an administrator, who belongs to none of them.",
+  })
+  mine(@CurrentUser() user: AuthenticatedUser) {
+    return this.classes.mine(user.id);
   }
 
   @Get(":id")

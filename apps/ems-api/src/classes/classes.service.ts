@@ -21,6 +21,30 @@ export class ClassesService {
     });
   }
 
+  /**
+   * The classes this person is actually in — enrolled in, or teaching.
+   *
+   * Distinct from `list()`, which is every class in the school. A student
+   * opening an AI lesson needs to know which conversation is theirs, and
+   * "pick from all forty classes" is not an answer. Returns an empty list for
+   * an administrator, who belongs to none of them.
+   */
+  async mine(userId: string) {
+    const client = await this.tenantPrisma.getClient();
+    return client.class.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { homeroomTeacherId: userId },
+          { teachingAssignments: { some: { teacherUserId: userId } } },
+          { enrollments: { some: { status: "ACTIVE", studentProfile: { userId } } } },
+        ],
+      },
+      select: { id: true, name: true, gradeLevel: true, academicYear: true },
+      orderBy: [{ academicYear: "desc" }, { name: "asc" }],
+    });
+  }
+
   async findOne(id: string) {
     const client = await this.tenantPrisma.getClient();
     const record = await client.class.findFirst({

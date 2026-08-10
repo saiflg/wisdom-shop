@@ -37,6 +37,7 @@ export const ALLOWED_IMAGE_TYPES: Record<string, string> = {
 export const REJECTED_IMAGE_TYPES = ["image/svg+xml"];
 
 export const BRANDING_PREFIX = "branding";
+export const PHOTO_PREFIX = "photos";
 
 /**
  * Matches exactly what `buildBrandingKey` produces, and nothing else.
@@ -91,6 +92,38 @@ export function brandingKeyFor(schoolId: string, name: string): string | null {
   if (!SAFE_SCHOOL_ID.test(schoolId)) return null;
   if (!isSafeStoredName(name)) return null;
   return `schools/${schoolId}/${BRANDING_PREFIX}/${name}`;
+}
+
+/**
+ * `schools/<schoolId>/photos/<uuid>.<ext>`.
+ *
+ * Same construction as a logo, different prefix, and one important
+ * difference in how it is *served*: there is no public route for these. A
+ * school logo is meant to be seen by strangers on a login page; a child's
+ * photograph is not, so the key never appears in a URL and the bytes come
+ * back only through an authorised route.
+ */
+export function buildPhotoKey(schoolId: string, extension: string): string {
+  if (!SAFE_SCHOOL_ID.test(schoolId)) {
+    throw new Error(`Refusing to build a storage key for school id: ${schoolId}`);
+  }
+  const ext = extension.startsWith(".") ? extension.toLowerCase() : "";
+  return `schools/${schoolId}/${PHOTO_PREFIX}/${randomUUID()}${ext}`;
+}
+
+/**
+ * True when a stored key really belongs to this school's photographs.
+ *
+ * Checked before any read. The key comes from our own database rather than
+ * from a request, so this is a guard against a bug — a photo key that somehow
+ * points at another school's directory should fail to load rather than
+ * succeed quietly.
+ */
+export function isPhotoKeyForSchool(key: string, schoolId: string): boolean {
+  if (!SAFE_SCHOOL_ID.test(schoolId)) return false;
+  const prefix = `schools/${schoolId}/${PHOTO_PREFIX}/`;
+  if (!key.startsWith(prefix)) return false;
+  return isSafeStoredName(key.slice(prefix.length));
 }
 
 /** The bare filename of a stored key, for building a public URL. */

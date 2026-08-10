@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useStaff } from "@/lib/use-staff";
+import { PersonPhoto } from "@/components/person-photo";
 import {
   bankSummary,
   employmentState,
@@ -125,7 +126,8 @@ export default function StaffDirectoryPage() {
                 href={`/staff/${member.id}`}
                 className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 transition hover:border-brand-400 dark:border-slate-800"
               >
-                <span className="min-w-0">
+                <PersonPhoto userId={member.id} name={`${member.firstName} ${member.lastName}`} size="md" />
+                <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold">
                       {member.firstName} {member.lastName}

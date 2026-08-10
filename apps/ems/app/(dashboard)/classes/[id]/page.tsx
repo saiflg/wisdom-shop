@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { errorMessage } from "@/lib/api";
 import { useClassMembers } from "@/lib/use-class-chat";
 import { ClassChat } from "@/components/class-chat";
+import { PersonPhoto } from "@/components/person-photo";
 
 const LEADERSHIP_LABELS: Record<string, string> = {
   PRINCIPAL: "Principal",
@@ -105,16 +106,7 @@ export default function ClassPage() {
               <ul className="mt-3 space-y-1.5">
                 {data.students.map((student) => (
                   <li key={student.id} className="flex items-center gap-2 text-sm">
-                    <span
-                      aria-hidden="true"
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                    >
-                      {student.name
-                        .split(" ")
-                        .map((part) => part[0])
-                        .slice(0, 2)
-                        .join("")}
-                    </span>
+                    <PersonPhoto userId={student.id} name={student.name} size="sm" />
                     <span className="min-w-0 truncate">{student.name}</span>
                     {student.studentCode && (
                       <span className="ml-auto shrink-0 font-mono text-xs text-slate-500">{student.studentCode}</span>

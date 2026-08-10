@@ -14,6 +14,7 @@ import {
 } from "@/lib/use-staff";
 import { EMPLOYMENT_LABELS, employmentState, isTeaching } from "@/lib/staff-directory";
 import { RevealAccountNumber } from "@/components/reveal-account-number";
+import { PersonPhotoEditor } from "@/components/person-photo";
 import { SalaryEditor } from "@/components/salary-editor";
 
 /** The API sends timestamps; a date input wants "2026-09-01". */
@@ -140,6 +141,11 @@ function StaffRecord({ member }: { member: StaffMember }) {
           {state === "FUTURE" ? " · has not started yet" : ""}
         </p>
       </div>
+
+      <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Photo</h2>
+        <PersonPhotoEditor userId={member.id} name={fullName} />
+      </section>
 
       <section className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Employment</h2>

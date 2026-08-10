@@ -61,6 +61,15 @@ model User {
   refreshTokens        RefreshToken[]
   studentProfile       StudentProfile?
   guardianLinks        GuardianLink[]
+  /// Storage key for this person's photograph, or null.
+  ///
+  /// On User rather than on StudentProfile and StaffProfile separately,
+  /// because a photograph is a fact about a person and every one of them is a
+  /// User. It is never a URL: the key is resolved against per-school storage
+  /// and served through an authorised route, so a child's photograph is never
+  /// at a guessable public address.
+  photoKey String?
+
   homeroomFor          Class[]        @relation("HomeroomTeacher")
   classMessages        ClassMessage[] @relation("ClassMessageAuthor")
   createdSchemesOfWork SchemeOfWork[]

@@ -16,6 +16,8 @@ import {
 } from "@/lib/use-ai-teacher";
 import { useAuthStore } from "@/store/auth-store";
 import { BoardDiagram, BoardText, ChalkThinking } from "@/components/lesson-board";
+import { ClassChat } from "@/components/class-chat";
+import { useMyClasses } from "@/lib/use-class-chat";
 
 export default function TutorLessonPage() {
   const params = useParams<{ id: string }>();
@@ -154,35 +156,43 @@ export default function TutorLessonPage() {
         </p>
       )}
 
-      {/* Polite rather than assertive: a new lesson should be announced when
-          the screen reader reaches a natural pause, not cut the student off
-          mid-word. */}
-      <div
-        className="flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-200 p-4 dark:border-slate-800"
-        role="log"
-        aria-live="polite"
-        aria-label="Lesson transcript"
-      >
-        {session.turns?.length === 0 && (
-          <p className="py-8 text-center text-sm text-slate-500">
-            {!canAct
-              ? "Nothing has been taught yet."
-              : isClass
-                ? "Press Start the class below when you're ready."
-                : "Ask your first question below."}
-          </p>
-        )}
+      {/* The board and the class beside it — stacked on a phone, side by side
+          once there is room. Deliberately not a floating panel over the
+          board: the lesson is what the student came for, and a chat window
+          covering the diagram would be the wrong thing to lose. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row">
+        {/* Polite rather than assertive: a new lesson should be announced when
+            the screen reader reaches a natural pause, not cut the student off
+            mid-word. */}
+        <div
+          className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+          role="log"
+          aria-live="polite"
+          aria-label="Lesson transcript"
+        >
+          {session.turns?.length === 0 && (
+            <p className="py-8 text-center text-sm text-slate-500">
+              {!canAct
+                ? "Nothing has been taught yet."
+                : isClass
+                  ? "Press Start the class below when you're ready."
+                  : "Ask your first question below."}
+            </p>
+          )}
 
-        {session.turns?.map((turn) => <Turn key={turn.id} turn={turn} />)}
+          {session.turns?.map((turn) => <Turn key={turn.id} turn={turn} />)}
 
-        {busy && (
-          <div className="flex justify-start">
-            <ChalkThinking
-              label={continueClass.isPending ? "Preparing the next lesson…" : "Thinking…"}
-            />
-          </div>
-        )}
-        <div ref={bottom} />
+          {busy && (
+            <div className="flex justify-start">
+              <ChalkThinking
+                label={continueClass.isPending ? "Preparing the next lesson…" : "Thinking…"}
+              />
+            </div>
+          )}
+          <div ref={bottom} />
+        </div>
+
+        <ClassmatesPanel />
       </div>
 
       {/* Demonstrations a teacher added. Offered, never forced: the student
@@ -251,6 +261,68 @@ export default function TutorLessonPage() {
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * The class conversation, beside the lesson.
+ *
+ * Renders nothing at all when the viewer is in no class — an administrator
+ * reading a transcript, or a student not yet enrolled. An empty panel taking
+ * a third of the screen to say "you have no class" would cost the lesson more
+ * room than it is worth.
+ *
+ * Collapsible, and closed is remembered for the session only: a student who
+ * wants the whole width for a diagram should get it without that becoming a
+ * permanent decision they have to undo later.
+ */
+function ClassmatesPanel() {
+  const { data: classes } = useMyClasses();
+  const [open, setOpen] = useState(true);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const first = classes?.[0];
+  if (!first) return null;
+  const classId = selected ?? first.id;
+
+  return (
+    <aside className="flex min-h-0 shrink-0 flex-col gap-2 xl:w-96">
+      <div className="flex items-center justify-between gap-2">
+        {(classes?.length ?? 0) > 1 ? (
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <span className="sr-only">Which class</span>
+            <select
+              value={classId}
+              onChange={(event) => setSelected(event.target.value)}
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+            >
+              {(classes ?? []).map((klass) => (
+                <option key={klass.id} value={klass.id}>
+                  {klass.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{first.name}</p>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          aria-expanded={open}
+          className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          {open ? "Hide classmates" : "Show classmates"}
+        </button>
+      </div>
+
+      {open && (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <ClassChat classId={classId} />
+        </div>
+      )}
+    </aside>
   );
 }
 
