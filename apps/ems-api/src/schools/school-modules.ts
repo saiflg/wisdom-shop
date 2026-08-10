@@ -24,6 +24,7 @@ export const MODULE_KEYS = [
   "FEES",
   "PAYROLL",
   "MESSAGING",
+  "CLASS_CHAT",
   "PORTAL",
   "AI_CURRICULUM",
   "AI_TEACHER",
@@ -160,6 +161,14 @@ export const MODULE_CATALOG: readonly ModuleDefinition[] = [
     key: "MESSAGING",
     label: "Messaging",
     description: "Email, SMS and WhatsApp to families, through the school's own gateways.",
+    group: "Communication",
+    core: false,
+  },
+  {
+    key: "CLASS_CHAT",
+    label: "Class chat",
+    description:
+      "A group conversation per class, which the class's teachers can read and pause. Switch it off and no school user can message another.",
     group: "Communication",
     core: false,
   },

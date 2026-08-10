@@ -1,47 +1,132 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useClass } from "@/lib/use-classes";
+import { errorMessage } from "@/lib/api";
+import { useClassMembers } from "@/lib/use-class-chat";
+import { ClassChat } from "@/components/class-chat";
 
-export default function ClassDetailPage() {
+const LEADERSHIP_LABELS: Record<string, string> = {
+  PRINCIPAL: "Principal",
+  VICE_PRINCIPAL: "Vice principal",
+  HEAD_TEACHER: "Head teacher",
+};
+
+/**
+ * One class: who is in it, who teaches it, and the conversation.
+ *
+ * The same page for a student and for a teacher, because the answer to "who
+ * is in my class" is the same for both. What differs is what the API sends
+ * them — roll numbers to staff, names to classmates — rather than which
+ * component renders.
+ */
+export default function ClassPage() {
   const params = useParams<{ id: string }>();
-  const { data: klass, isLoading, error } = useClass(params.id);
+  const classId = params?.id ?? "";
+  const { data, isLoading, error } = useClassMembers(classId);
 
-  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>;
-  if (error) {
+  if (!classId) return null;
+  if (isLoading) return <p className="text-sm text-slate-500">Loading the class…</p>;
+
+  if (error || !data) {
     return (
-      <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-        Couldn&apos;t load this class: {error.message}
-      </p>
+      <div className="space-y-4">
+        <Link href="/classes" className="text-sm font-semibold text-brand-600 hover:underline">
+          ← Classes
+        </Link>
+        <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
+          {errorMessage(error, "Couldn't open that class.")}
+        </p>
+      </div>
     );
   }
-  if (!klass) return null;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{klass.name}</h1>
+        <Link href="/classes" className="text-sm font-semibold text-brand-600 hover:underline">
+          ← Classes
+        </Link>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">{data.class.name}</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          {klass.gradeLevel ? `${klass.gradeLevel} · ` : ""}
-          {klass.academicYear}
-          {klass.homeroomTeacher && ` · Homeroom: ${klass.homeroomTeacher.firstName} ${klass.homeroomTeacher.lastName}`}
+          {data.class.gradeLevel ? `${data.class.gradeLevel} · ` : ""}
+          {data.class.academicYear} · {data.students.length}{" "}
+          {data.students.length === 1 ? "student" : "students"}
         </p>
       </div>
 
-      <div>
-        <h2 className="text-lg font-semibold">Enrolled students</h2>
-        {(!klass.enrollments || klass.enrollments.length === 0) && (
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">No students enrolled yet.</p>
-        )}
-        {klass.enrollments && klass.enrollments.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {klass.enrollments.map((enrollment) => (
-              <li key={enrollment.id} className="rounded-lg border border-slate-200 px-4 py-2 text-sm dark:border-slate-800">
-                {enrollment.studentProfile.user.firstName} {enrollment.studentProfile.user.lastName}
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
+        <div className="space-y-6">
+          <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Who teaches this class</h2>
+
+            <dl className="mt-3 space-y-3 text-sm">
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-slate-500">Class teacher</dt>
+                <dd className="mt-0.5 font-medium">{data.classTeacher?.name ?? "Not assigned yet"}</dd>
+              </div>
+
+              {data.subjectTeachers.length > 0 && (
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-500">Subject teachers</dt>
+                  <dd className="mt-0.5 space-y-1">
+                    {data.subjectTeachers.map((teacher) => (
+                      <p key={`${teacher.id}-${teacher.subject}`}>
+                        {teacher.name} <span className="text-slate-500">· {teacher.subject}</span>
+                      </p>
+                    ))}
+                  </dd>
+                </div>
+              )}
+
+              {data.leadership.length > 0 && (
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-slate-500">School leadership</dt>
+                  <dd className="mt-0.5 space-y-1">
+                    {data.leadership.map((leader) => (
+                      <p key={leader.id}>
+                        {leader.name}{" "}
+                        <span className="text-slate-500">
+                          · {LEADERSHIP_LABELS[leader.role] ?? leader.jobTitle ?? leader.role}
+                        </span>
+                      </p>
+                    ))}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Class members</h2>
+            {data.students.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-500">Nobody is enrolled yet.</p>
+            ) : (
+              <ul className="mt-3 space-y-1.5">
+                {data.students.map((student) => (
+                  <li key={student.id} className="flex items-center gap-2 text-sm">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      {student.name
+                        .split(" ")
+                        .map((part) => part[0])
+                        .slice(0, 2)
+                        .join("")}
+                    </span>
+                    <span className="min-w-0 truncate">{student.name}</span>
+                    {student.studentCode && (
+                      <span className="ml-auto shrink-0 font-mono text-xs text-slate-500">{student.studentCode}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        <ClassChat classId={classId} />
       </div>
     </div>
   );

@@ -1685,6 +1685,46 @@ fallback is for the genuinely silent failures. Same lesson as the AI provider
 phase, arrived at from the opposite direction — there the failures said
 nothing, here something useful was said and the screen discarded it.
 
+**Class members and class chat (done).** A class page that answers "who is in
+my class", and a group conversation for the people in it.
+
+The whole shape follows from one decision: **a class group is supervisable and
+a private channel between two children is not.** There are no student-to-student
+direct messages here, and adding them later would be a safeguarding design of
+its own rather than another endpoint.
+
+- **Students are told, in the interface, that their teachers can read it.**
+  The notice comes from the server and is rendered verbatim above every
+  conversation — not in a tooltip, not once on first visit. Supervision a
+  child knows about is a classroom; supervision they do not know about is
+  surveillance, and there is a unit test asserting the sentence mentions both
+  teachers and removed messages.
+- **Deletion is always soft.** "Delete the evidence" is precisely what this
+  has to survive. Students see a visible gap — a message that vanishes without
+  trace invites "I never said that", and the class saw it anyway — and staff
+  see the original text. A student cannot delete a classmate's message, or the
+  loudest child in the class would control what the teacher gets to see.
+- **Reporting never deletes.** If it did, any group of children could silence
+  anyone by agreeing to report them, and the teacher would find an empty
+  conversation with no idea what happened. One report per person per message,
+  enforced by the database.
+- **Reading is oversight; writing is being in the room.** Any teacher or
+  administrator can read any class conversation without joining it — moderation
+  that requires membership first arrives too late — but an administrator cannot
+  post. Guardians get neither: the parent of one child in the room is not a
+  supervisor of the other thirty, and that is a different feature with
+  different consent.
+- **A class list is not a contact list.** Names to classmates, roll numbers to
+  staff, and nobody's email address to anybody.
+- **Rate limited per person per conversation**, with wording written for a
+  child — "Slow down a moment before sending another message", not a 429. The
+  e2e suite had to be slowed down to stop tripping its own safeguard; the
+  limit is the feature, so the tests wait rather than the limit loosening.
+- **Leadership is a designation, not a role.** `StaffProfile.leadership` names
+  the principal, vice principal and head teacher on a class page. It grants
+  nothing — they are already SCHOOL_ADMIN or TEACHER — because who is in
+  charge is a fact about the school rather than a permission.
+
 **Explicitly deferred, still not part of any phase so far:** daily lesson
 notes, exams/worksheets/marking guides, PDF/Word/Excel export,
 per-country curriculum-standard databases, live voice/video classroom (the

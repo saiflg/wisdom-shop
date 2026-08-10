@@ -62,6 +62,7 @@ model User {
   studentProfile       StudentProfile?
   guardianLinks        GuardianLink[]
   homeroomFor          Class[]        @relation("HomeroomTeacher")
+  classMessages        ClassMessage[] @relation("ClassMessageAuthor")
   createdSchemesOfWork SchemeOfWork[]
   createdLessonPlans   LessonPlan[]
   createdQuizzes       Quiz[]
@@ -98,6 +99,99 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+/// Named on a class page so a family knows who is in charge. Not a
+/// permission — see StaffProfile.leadership.
+enum SchoolLeadership {
+  PRINCIPAL
+  VICE_PRINCIPAL
+  HEAD_TEACHER
+}
+
+/// One conversation per class, created the first time somebody opens it.
+///
+/// A class group and nothing else. There is no student-to-student channel in
+/// this system, and that is a safeguarding decision rather than a missing
+/// feature: a group their teacher sits in can be supervised, and a private
+/// channel between two children cannot.
+model ClassConversation {
+  id      String @id @default(cuid())
+  classId String @unique
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  /// Set by a teacher to stop students posting — during a lesson, or after
+  /// something went wrong. Teachers can still write, so the room can be
+  /// closed without going silent.
+  lockedAt     DateTime?
+  lockedById   String?
+  lockedReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages ClassMessage[]
+
+  @@map("class_conversations")
+}
+
+model ClassMessage {
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   ClassConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  authorUserId String
+  author       User   @relation("ClassMessageAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  /// Snapshotted so a message still says who wrote it after they leave the
+  /// school — the same reasoning as a payslip's staff name.
+  authorName   String
+  authorRole   String
+
+  body String
+
+  /// Soft delete, always. Removing a message must not remove it from
+  /// moderation: "delete the evidence" is exactly the move this has to
+  /// survive. Students see a gap, staff see the original text.
+  deletedAt      DateTime?
+  deletedByUserId String?
+  deletedReason   String?
+
+  createdAt DateTime @default(now())
+
+  reports ClassMessageReport[]
+
+  /// The query this table exists to serve: one conversation, newest last.
+  @@index([conversationId, createdAt])
+  /// Rate limiting asks "what has this person sent here recently".
+  @@index([conversationId, authorUserId, createdAt])
+  @@map("class_messages")
+}
+
+/// A child saying "this one is not ok".
+///
+/// Separate from deletion on purpose: reporting is something a student can
+/// do, deleting is not, and a report that quietly deleted the message would
+/// hand every class a way to silence anyone.
+model ClassMessageReport {
+  id        String       @id @default(cuid())
+  messageId String
+  message   ClassMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  reportedByUserId String
+  reportedByName   String
+  reason           String
+
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  outcome          String?
+
+  createdAt DateTime @default(now())
+
+  /// One report per person per message: a second one adds nothing and lets a
+  /// group bury a teacher in duplicates.
+  @@unique([messageId, reportedByUserId])
+  @@index([reviewedAt])
+  @@map("class_message_reports")
+}
+
 model Class {
   id                String  @id @default(cuid())
   name              String
@@ -113,6 +207,7 @@ model Class {
   deletedAt DateTime?
 
   enrollments         Enrollment[]
+  conversation        ClassConversation?
   attendanceRegisters AttendanceRegister[]
   feeStructures       FeeStructure[]
   assessments         Assessment[]
@@ -609,6 +704,15 @@ model StaffProfile {
   employmentType EmploymentType?
   startDate      DateTime?
   endDate        DateTime?
+
+  /// Where this person sits in the school's leadership, if anywhere.
+  ///
+  /// Deliberately NOT a role. Roles decide what the software lets you do, and
+  /// a principal is not granted extra powers by being named one — they are
+  /// already a SCHOOL_ADMIN or a TEACHER. This is who a class page should
+  /// name when a parent asks who is in charge, which is a fact about the
+  /// school rather than a permission.
+  leadership SchoolLeadership?
 
   bankName    String?
   /// Sort code, routing number, or the local equivalent. Not secret on its

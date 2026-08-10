@@ -93,6 +93,7 @@ describe("the module tags themselves", () => {
       "FEES",
       "PAYROLL",
       "MESSAGING",
+      "CLASS_CHAT",
       "PORTAL",
       "AI_CURRICULUM",
       "AI_TEACHER",
