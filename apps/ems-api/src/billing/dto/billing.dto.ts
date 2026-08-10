@@ -14,6 +14,7 @@ import {
   MinLength,
   ValidateNested,
 } from "class-validator";
+import { MODULE_KEYS, type ModuleKey } from "@/schools/school-modules";
 
 const INTERVALS = ["MONTHLY", "YEARLY"] as const;
 
@@ -55,6 +56,17 @@ export class CreatePlanDto {
   @IsInt()
   @Min(1)
   maxStaff?: number;
+
+  @ApiPropertyOptional({
+    enum: MODULE_KEYS,
+    isArray: true,
+    description:
+      "Modules this plan includes. Omit or leave empty and the plan takes the default set — see school-modules.ts.",
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(MODULE_KEYS, { each: true })
+  modules?: ModuleKey[];
 }
 
 export class UpdatePlanDto {
@@ -75,6 +87,17 @@ export class UpdatePlanDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    enum: MODULE_KEYS,
+    isArray: true,
+    description:
+      "Replaces the plan's module list. Takes effect immediately for every school on this plan, except where a school has its own override.",
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(MODULE_KEYS, { each: true })
+  modules?: ModuleKey[];
 }
 
 export class SubscribeSchoolDto {

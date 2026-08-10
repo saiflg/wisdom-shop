@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
 import { LOCALES, LOCALE_LABELS, isComplete, type TranslationKey } from "@/lib/i18n";
 import { useTheme, THEMES, type Theme } from "@/lib/theme-provider";
 import { findActiveLeaf, flattenLeaves, visibleGroups } from "@/lib/navigation";
+import { useSchoolModules } from "@/lib/use-school-modules";
 
 function asKey(key: string): TranslationKey {
   return key as TranslationKey;
@@ -37,7 +38,11 @@ export function AppHeader() {
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const groups = useMemo(() => visibleGroups(user?.roles ?? []), [user?.roles]);
+  const { data: entitlements } = useSchoolModules();
+  const groups = useMemo(
+    () => visibleGroups(user?.roles ?? [], entitlements?.modules),
+    [user?.roles, entitlements?.modules],
+  );
   const active = useMemo(() => findActiveLeaf(groups, pathname), [groups, pathname]);
 
   const searchResults = useMemo(() => {
@@ -241,7 +246,11 @@ export function Breadcrumbs() {
   const pathname = usePathname() ?? "";
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const groups = useMemo(() => visibleGroups(user?.roles ?? []), [user?.roles]);
+  const { data: entitlements } = useSchoolModules();
+  const groups = useMemo(
+    () => visibleGroups(user?.roles ?? [], entitlements?.modules),
+    [user?.roles, entitlements?.modules],
+  );
   const active = useMemo(() => findActiveLeaf(groups, pathname), [groups, pathname]);
 
   return (

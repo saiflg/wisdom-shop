@@ -6,13 +6,28 @@ import { platformAuthHeaders, usePlatformAuthStore } from "@/store/platform-auth
 
 export type SchoolStatus = "PROVISIONING" | "ACTIVE" | "SUSPENDED" | "FAILED";
 
+/** A module key — see apps/ems-api/src/schools/school-modules.ts. */
+export type ModuleKey = string;
+
+export interface ModuleDefinition {
+  key: ModuleKey;
+  label: string;
+  description: string;
+  group: string;
+  /** Core modules cannot be switched off, and the console must not offer to. */
+  core: boolean;
+}
+
 export interface School {
   id: string;
   name: string;
   slug: string;
   databaseName: string;
+  customDomain: string | null;
   status: SchoolStatus;
   licenseKey: string | null;
+  /** What this school may actually use, after the plan and its own exceptions. */
+  modules: ModuleKey[];
   createdAt: string;
   updatedAt: string;
 }
@@ -34,9 +49,23 @@ export interface LifecycleEvent {
   createdAt: string;
 }
 
+export interface ModuleChange {
+  id: string;
+  module: ModuleKey;
+  enabled: boolean;
+  reason: string;
+  actorEmail: string;
+  createdAt: string;
+}
+
 export interface SchoolDetail extends School {
   provisioningAttempts: ProvisioningAttempt[];
   lifecycleEvents: LifecycleEvent[];
+  moduleChanges: ModuleChange[];
+  /** What the plan grants, before this school's own exceptions. */
+  planModules: ModuleKey[];
+  /** Only the exceptions, so the console can show which switches are overrides. */
+  overrides: Record<string, boolean>;
 }
 
 const SCHOOLS_KEY = ["platform", "schools"];
@@ -89,6 +118,63 @@ export function useCreateSchool() {
         body: input,
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: SCHOOLS_KEY }),
+  });
+}
+
+export interface UpdateSchoolInput {
+  name?: string;
+  /** An empty string clears it, which is distinct from omitting the field. */
+  customDomain?: string;
+}
+
+export function useUpdateSchool(schoolId: string) {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateSchoolInput) =>
+      apiFetch<School>(`/v1/platform/schools/${schoolId}`, {
+        method: "PATCH",
+        headers: platformAuthHeaders(token),
+        body: input,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: SCHOOLS_KEY }),
+  });
+}
+
+/** The catalog is a property of the build, so it never changes while the console is open. */
+export function useModuleCatalog() {
+  const token = useToken();
+  const enabled = useAuthed();
+  return useQuery({
+    queryKey: [...SCHOOLS_KEY, "module-catalog"],
+    enabled,
+    staleTime: Infinity,
+    queryFn: () =>
+      apiFetch<ModuleDefinition[]>("/v1/platform/schools/modules/catalog", {
+        headers: platformAuthHeaders(token),
+      }),
+  });
+}
+
+export interface SetModulesInput {
+  modules: { module: ModuleKey; enabled: boolean }[];
+  reason: string;
+}
+
+export function useSetSchoolModules(schoolId: string) {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SetModulesInput) =>
+      apiFetch<SchoolDetail>(`/v1/platform/schools/${schoolId}/modules`, {
+        method: "PUT",
+        headers: platformAuthHeaders(token),
+        body: input,
+      }),
+    onSuccess: (detail) => {
+      queryClient.setQueryData([...SCHOOLS_KEY, schoolId], detail);
+      void queryClient.invalidateQueries({ queryKey: SCHOOLS_KEY });
+    },
   });
 }
 

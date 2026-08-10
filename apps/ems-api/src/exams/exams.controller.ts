@@ -15,6 +15,7 @@ import {
   UpdateExamDto,
   UpdateQuestionDto,
 } from "./dto/exams.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
  * Examinations and CBT.
@@ -27,6 +28,7 @@ import {
  */
 @ApiTags("exams")
 @ApiBearerAuth()
+@RequiresModule("EXAMS")
 @Controller("exams")
 export class ExamsController {
   constructor(

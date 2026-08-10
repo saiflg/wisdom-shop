@@ -4,9 +4,11 @@ import type { Response } from "express";
 import { CurrentUser } from "@/auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { PdfService } from "./pdf.service";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("pdf")
 @ApiBearerAuth()
+@RequiresModule("DOCUMENTS")
 @Controller("pdf")
 export class PdfController {
   constructor(private readonly pdf: PdfService) {}

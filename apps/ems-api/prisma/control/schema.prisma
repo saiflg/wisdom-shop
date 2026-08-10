@@ -53,11 +53,24 @@ model School {
   /// error. Null for schools a platform admin created directly.
   licenseKey   String?      @unique
 
+  /// Per-school exceptions to what the plan includes, as
+  /// `{ "PAYROLL": true, "AI_TEACHER": false }`. Null means "whatever the
+  /// plan says", which is the ordinary case.
+  ///
+  /// A JSON blob rather than a join table because it is sparse, read as a
+  /// whole or not at all, and never queried across schools. Unknown keys are
+  /// dropped on read — see school-modules.ts — so a renamed module cannot
+  /// become an entitlement, and core modules are re-added after the
+  /// overrides are applied so no mis-click here can take a school's students
+  /// away.
+  moduleOverrides Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   provisioningAttempts ProvisioningAttempt[]
   lifecycleEvents      SchoolLifecycleEvent[]
+  moduleChanges        SchoolModuleChange[]
   subscription         Subscription?
   invoices             Invoice[]
 
@@ -94,6 +107,33 @@ model SchoolLifecycleEvent {
 
 /// Forensic trail for onboarding: the concrete answer to "what happened
 /// when provisioning failed partway", queryable without grepping logs.
+/// Who switched which module on or off for a school, and why.
+///
+/// One row per module changed rather than one per save, so the history reads
+/// as a list of decisions ("payroll enabled, because they upgraded") rather
+/// than as diffs somebody has to reconstruct. Same reasoning as
+/// SchoolLifecycleEvent, and the actor is likewise stored by value: deleting
+/// a departed operator's account must not erase what they granted.
+model SchoolModuleChange {
+  id       String @id @default(cuid())
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  /// A ModuleKey — see school-modules.ts. Deliberately a plain string: this
+  /// is history, and it must survive a module being renamed or retired.
+  module  String
+  enabled Boolean
+  reason  String
+
+  actorPlatformUserId String
+  actorEmail          String
+
+  createdAt DateTime @default(now())
+
+  @@index([schoolId, createdAt])
+  @@map("school_module_changes")
+}
+
 model ProvisioningAttempt {
   id           String   @id @default(cuid())
   schoolId     String
@@ -191,6 +231,14 @@ model SubscriptionPlan {
   maxStudents Int?
   maxStaff    Int?
   isActive    Boolean @default(true)
+
+  /// Module keys this plan includes, e.g. ["ATTENDANCE", "FEES"]. See
+  /// school-modules.ts for the catalog and for why an *empty* list means
+  /// "this plan has no opinion, use the defaults" rather than "nothing" —
+  /// plans written before modules existed have an empty array, and reading
+  /// that as a total switch-off would take every existing school down on the
+  /// deploy that introduced this column.
+  modules String[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

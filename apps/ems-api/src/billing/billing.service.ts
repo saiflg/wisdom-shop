@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { InvoiceStatus, Prisma } from "ems-control-client";
 import { ControlPrismaService } from "@/control-db/control-prisma.service";
+import { SchoolModulesService } from "@/schools/school-modules.service";
 import { addInterval, computeInvoiceTotals, formatInvoiceNumber, periodFor, type InvoiceLineInput } from "./billing-math";
 import { explainInvoiceRefusal, explainSubscriptionRefusal } from "./billing-status";
 import { selectCycleWork } from "./billing-cycle";
@@ -25,7 +26,10 @@ export interface BillingCycleResult {
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
 
-  constructor(private readonly controlPrisma: ControlPrismaService) {}
+  constructor(
+    private readonly controlPrisma: ControlPrismaService,
+    private readonly schoolModules: SchoolModulesService,
+  ) {}
 
   // ── Plans ────────────────────────────────────────────────────────────
 
@@ -46,7 +50,18 @@ export class BillingService {
    */
   async updatePlan(id: string, dto: UpdatePlanDto) {
     await this.getPlan(id);
-    return this.controlPrisma.subscriptionPlan.update({ where: { id }, data: dto });
+    const plan = await this.controlPrisma.subscriptionPlan.update({ where: { id }, data: dto });
+
+    // Modules are deliberately *not* snapshotted the way price is, and the
+    // asymmetry is the point: a customer must never see their bill change
+    // because someone edited the catalogue, but they should absolutely see
+    // the module they just paid for appear without waiting for a renewal.
+    //
+    // Every school on this plan is now stale, and working out which ones
+    // those are costs more than clearing the lot.
+    if (dto.modules) this.schoolModules.invalidateAll();
+
+    return plan;
   }
 
   private async getPlan(id: string) {

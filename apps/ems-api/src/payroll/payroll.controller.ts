@@ -8,6 +8,7 @@ import { PayrollService } from "./payroll.service";
 import { PayslipPdfService } from "./payslip-pdf.service";
 import { SetSalaryComponentsDto } from "./dto/set-salary-components.dto";
 import { CreatePayrollRunDto } from "./dto/create-payroll-run.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
  * Payroll.
@@ -18,6 +19,7 @@ import { CreatePayrollRunDto } from "./dto/create-payroll-run.dto";
 @ApiTags("payroll")
 @ApiBearerAuth()
 @Roles("SCHOOL_ADMIN")
+@RequiresModule("PAYROLL")
 @Controller("payroll")
 export class PayrollController {
   constructor(

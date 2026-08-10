@@ -13,9 +13,11 @@ import {
   UpdateFinanceSettingsDto,
   VoidInvoiceDto,
 } from "./dto/fees.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("fees")
 @ApiBearerAuth()
+@RequiresModule("FEES")
 @Controller("fees")
 export class FeesController {
   constructor(private readonly fees: FeesService) {}

@@ -29,6 +29,11 @@ export type NavIcon =
 export interface NavLeaf {
   /** i18n key, e.g. "nav.students.list". Also the stable id for favorites/recents. */
   key: string;
+  /**
+   * The purchasable module this belongs to, if any — see the Super Admin
+   * console. Absent means core, and every school has it.
+   */
+  module?: string;
   /** Present only when the route exists. Absent = planned, rendered disabled. */
   href?: string;
   roles?: NavRole[];
@@ -38,6 +43,8 @@ export interface NavGroup {
   key: string;
   icon: NavIcon;
   roles?: NavRole[];
+  /** Set only where an entire section belongs to one module, e.g. Messaging. */
+  module?: string;
   items: NavLeaf[];
 }
 
@@ -51,7 +58,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       // First for everybody, but only students and guardians have anything
       // behind it — it tells staff so rather than showing a broken page.
-      { key: "nav.dashboard.my", href: "/my" },
+      { key: "nav.dashboard.my", href: "/my", module: "PORTAL" },
       { key: "nav.dashboard.overview", href: "/dashboard" },
       { key: "nav.dashboard.analytics" },
       { key: "nav.dashboard.notifications" },
@@ -68,10 +75,10 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "nav.students.dashboard" },
       { key: "nav.students.registration", href: "/students", roles: ADMIN_ONLY },
-      { key: "nav.students.bulkImport", href: "/data-exchange", roles: ADMIN_ONLY },
+      { key: "nav.students.bulkImport", href: "/data-exchange", roles: ADMIN_ONLY, module: "DATA_EXCHANGE" },
       { key: "nav.students.list", href: "/students" },
       { key: "nav.students.portal" },
-      { key: "nav.students.attendance", href: "/attendance" },
+      { key: "nav.students.attendance", href: "/attendance", module: "ATTENDANCE" },
       { key: "nav.students.academicRecords" },
       { key: "nav.students.behaviour" },
       { key: "nav.students.medical" },
@@ -112,7 +119,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.staff.nonTeaching", href: "/staff?group=non-teaching", roles: ADMIN_ONLY },
       // HR is where somebody goes to ask who has read whose bank details.
       { key: "nav.staff.hr", href: "/staff/access-log", roles: ADMIN_ONLY },
-      { key: "nav.staff.payroll", href: "/payroll", roles: ADMIN_ONLY },
+      { key: "nav.staff.payroll", href: "/payroll", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.welfare", roles: ADMIN_ONLY },
       { key: "nav.staff.loans", roles: ADMIN_ONLY },
       { key: "nav.staff.salaryAdvance", roles: ADMIN_ONLY },
@@ -130,13 +137,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.academics.classes", href: "/classes" },
       { key: "nav.academics.sections" },
       { key: "nav.academics.subjects", href: "/subjects" },
-      { key: "nav.academics.curriculum", href: "/schemes-of-work" },
+      { key: "nav.academics.curriculum", href: "/schemes-of-work", module: "ACADEMICS" },
       { key: "nav.academics.lessonPlans", href: "/lesson-plans" },
       { key: "nav.academics.lessonNotes" },
-      { key: "nav.academics.aiTeaching", href: "/ai-teacher" },
+      { key: "nav.academics.aiTeaching", href: "/ai-teacher", module: "AI_TEACHER" },
       { key: "nav.academics.liveClassroom" },
-      { key: "nav.academics.timetable", href: "/timetable" },
-      { key: "nav.academics.homework", href: "/homework" },
+      { key: "nav.academics.timetable", href: "/timetable", module: "TIMETABLE" },
+      { key: "nav.academics.homework", href: "/homework", module: "HOMEWORK" },
       { key: "nav.academics.assignments" },
     ],
   },
@@ -144,17 +151,17 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "nav.examination",
     icon: "examination",
     items: [
-      { key: "nav.examination.setup", href: "/assessments", roles: STAFF },
-      { key: "nav.examination.questionBank", href: "/question-bank", roles: STAFF },
+      { key: "nav.examination.setup", href: "/assessments", roles: STAFF, module: "GRADING" },
+      { key: "nav.examination.questionBank", href: "/question-bank", roles: STAFF, module: "EXAMS" },
       { key: "nav.examination.quizzes", href: "/quizzes" },
       // Everyone: staff build and mark here, students sit here.
-      { key: "nav.examination.cbt", href: "/exams" },
+      { key: "nav.examination.cbt", href: "/exams", module: "EXAMS" },
       // The AI drafting tool lives on the question bank screen — a separate
       // page would be the same list with one extra button.
-      { key: "nav.examination.aiExamination", href: "/question-bank", roles: STAFF },
-      { key: "nav.examination.results", href: "/results", roles: STAFF },
+      { key: "nav.examination.aiExamination", href: "/question-bank", roles: STAFF, module: "AI_CURRICULUM" },
+      { key: "nav.examination.results", href: "/results", roles: STAFF, module: "GRADING" },
       { key: "nav.examination.resultTemplates", roles: ADMIN_ONLY },
-      { key: "nav.examination.reportCards", href: "/report-cards" },
+      { key: "nav.examination.reportCards", href: "/report-cards", module: "DOCUMENTS" },
       { key: "nav.examination.transcript" },
     ],
   },
@@ -162,6 +169,9 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "nav.finance",
     icon: "finance",
     roles: [...ADMIN_ONLY, "GUARDIAN"],
+    // The whole section is one module: a school without fees has no use for
+    // invoices, discounts or scholarships either.
+    module: "FEES",
     items: [
       { key: "nav.finance.fees", href: "/fee-structures", roles: ADMIN_ONLY },
       { key: "nav.finance.invoices", href: "/invoices" },
@@ -176,6 +186,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     key: "nav.messaging",
     icon: "messaging",
+    module: "MESSAGING",
     items: [
       { key: "nav.messaging.templates", href: "/messaging/templates", roles: ADMIN_ONLY },
       { key: "nav.messaging.outbox", href: "/messaging/outbox", roles: ADMIN_ONLY },
@@ -215,10 +226,29 @@ export function isVisibleTo(roles: NavRole[] | undefined, userRoles: string[]): 
   return roles.some((role) => userRoles.includes(role));
 }
 
+/**
+ * True when the school has the module this item belongs to.
+ *
+ * `undefined` modules means "not part of any purchasable module", which is
+ * the answer for the dashboard, settings and everything core.
+ *
+ * **Unknown entitlements show everything.** While the modules request is in
+ * flight `modules` is undefined, and hiding the whole menu for a second on
+ * every page load would be worse than briefly showing an item the API will
+ * refuse. This is a courtesy, not a control — ModuleGuard is the control.
+ */
+export function hasModule(module: string | undefined, modules: string[] | undefined): boolean {
+  if (!module || !modules) return true;
+  return modules.includes(module);
+}
+
 /** Groups and leaves the user may see, with empty groups dropped. */
-export function visibleGroups(userRoles: string[]): NavGroup[] {
-  return NAV_GROUPS.filter((group) => isVisibleTo(group.roles, userRoles))
-    .map((group) => ({ ...group, items: group.items.filter((item) => isVisibleTo(item.roles, userRoles)) }))
+export function visibleGroups(userRoles: string[], modules?: string[]): NavGroup[] {
+  return NAV_GROUPS.filter((group) => isVisibleTo(group.roles, userRoles) && hasModule(group.module, modules))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => isVisibleTo(item.roles, userRoles) && hasModule(item.module, modules)),
+    }))
     .filter((group) => group.items.length > 0);
 }
 

@@ -10,6 +10,7 @@ import {
   SubmitWorkDto,
   UpdateAssignmentDto,
 } from "./dto/homework.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
  * Homework: a teacher sets work, students hand it in, it is marked.
@@ -22,6 +23,7 @@ import {
  */
 @ApiTags("homework")
 @ApiBearerAuth()
+@RequiresModule("HOMEWORK")
 @Controller("homework")
 export class HomeworkController {
   constructor(private readonly homework: HomeworkService) {}

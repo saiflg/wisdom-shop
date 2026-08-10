@@ -7,6 +7,7 @@ import { QuizzesService } from "./quizzes.service";
 import { CreateQuizDto } from "./dto/create-quiz.dto";
 import { GenerateQuizDto } from "./dto/generate-quiz.dto";
 import { UpdateQuizDto } from "./dto/update-quiz.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("quizzes")
 @ApiBearerAuth()
@@ -22,6 +23,7 @@ export class QuizzesController {
   }
 
   @Post("generate")
+  @RequiresModule("AI_CURRICULUM")
   @Roles("SCHOOL_ADMIN", "TEACHER")
   @ApiOperation({ summary: "Generate a quiz with AI — 403 if the school's mode is MANUAL" })
   generate(@Body() dto: GenerateQuizDto, @CurrentUser() user: AuthenticatedUser) {

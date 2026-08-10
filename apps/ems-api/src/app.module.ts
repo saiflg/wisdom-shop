@@ -8,6 +8,7 @@ import { TenancyModule } from "./tenancy/tenancy.module";
 import { TenantContextInterceptor } from "./tenancy/tenant-context.interceptor";
 import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
 import { RolesGuard } from "./auth/guards/roles.guard";
+import { ModuleGuard } from "./schools/guards/module.guard";
 import { HealthModule } from "./health/health.module";
 import { PlatformAuthModule } from "./platform-auth/platform-auth.module";
 import { SchoolsModule } from "./schools/schools.module";
@@ -105,6 +106,10 @@ import { BrandingModule } from "./branding/branding.module";
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Last of the three: there is no point asking whether the school bought a
+    // module until we know who is asking and that they are allowed. Inert
+    // without @RequiresModule, so it costs nothing on ungated routes.
+    { provide: APP_GUARD, useClass: ModuleGuard },
     // Runs after guards (interceptor stage), so req.user is already set —
     // see TenantContextInterceptor's own comment for why this matters.
     { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },

@@ -7,6 +7,8 @@ import { ApiError } from "@/lib/api";
 import { useChangeSchoolStatus, useSchool } from "@/lib/use-schools";
 import { StatusBadge } from "@/components/status-badge";
 import { SubscriptionPanel } from "@/components/subscription-panel";
+import { SchoolDetailsPanel } from "@/components/school-details-panel";
+import { SchoolModulesPanel } from "@/components/school-modules-panel";
 
 export default function SchoolDetailPage() {
   const params = useParams<{ id: string }>();
@@ -37,7 +39,11 @@ export default function SchoolDetailPage() {
         </p>
       </div>
 
+      <SchoolDetailsPanel school={school} />
+
       <SubscriptionPanel schoolId={school.id} />
+
+      <SchoolModulesPanel school={school} />
 
       <LifecycleActions schoolId={school.id} status={school.status} />
 

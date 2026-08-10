@@ -10,9 +10,11 @@ import {
   RecordMarksDto,
   UpsertGradeScaleDto,
 } from "./dto/grading.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("grading")
 @ApiBearerAuth()
+@RequiresModule("GRADING")
 @Controller("grading")
 export class GradingController {
   constructor(private readonly grading: GradingService) {}

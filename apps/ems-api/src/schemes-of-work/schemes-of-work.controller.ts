@@ -7,6 +7,7 @@ import { SchemesOfWorkService } from "./schemes-of-work.service";
 import { CreateSchemeOfWorkDto } from "./dto/create-scheme-of-work.dto";
 import { GenerateSchemeOfWorkDto } from "./dto/generate-scheme-of-work.dto";
 import { UpdateSchemeOfWorkDto } from "./dto/update-scheme-of-work.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("schemes-of-work")
 @ApiBearerAuth()
@@ -22,6 +23,7 @@ export class SchemesOfWorkController {
   }
 
   @Post("generate")
+  @RequiresModule("AI_CURRICULUM")
   @Roles("SCHOOL_ADMIN", "TEACHER")
   @ApiOperation({ summary: "Generate a scheme of work with AI — 403 if the school's mode is MANUAL" })
   generate(@Body() dto: GenerateSchemeOfWorkDto, @CurrentUser() user: AuthenticatedUser) {

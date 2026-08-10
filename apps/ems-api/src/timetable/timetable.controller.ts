@@ -11,9 +11,11 @@ import {
   UpsertAssignmentDto,
   UpsertEntryDto,
 } from "./dto/timetable.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("timetable")
 @ApiBearerAuth()
+@RequiresModule("TIMETABLE")
 @Controller("timetable")
 export class TimetableController {
   constructor(private readonly timetable: TimetableService) {}

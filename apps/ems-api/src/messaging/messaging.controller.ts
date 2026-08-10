@@ -4,9 +4,11 @@ import type { MessageEvent, MessageStatus } from "ems-tenant-client";
 import { Roles } from "@/auth/decorators/roles.decorator";
 import { MessagingService } from "./messaging.service";
 import { UpdateTemplateDto } from "./dto/messaging.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("messaging")
 @ApiBearerAuth()
+@RequiresModule("MESSAGING")
 @Controller("messaging")
 export class MessagingController {
   constructor(private readonly messaging: MessagingService) {}

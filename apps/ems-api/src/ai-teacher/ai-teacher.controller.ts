@@ -8,6 +8,7 @@ import { LessonResourcesService } from "./lesson-resources.service";
 import { StartSessionDto } from "./dto/start-session.dto";
 import { AskQuestionDto } from "./dto/ask-question.dto";
 import { CreateLessonResourceDto } from "./dto/create-lesson-resource.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
  * The AI Teacher: a tutoring conversation grounded in the school's own
@@ -20,6 +21,7 @@ import { CreateLessonResourceDto } from "./dto/create-lesson-resource.dto";
  */
 @ApiTags("ai-teacher")
 @ApiBearerAuth()
+@RequiresModule("AI_TEACHER")
 @Controller("ai-teacher/sessions")
 export class AiTeacherController {
   constructor(private readonly aiTeacher: AiTeacherService) {}

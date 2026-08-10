@@ -7,6 +7,7 @@ import { LessonPlansService } from "./lesson-plans.service";
 import { CreateLessonPlanDto } from "./dto/create-lesson-plan.dto";
 import { GenerateLessonPlanDto } from "./dto/generate-lesson-plan.dto";
 import { UpdateLessonPlanDto } from "./dto/update-lesson-plan.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("lesson-plans")
 @ApiBearerAuth()
@@ -22,6 +23,7 @@ export class LessonPlansController {
   }
 
   @Post("generate")
+  @RequiresModule("AI_CURRICULUM")
   @Roles("SCHOOL_ADMIN", "TEACHER")
   @ApiOperation({ summary: "Generate a lesson plan with AI — 403 if the school's mode is MANUAL" })
   generate(@Body() dto: GenerateLessonPlanDto, @CurrentUser() user: AuthenticatedUser) {

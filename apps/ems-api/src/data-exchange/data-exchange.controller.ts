@@ -15,6 +15,7 @@ import type { Response } from "express";
 import { Roles } from "@/auth/decorators/roles.decorator";
 import { DataExchangeService } from "./data-exchange.service";
 import type { SheetFormat } from "./workbook";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
  * Typed structurally rather than via `Express.Multer.File`, which would mean
@@ -31,6 +32,7 @@ const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 @ApiTags("data-exchange")
 @ApiBearerAuth()
+@RequiresModule("DATA_EXCHANGE")
 @Controller("data")
 export class DataExchangeController {
   constructor(private readonly data: DataExchangeService) {}

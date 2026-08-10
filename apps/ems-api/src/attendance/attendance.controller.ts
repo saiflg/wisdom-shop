@@ -5,9 +5,11 @@ import { CurrentUser } from "@/auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { AttendanceService } from "./attendance.service";
 import { AmendAttendanceDto, TakeRegisterDto } from "./dto/attendance.dto";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("attendance")
 @ApiBearerAuth()
+@RequiresModule("ATTENDANCE")
 @Controller("attendance")
 export class AttendanceController {
   constructor(private readonly attendance: AttendanceService) {}

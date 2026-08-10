@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
 import { findActiveLeaf, flattenLeaves, visibleGroups, type NavGroup, type NavLeaf } from "@/lib/navigation";
 import { useBranding } from "@/lib/branding-context";
+import { useSchoolModules } from "@/lib/use-school-modules";
 import { NavIconGlyph, ChevronIcon, StarIcon } from "./nav-icon";
 import { SchoolMark } from "./school-mark";
 
@@ -40,7 +41,14 @@ export function Sidebar() {
 
   useEffect(() => hydrate(), [hydrate]);
 
-  const groups = useMemo(() => visibleGroups(userRoles ?? []), [userRoles]);
+  // Modules are undefined until the request lands, and `visibleGroups` shows
+  // everything in that case — a menu that flickers empty on every page load
+  // would be worse than briefly offering a link the API will refuse.
+  const { data: entitlements } = useSchoolModules();
+  const groups = useMemo(
+    () => visibleGroups(userRoles ?? [], entitlements?.modules),
+    [userRoles, entitlements?.modules],
+  );
   const active = useMemo(() => findActiveLeaf(groups, pathname), [groups, pathname]);
 
   // Record the visit and auto-open the owning group when the route changes.

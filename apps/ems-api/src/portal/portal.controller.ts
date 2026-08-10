@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "@/auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { PortalService } from "./portal.service";
+import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
  * What a student or a family sees when they sign in.
@@ -12,6 +13,7 @@ import { PortalService } from "./portal.service";
  */
 @ApiTags("portal")
 @ApiBearerAuth()
+@RequiresModule("PORTAL")
 @Controller("portal")
 export class PortalController {
   constructor(private readonly portal: PortalService) {}
