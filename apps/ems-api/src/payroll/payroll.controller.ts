@@ -6,8 +6,10 @@ import { CurrentUser } from "@/auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { PayrollService } from "./payroll.service";
 import { PayslipPdfService } from "./payslip-pdf.service";
+import { VoucherService } from "./voucher.service";
 import { SetSalaryComponentsDto } from "./dto/set-salary-components.dto";
 import { CreatePayrollRunDto } from "./dto/create-payroll-run.dto";
+import { DownloadVoucherDto } from "./dto/download-voucher.dto";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
@@ -25,7 +27,43 @@ export class PayrollController {
   constructor(
     private readonly payroll: PayrollService,
     private readonly pdf: PayslipPdfService,
+    private readonly voucher: VoucherService,
   ) {}
+
+  @Get("runs/:id/voucher")
+  @ApiOperation({ summary: "The whole run as a voucher, with page subtotals" })
+  buildVoucher(@Param("id") id: string) {
+    // Account numbers stay masked here. This feeds a screen, and a screen is
+    // read over somebody's shoulder.
+    return this.voucher.build(id, { revealAccountNumbers: false });
+  }
+
+  @Post("runs/:id/voucher.xlsx")
+  @ApiOperation({
+    summary: "Download the salary voucher as a spreadsheet",
+    description:
+      "A POST rather than a GET because it is an audited disclosure of every staff bank account, not a page view.",
+  })
+  async voucherWorkbook(
+    @Param("id") id: string,
+    @Body() dto: DownloadVoucherDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response,
+  ) {
+    // Revealing fifty account numbers at once is a bigger disclosure than the
+    // single guarded reveal on a staff record. It defaults to masked, and the
+    // service writes one access-log row per person — refusing to reveal at
+    // all without a named viewer.
+    const { buffer, filename } = await this.voucher.toWorkbook(id, {
+      revealAccountNumbers: dto.includeAccountNumbers === true,
+      viewer: { id: user.id },
+      rowsPerPage: dto.rowsPerPage,
+    });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
+  }
 
   @Get("staff/:userId/components")
   @ApiOperation({ summary: "A staff member's salary, with a preview of what it comes to" })

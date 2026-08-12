@@ -771,6 +771,16 @@ model StaffProfile {
   startDate      DateTime?
   endDate        DateTime?
 
+  /// "Degree", "NCE", "Diploma" — free text rather than an enum, because the
+  /// list differs by country and by what a school chooses to record, and an
+  /// enum would need a migration every time a school hired somebody with a
+  /// qualification nobody had anticipated. Printed on the salary voucher.
+  qualification String?
+  /// One line the bursar writes against a person on the voucher — "on leave",
+  /// "half month", "resigned 14th". Belongs to the person rather than to a
+  /// single month's payslip, because it is usually a standing note.
+  remark        String?
+
   /// Where this person sits in the school's leadership, if anywhere.
   ///
   /// Deliberately NOT a role. Roles decide what the software lets you do, and
