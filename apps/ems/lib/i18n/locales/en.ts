@@ -76,8 +76,7 @@ export const en = {
   "nav.students.transport": "Transport",
   "nav.students.library": "Library",
   "nav.students.documents": "Documents",
-  "nav.students.promotion": "Promotion",
-  "nav.students.graduation": "Graduation",
+  "nav.students.promotion": "End of year",
   "nav.students.wallet": "Student wallet",
   "nav.students.idCards": "Student ID cards",
 

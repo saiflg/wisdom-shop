@@ -20,6 +20,7 @@ import { ClassesModule } from "./classes/classes.module";
 import { StudentsModule } from "./students/students.module";
 import { TeachersModule } from "./teachers/teachers.module";
 import { GuardiansModule } from "./guardians/guardians.module";
+import { PromotionModule } from "./promotion/promotion.module";
 import { EnrollmentsModule } from "./enrollments/enrollments.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
 import { CurriculumSettingsModule } from "./curriculum-settings/curriculum-settings.module";
@@ -79,6 +80,7 @@ import { BrandingModule } from "./branding/branding.module";
     StudentsModule,
     TeachersModule,
     GuardiansModule,
+    PromotionModule,
     EnrollmentsModule,
     OnboardingModule,
     CurriculumSettingsModule,

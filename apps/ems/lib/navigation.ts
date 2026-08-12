@@ -86,8 +86,12 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.students.transport" },
       { key: "nav.students.library" },
       { key: "nav.students.documents" },
-      { key: "nav.students.promotion", roles: ADMIN_ONLY },
-      { key: "nav.students.graduation", roles: ADMIN_ONLY },
+      // Graduation used to sit below this as its own item. It is the same
+      // screen: a final-year class is one whose destination is "Leaving the
+      // school", chosen in the same dropdown as everywhere else. A second
+      // menu item pointing at the same page teaches people there are two
+      // procedures when there is one.
+      { key: "nav.students.promotion", href: "/promotion", roles: ADMIN_ONLY },
       { key: "nav.students.wallet" },
       { key: "nav.students.idCards" },
     ],
