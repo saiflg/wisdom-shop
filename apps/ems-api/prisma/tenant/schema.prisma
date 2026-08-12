@@ -1035,6 +1035,37 @@ model PayrollRun {
   @@map("payroll_runs")
 }
 
+/// How this school wants its salary voucher laid out.
+///
+/// One row per school — the tenant database holds exactly one school, so this
+/// is a singleton in the same way CurriculumSettings is. Kept out of the code
+/// because schools genuinely disagree about voucher columns, and a school
+/// admin must be able to change theirs from the portal without waiting for a
+/// release.
+model VoucherSettings {
+  id String @id @default(cuid())
+
+  /// Printed above the table, e.g. "GENERAL VOUCHER". The school's own name
+  /// and the pay period are added around it automatically.
+  title String @default("GENERAL VOUCHER")
+
+  /// Rows between subtotals. A property of the paper the school prints on,
+  /// which is why it is settings rather than a constant.
+  rowsPerPage Int @default(16)
+
+  /// `[{ key, label, source, money }]` — see voucher-layout.ts. Stored as JSON
+  /// rather than as rows in a table because the order IS the meaning here: a
+  /// voucher is a sequence of columns, and reordering rows in SQL to express
+  /// that needs a position column that then has to be kept dense on every
+  /// edit. A single document rewritten wholesale cannot get out of order.
+  columns Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("voucher_settings")
+}
+
 model Payslip {
   id    String     @id @default(cuid())
   runId String

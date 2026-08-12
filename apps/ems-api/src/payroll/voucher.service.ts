@@ -1,16 +1,17 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import type { Prisma } from "ems-tenant-client";
 import ExcelJS from "exceljs";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import { TenantSecretsService } from "@/common/crypto/tenant-secrets.service";
 import { formatPayPeriod } from "./payroll-math";
 import {
   buildVoucher,
-  DEFAULT_VOUCHER_COLUMNS,
   formatCents,
   type Voucher,
   type VoucherColumn,
   type VoucherPayslip,
 } from "./voucher-layout";
+import { parseRowsPerPage, parseVoucherColumns, validateColumns } from "./voucher-settings";
 
 /** What the school prints above the table. */
 export interface VoucherHeading {
@@ -148,7 +149,8 @@ export class VoucherService {
     if (!run) throw new NotFoundException("No payroll run found with that id");
 
     const payslips = await this.gather(runId, options.revealAccountNumbers ?? false, options.viewer);
-    const columns = options.columns ?? DEFAULT_VOUCHER_COLUMNS;
+    const settings = await this.getSettings();
+    const columns = options.columns ?? settings.columns;
 
     // Branding is optional and its displayName is what the school calls
     // itself. A school that never set one still gets a voucher — with a
@@ -159,11 +161,64 @@ export class VoucherService {
     return {
       heading: {
         schoolName: branding?.displayName?.trim() || "School",
-        title: "GENERAL VOUCHER",
+        title: settings.title,
         period: `${formatPayPeriod(run.year, run.month).toUpperCase()} SALARIES AND ALLOWANCES`,
       },
       columns,
-      voucher: buildVoucher(payslips, columns, options.rowsPerPage ?? 16),
+      voucher: buildVoucher(payslips, columns, options.rowsPerPage ?? settings.rowsPerPage),
+    };
+  }
+
+  /**
+   * This school's voucher layout.
+   *
+   * Read-repair rather than seed-at-provisioning: a school created before
+   * this feature existed has no row, and every school would otherwise need a
+   * backfill. The defaults are returned unsaved, so a school that never opens
+   * the editor still gets a working voucher and no row it did not ask for.
+   */
+  async getSettings(): Promise<{ title: string; rowsPerPage: number; columns: VoucherColumn[] }> {
+    const client = await this.tenantPrisma.getClient();
+    const row = await client.voucherSettings.findFirst();
+
+    return {
+      title: row?.title?.trim() || "GENERAL VOUCHER",
+      rowsPerPage: parseRowsPerPage(row?.rowsPerPage),
+      columns: parseVoucherColumns(row?.columns),
+    };
+  }
+
+  /**
+   * Replace the layout wholesale.
+   *
+   * Not a patch: the columns are an ordered sequence, and merging a partial
+   * update into an order is how an editor and a server end up disagreeing
+   * about which column comes third.
+   */
+  async saveSettings(input: { title?: string; rowsPerPage?: number; columns: VoucherColumn[] }) {
+    const client = await this.tenantPrisma.getClient();
+
+    const columns = parseVoucherColumns(input.columns);
+    const problems = validateColumns(columns);
+    if (problems.length > 0) {
+      throw new BadRequestException(problems);
+    }
+
+    const data = {
+      title: input.title?.trim() || "GENERAL VOUCHER",
+      rowsPerPage: parseRowsPerPage(input.rowsPerPage ?? 16),
+      columns: columns as unknown as Prisma.InputJsonValue,
+    };
+
+    const existing = await client.voucherSettings.findFirst({ select: { id: true } });
+    const saved = existing
+      ? await client.voucherSettings.update({ where: { id: existing.id }, data })
+      : await client.voucherSettings.create({ data });
+
+    return {
+      title: saved.title,
+      rowsPerPage: saved.rowsPerPage,
+      columns: parseVoucherColumns(saved.columns),
     };
   }
 

@@ -10,6 +10,7 @@ import { VoucherService } from "./voucher.service";
 import { SetSalaryComponentsDto } from "./dto/set-salary-components.dto";
 import { CreatePayrollRunDto } from "./dto/create-payroll-run.dto";
 import { DownloadVoucherDto } from "./dto/download-voucher.dto";
+import { SaveVoucherSettingsDto } from "./dto/save-voucher-settings.dto";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
@@ -29,6 +30,22 @@ export class PayrollController {
     private readonly pdf: PayslipPdfService,
     private readonly voucher: VoucherService,
   ) {}
+
+  @Get("voucher-settings")
+  @ApiOperation({ summary: "How this school's salary voucher is laid out" })
+  getVoucherSettings() {
+    return this.voucher.getSettings();
+  }
+
+  @Put("voucher-settings")
+  @ApiOperation({
+    summary: "Change the voucher layout",
+    description:
+      "Wholesale rather than piecemeal: the columns are an ordered sequence, and merging a partial update into an order is how an editor and a server end up disagreeing about which column comes third.",
+  })
+  saveVoucherSettings(@Body() dto: SaveVoucherSettingsDto) {
+    return this.voucher.saveSettings(dto);
+  }
 
   @Get("runs/:id/voucher")
   @ApiOperation({ summary: "The whole run as a voucher, with page subtotals" })
