@@ -82,9 +82,8 @@ export const en = {
   "nav.students.idCards": "Student ID cards",
 
   // ── Navigation: Parents ────────────────────────────────────────────
-  "nav.parents.dashboard": "Parent dashboard",
-  "nav.parents.portal": "Parent portal",
-  "nav.parents.list": "Parent list",
+  "nav.parents.dashboard": "Needs attention",
+  "nav.parents.list": "All parents",
   "nav.parents.communication": "Parent communication",
   "nav.parents.payments": "Parent payments",
 

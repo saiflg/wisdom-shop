@@ -97,8 +97,15 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: "parents",
     roles: STAFF,
     items: [
-      { key: "nav.parents.dashboard" },
-      { key: "nav.parents.portal" },
+      // Admin-only: it aggregates fee debt and today's absences across the
+      // whole school, neither of which is a teacher's business.
+      { key: "nav.parents.dashboard", href: "/parents", roles: ADMIN_ONLY },
+      // "Parent portal" used to sit here as a placeholder and has been
+      // removed rather than given a page. In a STAFF sidebar the phrase has
+      // no meaning that the directory and this dashboard do not already
+      // serve — the portal is what a family sees, and staff reach it by
+      // looking at the family. Inventing a page to justify a menu item is
+      // how sidebars fill up with screens nobody opens twice.
       { key: "nav.parents.list", href: "/guardians" },
       // Both of these were built and then only linked from the section they
       // technically belong to (Messaging, Finance). Somebody looking for

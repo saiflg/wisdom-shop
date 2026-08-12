@@ -22,6 +22,14 @@ export class GuardiansController {
     return this.guardians.list();
   }
 
+  // Admin-only, unlike the directory. This one aggregates fee debt and today's
+  // absences across the whole school — a teacher has no business with either.
+  @Get("overview")
+  @ApiOperation({ summary: "What needs attention about families today" })
+  overview() {
+    return this.guardians.overview();
+  }
+
   @Post()
   @ApiOperation({ summary: "Link a guardian (existing or new) to a student" })
   create(@Body() dto: CreateGuardianDto) {

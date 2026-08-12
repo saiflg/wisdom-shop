@@ -3,6 +3,7 @@ import * as argon2 from "argon2";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { CreateGuardianDto } from "./dto/create-guardian.dto";
 import { groupGuardians } from "./guardian-directory";
+import { buildOverview, type OverviewInput } from "./parents-overview";
 
 @Injectable()
 export class GuardiansService {
@@ -87,6 +88,122 @@ export class GuardiansService {
     });
 
     return groupGuardians(links);
+  }
+
+  /**
+   * The morning view of a school's families.
+   *
+   * Everything is read in one pass rather than lazily per card, because the
+   * page shows all of it at once and five sequential round trips on a slow
+   * connection is what makes a dashboard feel broken.
+   *
+   * "Today" is the server's calendar day. A school runs on one clock in one
+   * place, so a per-user timezone would be a fiction — and attendance
+   * registers are already normalised to UTC midnight for the same reason.
+   */
+  async overview() {
+    const client = await this.tenantPrisma.getClient();
+    const now = new Date();
+    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const endOfDay = new Date(startOfDay.getTime() + 86_400_000);
+
+    const [links, threads, absences, invoices] = await Promise.all([
+      client.guardianLink.findMany({
+        where: { studentProfile: { deletedAt: null } },
+        include: {
+          guardianUser: {
+            select: { id: true, firstName: true, lastName: true, email: true, phone: true, passwordHash: true },
+          },
+          studentProfile: { select: { user: { select: { firstName: true, lastName: true } } } },
+        },
+      }),
+      client.parentThread.findMany({
+        where: { lastSide: "FAMILY", studentProfile: { deletedAt: null } },
+        select: {
+          studentProfileId: true,
+          lastMessageAt: true,
+          studentProfile: { select: { user: { select: { firstName: true, lastName: true } } } },
+        },
+      }),
+      client.attendanceRecord.findMany({
+        where: {
+          status: "ABSENT",
+          register: { date: { gte: startOfDay, lt: endOfDay } },
+          studentProfile: { deletedAt: null },
+        },
+        select: {
+          studentProfileId: true,
+          studentProfile: { select: { user: { select: { firstName: true, lastName: true } } } },
+          register: { select: { class: { select: { name: true } } } },
+        },
+      }),
+      client.feeInvoice.findMany({
+        // DRAFT is excluded on purpose: an invoice nobody has issued is not a
+        // debt, and chasing a family for one is worse than not chasing at all.
+        where: { status: { in: ["ISSUED", "PARTIALLY_PAID"] }, studentProfile: { deletedAt: null } },
+        select: {
+          studentProfileId: true,
+          totalCents: true,
+          paidCents: true,
+          currency: true,
+          dueDate: true,
+          studentProfile: { select: { user: { select: { firstName: true, lastName: true } } } },
+        },
+      }),
+    ]);
+
+    // One entry per guardian, carrying every child — the same collapsing the
+    // directory does, because a mother of three is one family here too.
+    const byGuardian = new Map<string, OverviewInput["guardians"][number]>();
+    for (const link of links) {
+      const u = link.guardianUser;
+      let entry = byGuardian.get(u.id);
+      if (!entry) {
+        entry = {
+          guardianUserId: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          email: u.email,
+          phone: u.phone,
+          // The hash itself never leaves this method; only whether one exists.
+          hasPassword: Boolean(u.passwordHash),
+          childNames: [],
+        };
+        byGuardian.set(u.id, entry);
+      }
+      entry.childNames.push(`${link.studentProfile.user.firstName} ${link.studentProfile.user.lastName}`);
+    }
+
+    const name = (p: { user: { firstName: string; lastName: string } }) =>
+      `${p.user.firstName} ${p.user.lastName}`;
+
+    return buildOverview(
+      {
+        guardians: [...byGuardian.values()],
+        awaitingReply: threads.map((t) => ({
+          studentProfileId: t.studentProfileId,
+          studentName: name(t.studentProfile),
+          waitingSince: t.lastMessageAt ?? now,
+        })),
+        absentToday: absences.map((a) => ({
+          studentProfileId: a.studentProfileId,
+          studentName: name(a.studentProfile),
+          className: a.register.class?.name ?? null,
+        })),
+        outstandingInvoices: invoices
+          .map((i) => ({
+            studentProfileId: i.studentProfileId,
+            studentName: name(i.studentProfile),
+            outstandingCents: i.totalCents - i.paidCents,
+            currency: i.currency,
+            dueDate: i.dueDate,
+          }))
+          // A fully paid invoice can still sit in PARTIALLY_PAID if the last
+          // payment settled it exactly; owing nothing is not a debt.
+          .filter((i) => i.outstandingCents > 0),
+      },
+      now,
+    );
   }
 
   async remove(linkId: string) {
