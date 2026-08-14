@@ -781,6 +781,15 @@ model StaffProfile {
   startDate      DateTime?
   endDate        DateTime?
 
+  /// Which part of the school this person belongs to — "Primary",
+  /// "Secondary", "Islamiyyah", "Security", "Kitchen".
+  ///
+  /// Free text and distinct from jobTitle: a school has Primary teachers and
+  /// Secondary teachers with the same job title, and turnover is read by
+  /// section because that is where a gap has to be filled. An enum would need
+  /// a migration every time a school opened a new wing.
+  section String?
+
   /// How much to recover from this person's salary each month towards their
   /// own children's school fees.
   ///

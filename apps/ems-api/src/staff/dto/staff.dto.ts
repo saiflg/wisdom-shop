@@ -81,6 +81,16 @@ export class UpsertStaffProfileDto {
   @Min(0)
   childFeeDeductionCents?: number;
 
+  @ApiPropertyOptional({
+    example: "Primary",
+    description:
+      "Which part of the school this person belongs to. Distinct from job title: staff turnover is read by section, because that is where a gap has to be filled.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  section?: string;
+
   @ApiPropertyOptional({ example: "Degree", description: "Printed on the salary voucher" })
   @IsOptional()
   @IsString()

@@ -41,6 +41,19 @@ export class StaffController {
     return this.staff.accessLog();
   }
 
+  // Before `:userId`, or "turnover" is read as a user id and every request
+  // 404s — the same trap the module catalog route documents.
+  @Get("turnover")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Who has left, by section, and what replacing them costs",
+    description:
+      "Somebody whose last day is still ahead is not counted: their resignation is in, but the post is not yet vacant and the school is still paying them.",
+  })
+  turnover() {
+    return this.staff.turnover();
+  }
+
   @Get(":userId")
   @Roles("SCHOOL_ADMIN")
   @ApiOperation({ summary: "One staff member, bank details masked" })

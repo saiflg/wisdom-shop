@@ -137,6 +137,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.staff.nonTeaching", href: "/staff?group=non-teaching", roles: ADMIN_ONLY },
       // HR is where somebody goes to ask who has read whose bank details.
       { key: "nav.staff.hr", href: "/staff/access-log", roles: ADMIN_ONLY },
+      // Not gated on PAYROLL, unlike the schedules: a school that does not run
+      // payroll here still needs to know who has left and where the gap is.
+      { key: "nav.staff.turnover", href: "/staff/turnover", roles: ADMIN_ONLY },
       { key: "nav.staff.payroll", href: "/payroll", roles: ADMIN_ONLY, module: "PAYROLL" },
       // The document a bursar signs, and the screen where a school decides
       // what that document looks like. Separate from the payroll run itself:

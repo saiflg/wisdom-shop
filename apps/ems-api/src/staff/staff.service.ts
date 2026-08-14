@@ -5,6 +5,7 @@ import { TenantSecretsService } from "@/common/crypto/tenant-secrets.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { toMaskedBankDetails, validateBankDetails } from "./bank-details";
 import type { RegisterStaffDto, RevealAccountNumberDto, UpsertStaffProfileDto } from "./dto/staff.dto";
+import { buildTurnover } from "./staff-turnover";
 
 const UNIQUE_VIOLATION = "P2002";
 
@@ -155,6 +156,7 @@ export class StaffService {
       qualification: dto.qualification?.trim() || null,
       remark: dto.remark?.trim() || null,
       pensionPin: dto.pensionPin?.trim() || null,
+      section: dto.section?.trim() || null,
       // Undefined means "not part of this edit" and leaves the arrangement
       // alone; a screen that omits the field must not silently switch off a
       // fee recovery somebody agreed to.
@@ -231,6 +233,54 @@ export class StaffService {
     return client.bankDetailAccess.findMany({ orderBy: { createdAt: "desc" }, take: 200 });
   }
 
+  /**
+   * Who has left, grouped by the section they left a gap in.
+   *
+   * Somebody whose end date is in the future is still working: their
+   * resignation is in, but counting them as gone would show a vacancy that is
+   * not open and a salary the school is still paying.
+   */
+  async turnover(asAt = new Date()) {
+    const client = await this.tenantPrisma.getClient();
+
+    const profiles = await client.staffProfile.findMany({
+      where: { endDate: { not: null, lte: asAt } },
+      select: {
+        id: true,
+        section: true,
+        jobTitle: true,
+        startDate: true,
+        endDate: true,
+        user: { select: { firstName: true, lastName: true } },
+        // Their final payslip: what they were actually last paid. Salary
+        // components get edited and deleted after somebody leaves; a payslip
+        // is a snapshot of what really happened.
+        payslips: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { netCents: true, run: { select: { year: true, month: true } } },
+        },
+      },
+    });
+
+    return buildTurnover(
+      profiles.map((profile) => ({
+        staffProfileId: profile.id,
+        name: `${profile.user.firstName} ${profile.user.lastName}`,
+        section: profile.section,
+        jobTitle: profile.jobTitle,
+        startDate: profile.startDate,
+        // Non-null by the query above; narrowed here rather than asserted so
+        // a future change to the filter cannot silently produce an invalid row.
+        endDate: profile.endDate ?? asAt,
+        lastMonthlyCents: profile.payslips[0]?.netCents ?? null,
+        // The school's currency is shown once in the page heading rather than
+        // against every row, as it is on the voucher.
+        currency: null,
+      })),
+    );
+  }
+
   private present(user: {
     id: string;
     email: string | null;
@@ -251,6 +301,7 @@ export class StaffService {
       qualification: string | null;
       remark: string | null;
       pensionPin: string | null;
+      section: string | null;
       childFeeDeductionCents: number;
     } | null;
   }) {
@@ -282,6 +333,7 @@ export class StaffService {
       // pension account but cannot move money out of it, and it is printed on
       // a schedule that leaves the building every month regardless.
       pensionPin: profile?.pensionPin ?? null,
+      section: profile?.section ?? null,
       childFeeDeductionCents: profile?.childFeeDeductionCents ?? 0,
       bank: toMaskedBankDetails(profile ?? {}, accountNumber),
     };
