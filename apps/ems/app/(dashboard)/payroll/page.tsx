@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api";
 import { useAuthQueryState } from "@/lib/api-auth";
 import { useStaff } from "@/lib/use-staff";
 import { SalaryEditor } from "@/components/salary-editor";
+import { ChecklistWarning, PayrollChecklist } from "@/components/payroll-checklist";
 import {
   downloadPayslipPdf,
   downloadTransferFile,
@@ -248,6 +249,14 @@ function RunDetail({ id }: { id: string }) {
         <Total label="Net" value={money(run.summary.netCents)} emphasis />
       </div>
 
+      {/* The checks come before the approve button because that is the order
+          the work happens in. Only while it is still a draft: once a month is
+          approved the list stops being a prompt and becomes a record, kept
+          below with the rest of the run. */}
+      {run.status === "DRAFT" && <PayrollChecklist runId={id} />}
+
+      {run.status === "DRAFT" && <ChecklistWarning runId={id} />}
+
       <div className="flex flex-wrap gap-2">
         {run.status === "DRAFT" && (
           <>
@@ -299,6 +308,8 @@ function RunDetail({ id }: { id: string }) {
           salary is edited.
         </p>
       )}
+
+      {run.status !== "DRAFT" && <PayrollChecklist runId={id} readOnly />}
 
       {message && (
         <p role="status" className={message.tone === "ok" ? "text-sm text-emerald-600" : "text-sm text-red-600"}>

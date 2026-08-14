@@ -54,8 +54,29 @@ export interface PayrollRun {
   payslips?: Payslip[];
 }
 
+export interface ChecklistItem {
+  id: string;
+  label: string;
+  position: number;
+  done: boolean;
+  doneAt: string | null;
+  doneByName: string | null;
+  note: string | null;
+}
+
+export interface Checklist {
+  runId: string;
+  period: { year: number; month: number };
+  runStatus: PayrollRunStatus;
+  items: ChecklistItem[];
+  progress: { total: number; done: number; percent: number; complete: boolean };
+  /** Something to read before approving, or null. Never a reason to block. */
+  warning: string | null;
+}
+
 const RUNS_KEY = ["payroll", "runs"];
 const SALARY_KEY = ["payroll", "salary"];
+const CHECKLIST_KEY = ["payroll", "checklist"];
 
 export function useSalary(userId: string | null) {
   const { accessToken, enabled } = useAuthQueryState();
@@ -133,6 +154,67 @@ export function useApproveRun(id: string) {
 
 export function useMarkRunPaid(id: string) {
   return useRunAction(id, "paid");
+}
+
+export function useChecklist(runId: string | null) {
+  const { accessToken, enabled } = useAuthQueryState();
+  return useQuery({
+    queryKey: [...CHECKLIST_KEY, runId],
+    enabled: enabled && Boolean(runId),
+    queryFn: () =>
+      apiFetch<Checklist>(`/v1/payroll/runs/${runId}/checklist`, { headers: authHeaders(accessToken) }),
+  });
+}
+
+/**
+ * Ticking, adding and removing all return the whole list.
+ *
+ * So the cache is replaced with the server's answer rather than invalidated
+ * and refetched: a tick that appears to land and then reverts on the refetch
+ * is worse than one that takes a moment, and this way the screen can never
+ * disagree with what was stored.
+ */
+function useChecklistMutation<TInput>(
+  runId: string,
+  request: (input: TInput, token: string | null) => Promise<Checklist>,
+) {
+  const accessToken = useAuthQueryState().accessToken;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TInput) => request(input, accessToken),
+    onSuccess: (checklist) => queryClient.setQueryData([...CHECKLIST_KEY, runId], checklist),
+  });
+}
+
+export function useSetChecklistItem(runId: string) {
+  return useChecklistMutation<{ itemId: string; done: boolean; note?: string }>(
+    runId,
+    ({ itemId, done, note }, token) =>
+      apiFetch<Checklist>(`/v1/payroll/runs/${runId}/checklist/${itemId}`, {
+        method: "PATCH",
+        headers: authHeaders(token),
+        body: { done, ...(note === undefined ? {} : { note }) },
+      }),
+  );
+}
+
+export function useAddChecklistItem(runId: string) {
+  return useChecklistMutation<string>(runId, (label, token) =>
+    apiFetch<Checklist>(`/v1/payroll/runs/${runId}/checklist`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: { label },
+    }),
+  );
+}
+
+export function useRemoveChecklistItem(runId: string) {
+  return useChecklistMutation<string>(runId, (itemId, token) =>
+    apiFetch<Checklist>(`/v1/payroll/runs/${runId}/checklist/${itemId}`, {
+      method: "DELETE",
+      headers: authHeaders(token),
+    }),
+  );
 }
 
 /**
