@@ -20,13 +20,20 @@ describe("buildSheet and parseSheet", () => {
     { header: "First name", field: "firstName" },
   ];
 
+  // An .xlsx is a zip archive, and exceljs really does build and unpack one
+  // here rather than pretending to. That comfortably outruns Jest's 5s
+  // default once the whole suite is running in parallel, which made these
+  // tests fail on a loaded machine and pass on an idle one. The assertions
+  // were never the problem, so the timeout is what gets fixed.
+  const SLOW = 30_000;
+
   it.each(["xlsx", "csv"] as const)("round-trips through %s", async (format) => {
     const buffer = await buildSheet(columns, [{ studentCode: "ADM001", firstName: "Ada" }], format);
     const parsed = await parseSheet(buffer, format);
 
     expect(parsed.headers).toEqual(["Admission number", "First name"]);
     expect(parsed.rows[0]).toEqual(["ADM001", "Ada"]);
-  });
+  }, SLOW);
 
   it.each(["xlsx", "csv"] as const)("keeps a leading zero intact through %s", async (format) => {
     // "007" is not seven. Excel turning it into a number silently
@@ -34,36 +41,36 @@ describe("buildSheet and parseSheet", () => {
     const buffer = await buildSheet(columns, [{ studentCode: "007", firstName: "Ada" }], format);
     const parsed = await parseSheet(buffer, format);
     expect(parsed.rows[0]?.[0]).toBe("007");
-  });
+  }, SLOW);
 
   it("writes an empty string where a value is missing rather than 'undefined'", async () => {
     const buffer = await buildSheet(columns, [{ studentCode: "ADM001" }], "csv");
     const parsed = await parseSheet(buffer, "csv");
     expect(parsed.rows[0]?.[1]).toBe("");
-  });
+  }, SLOW);
 
   it("handles a sheet with only headers", async () => {
     const buffer = await buildSheet(columns, [], "xlsx");
     const parsed = await parseSheet(buffer, "xlsx");
     expect(parsed.headers).toEqual(["Admission number", "First name"]);
     expect(parsed.rows).toEqual([]);
-  });
+  }, SLOW);
 
   it("preserves values containing commas and quotes through csv", async () => {
     // The classic csv trap — a name like O'Brien, or "Smith, Jr".
     const buffer = await buildSheet(columns, [{ studentCode: "ADM001", firstName: 'Smith, "Jr"' }], "csv");
     const parsed = await parseSheet(buffer, "csv");
     expect(parsed.rows[0]?.[1]).toBe('Smith, "Jr"');
-  });
+  }, SLOW);
 
   it("preserves non-ASCII names", async () => {
     const buffer = await buildSheet(columns, [{ studentCode: "ADM001", firstName: "Ngọzi Adébáyọ̀" }], "xlsx");
     const parsed = await parseSheet(buffer, "xlsx");
     expect(parsed.rows[0]?.[1]).toBe("Ngọzi Adébáyọ̀");
-  });
+  }, SLOW);
 
   it("truncates an over-long sheet name to Excel's limit instead of failing", async () => {
     const buffer = await buildSheet(columns, [], "xlsx", "a".repeat(60));
     await expect(parseSheet(buffer, "xlsx")).resolves.toBeDefined();
-  });
+  }, SLOW);
 });
