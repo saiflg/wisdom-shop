@@ -148,6 +148,12 @@ export const NAV_GROUPS: NavGroup[] = [
       // recovered the same way, differing only in the word printed on the
       // voucher. Gated on PAYROLL because recovery happens through it.
       { key: "nav.staff.loans", href: "/payroll/loans", roles: ADMIN_ONLY, module: "PAYROLL" },
+      // The two schedules whose audience is outside the school — the tax
+      // authority and the pension administrator. Next to the voucher they are
+      // derived from, rather than filed under Settings, because they are
+      // documents a bursar produces monthly and not options anybody sets once.
+      { key: "nav.staff.paye", href: "/payroll/tax", roles: ADMIN_ONLY, module: "PAYROLL" },
+      { key: "nav.staff.pension", href: "/payroll/pension", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.salaryAdvance", roles: ADMIN_ONLY },
       { key: "nav.staff.medicalAssistance", roles: ADMIN_ONLY },
       { key: "nav.staff.leave" },

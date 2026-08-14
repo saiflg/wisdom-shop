@@ -97,6 +97,8 @@ export const en = {
   "nav.staff.voucher": "Salary voucher",
   "nav.staff.welfare": "Welfare",
   "nav.staff.loans": "Loans",
+  "nav.staff.paye": "PAYE schedule",
+  "nav.staff.pension": "Pension schedule",
   "nav.staff.salaryAdvance": "Salary advance",
   "nav.staff.medicalAssistance": "Medical assistance",
   "nav.staff.leave": "Leave management",
