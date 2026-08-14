@@ -152,6 +152,10 @@ export const NAV_GROUPS: NavGroup[] = [
       // authority and the pension administrator. Next to the voucher they are
       // derived from, rather than filed under Settings, because they are
       // documents a bursar produces monthly and not options anybody sets once.
+      // Under Staff rather than Finance: the money moves out of a salary, and
+      // the person deciding is the one running payroll. It shows up on the
+      // family's invoice either way.
+      { key: "nav.staff.childFees", href: "/payroll/staff-fees", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.paye", href: "/payroll/tax", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.pension", href: "/payroll/pension", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.salaryAdvance", roles: ADMIN_ONLY },
