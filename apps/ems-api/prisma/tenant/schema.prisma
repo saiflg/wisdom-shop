@@ -1068,7 +1068,8 @@ model PayrollRun {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  payslips Payslip[]
+  payslips  Payslip[]
+  checklist PayrollChecklistItem[]
 
   /// One payroll per month. The constraint that stops a school paying
   /// everybody twice because two administrators both pressed the button —
@@ -1149,6 +1150,40 @@ model StaffLoanRepayment {
   @@unique([loanId, runId])
   @@index([loanId])
   @@map("staff_loan_repayments")
+}
+
+/// One month-end check a bursar works through before approving a payroll.
+///
+/// Attached to the run rather than to a school-wide template, and next
+/// month's list is copied from last month's. That means a school's own
+/// wording carries forward without a template entity to keep in step — and a
+/// checklist stays a record of what was checked FOR THAT MONTH, which is the
+/// thing somebody needs when a payslip is queried a year later.
+model PayrollChecklistItem {
+  id    String     @id @default(cuid())
+  runId String
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  label    String
+  position Int
+
+  /// Null until somebody ticks it. The presence of a time IS the tick.
+  doneAt DateTime?
+  /// Stored by value like the payslip's staffName: who confirmed a check must
+  /// still read correctly after they leave and their account is removed.
+  doneByUserId String?
+  doneByName   String?
+  note         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One of each check per run. Two items with the same wording means
+  /// somebody ticks one, believes the job is done, and the other sits there
+  /// accusing them.
+  @@unique([runId, label])
+  @@index([runId])
+  @@map("payroll_checklist_items")
 }
 
 /// Where this school's pension contributions go, and on what terms.

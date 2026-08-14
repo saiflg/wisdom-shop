@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Param, Patch, Post, Put, Query, Res } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Put, Query, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Roles } from "@/auth/decorators/roles.decorator";
@@ -15,7 +15,9 @@ import { SavePensionSettingsDto } from "./dto/save-pension-settings.dto";
 import { StatutoryService } from "./statutory.service";
 import { StaffFeesService } from "./staff-fees.service";
 import { LoansService } from "./loans.service";
+import { ChecklistService } from "./checklist.service";
 import { CloseLoanDto, CreateLoanDto, RepayLoanDto } from "./dto/loan.dto";
+import { AddChecklistItemDto, SetChecklistItemDto } from "./dto/checklist.dto";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
@@ -37,6 +39,7 @@ export class PayrollController {
     private readonly statutory: StatutoryService,
     private readonly staffFees: StaffFeesService,
     private readonly loans: LoansService,
+    private readonly checklists: ChecklistService,
   ) {}
 
   @Get("loans")
@@ -80,6 +83,39 @@ export class PayrollController {
   @ApiOperation({ summary: "Write off or cancel a loan" })
   closeLoan(@Param("id") id: string, @Body() dto: CloseLoanDto) {
     return this.loans.close(id, dto.status, dto.note);
+  }
+
+  @Get("runs/:id/checklist")
+  @ApiOperation({
+    summary: "The month-end checks for this run",
+    description:
+      "Created on first sight, seeded from the previous run's list so a school's own wording carries forward. The ticks never carry forward.",
+  })
+  checklist(@Param("id") id: string) {
+    return this.checklists.forRun(id);
+  }
+
+  @Patch("runs/:id/checklist/:itemId")
+  @ApiOperation({ summary: "Tick or untick a month-end check" })
+  setChecklistItem(
+    @Param("id") id: string,
+    @Param("itemId") itemId: string,
+    @Body() dto: SetChecklistItemDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.checklists.setDone(id, itemId, dto.done, { id: user.id }, dto.note);
+  }
+
+  @Post("runs/:id/checklist")
+  @ApiOperation({ summary: "Add a check this school wants on the list" })
+  addChecklistItem(@Param("id") id: string, @Body() dto: AddChecklistItemDto) {
+    return this.checklists.addItem(id, dto.label);
+  }
+
+  @Delete("runs/:id/checklist/:itemId")
+  @ApiOperation({ summary: "Remove a check this school does not need" })
+  removeChecklistItem(@Param("id") id: string, @Param("itemId") itemId: string) {
+    return this.checklists.removeItem(id, itemId);
   }
 
   @Get("staff-fees")
@@ -200,7 +236,7 @@ export class PayrollController {
   @Post("runs")
   @ApiOperation({
     summary: "Open a month's payroll",
-    description: "409 if that month has already been run Ã¢â‚¬â€ a month cannot be paid twice.",
+    description: "409 if that month has already been run — a month cannot be paid twice.",
   })
   createRun(@Body() dto: CreatePayrollRunDto) {
     return this.payroll.createRun(dto);
@@ -230,7 +266,7 @@ export class PayrollController {
   @Patch("runs/:id/paid")
   @ApiOperation({
     summary: "Record that the bank has been instructed",
-    description: "Recorded, never performed Ã¢â‚¬â€ this software does not move money.",
+    description: "Recorded, never performed — this software does not move money.",
   })
   markPaid(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.payroll.markPaid(id, user);

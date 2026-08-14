@@ -7,6 +7,7 @@ import { VoucherService } from "./voucher.service";
 import { StatutoryService } from "./statutory.service";
 import { StaffFeesService } from "./staff-fees.service";
 import { LoansService } from "./loans.service";
+import { ChecklistService } from "./checklist.service";
 
 @Module({
   controllers: [PayrollController],
@@ -17,8 +18,16 @@ import { LoansService } from "./loans.service";
     StatutoryService,
     StaffFeesService,
     LoansService,
+    ChecklistService,
     TenantSecretsService,
   ],
-  exports: [PayrollService, VoucherService, StatutoryService, StaffFeesService, LoansService],
+  exports: [
+    PayrollService,
+    VoucherService,
+    StatutoryService,
+    StaffFeesService,
+    LoansService,
+    ChecklistService,
+  ],
 })
 export class PayrollModule {}
