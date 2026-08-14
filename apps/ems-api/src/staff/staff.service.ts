@@ -152,6 +152,9 @@ export class StaffService {
       bankName: dto.bankName?.trim() || null,
       bankCode: dto.bankCode?.trim() || null,
       accountName: dto.accountName?.trim() || null,
+      qualification: dto.qualification?.trim() || null,
+      remark: dto.remark?.trim() || null,
+      pensionPin: dto.pensionPin?.trim() || null,
       ...(accountNumberEncrypted === undefined ? {} : { accountNumberEncrypted }),
     };
 
@@ -239,6 +242,9 @@ export class StaffService {
       bankCode: string | null;
       accountName: string | null;
       accountNumberEncrypted: string | null;
+      qualification: string | null;
+      remark: string | null;
+      pensionPin: string | null;
     } | null;
   }) {
     const profile = user.staffProfile;
@@ -263,6 +269,12 @@ export class StaffService {
       employmentType: profile?.employmentType ?? null,
       startDate: profile?.startDate ?? null,
       endDate: profile?.endDate ?? null,
+      qualification: profile?.qualification ?? null,
+      remark: profile?.remark ?? null,
+      // Returned in full, unlike the account number. A PIN identifies a
+      // pension account but cannot move money out of it, and it is printed on
+      // a schedule that leaves the building every month regardless.
+      pensionPin: profile?.pensionPin ?? null,
       bank: toMaskedBankDetails(profile ?? {}, accountNumber),
     };
   }

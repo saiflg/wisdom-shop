@@ -60,6 +60,31 @@ export class UpsertStaffProfileDto {
   @MaxLength(160)
   accountName?: string;
 
+  @ApiPropertyOptional({ example: "Degree", description: "Printed on the salary voucher" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  qualification?: string;
+
+  @ApiPropertyOptional({
+    example: "On maternity leave from October",
+    description: "A standing note printed against this person on the voucher",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  remark?: string;
+
+  @ApiPropertyOptional({
+    example: "PEN100862927718",
+    description:
+      "Retirement Savings Account PIN, printed on the pension schedule. Without it the administrator cannot credit the contribution.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  pensionPin?: string;
+
   @ApiPropertyOptional({
     example: "0123456789",
     description: "Stored encrypted and returned masked. Send an empty string to clear it.",

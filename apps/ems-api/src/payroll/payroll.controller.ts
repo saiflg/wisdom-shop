@@ -11,6 +11,8 @@ import { SetSalaryComponentsDto } from "./dto/set-salary-components.dto";
 import { CreatePayrollRunDto } from "./dto/create-payroll-run.dto";
 import { DownloadVoucherDto } from "./dto/download-voucher.dto";
 import { SaveVoucherSettingsDto } from "./dto/save-voucher-settings.dto";
+import { SavePensionSettingsDto } from "./dto/save-pension-settings.dto";
+import { StatutoryService } from "./statutory.service";
 import { LoansService } from "./loans.service";
 import { CloseLoanDto, CreateLoanDto, RepayLoanDto } from "./dto/loan.dto";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
@@ -31,6 +33,7 @@ export class PayrollController {
     private readonly payroll: PayrollService,
     private readonly pdf: PayslipPdfService,
     private readonly voucher: VoucherService,
+    private readonly statutory: StatutoryService,
     private readonly loans: LoansService,
   ) {}
 
@@ -77,6 +80,30 @@ export class PayrollController {
     return this.loans.close(id, dto.status, dto.note);
   }
 
+  @Get("runs/:id/tax-register")
+  @ApiOperation({ summary: "PAYE for one month: who paid, and the total to remit" })
+  taxRegister(@Param("id") id: string) {
+    return this.statutory.taxRegister(id);
+  }
+
+  @Get("runs/:id/pension-register")
+  @ApiOperation({ summary: "The contribution schedule filed with the pension administrator" })
+  pensionRegister(@Param("id") id: string) {
+    return this.statutory.pensionRegister(id);
+  }
+
+  @Get("pension-settings")
+  @ApiOperation({ summary: "Where this school's pension contributions go, and on what terms" })
+  getPensionSettings() {
+    return this.statutory.getPensionSettings();
+  }
+
+  @Put("pension-settings")
+  @ApiOperation({ summary: "Change the pension administrator, account or employer share" })
+  savePensionSettings(@Body() dto: SavePensionSettingsDto) {
+    return this.statutory.savePensionSettings(dto);
+  }
+
   @Get("voucher-settings")
   @ApiOperation({ summary: "How this school's salary voucher is laid out" })
   getVoucherSettings() {
@@ -115,7 +142,7 @@ export class PayrollController {
   ) {
     // Revealing fifty account numbers at once is a bigger disclosure than the
     // single guarded reveal on a staff record. It defaults to masked, and the
-    // service writes one access-log row per person — refusing to reveal at
+    // service writes one access-log row per person â€” refusing to reveal at
     // all without a named viewer.
     const { buffer, filename } = await this.voucher.toWorkbook(id, {
       revealAccountNumbers: dto.includeAccountNumbers === true,
@@ -152,7 +179,7 @@ export class PayrollController {
   @Post("runs")
   @ApiOperation({
     summary: "Open a month's payroll",
-    description: "409 if that month has already been run — a month cannot be paid twice.",
+    description: "409 if that month has already been run â€” a month cannot be paid twice.",
   })
   createRun(@Body() dto: CreatePayrollRunDto) {
     return this.payroll.createRun(dto);
@@ -182,7 +209,7 @@ export class PayrollController {
   @Patch("runs/:id/paid")
   @ApiOperation({
     summary: "Record that the bank has been instructed",
-    description: "Recorded, never performed — this software does not move money.",
+    description: "Recorded, never performed â€” this software does not move money.",
   })
   markPaid(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.payroll.markPaid(id, user);

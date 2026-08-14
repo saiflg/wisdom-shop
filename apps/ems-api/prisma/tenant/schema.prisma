@@ -771,6 +771,16 @@ model StaffProfile {
   startDate      DateTime?
   endDate        DateTime?
 
+  /// The staff member's Retirement Savings Account PIN, printed on the
+  /// schedule filed with the pension administrator. Free text: the format is
+  /// the PFA's to define, not ours, and a school importing existing records
+  /// must not have them rejected by a pattern we invented.
+  ///
+  /// Not encrypted, unlike the bank account number: a PIN identifies an
+  /// account but cannot move money out of it, and it has to be printed on a
+  /// schedule that leaves the building every month anyway.
+  pensionPin String?
+
   /// "Degree", "NCE", "Diploma" — free text rather than an enum, because the
   /// list differs by country and by what a school chooses to record, and an
   /// enum would need a migration every time a school hired somebody with a
@@ -1108,6 +1118,39 @@ model StaffLoanRepayment {
   @@unique([loanId, runId])
   @@index([loanId])
   @@map("staff_loan_repayments")
+}
+
+/// Where this school's pension contributions go, and on what terms.
+///
+/// A singleton per school, like CurriculumSettings. The provider and account
+/// are printed at the top of every schedule, so they belong to the school
+/// rather than to a payroll run.
+model PensionSettings {
+  id String @id @default(cuid())
+
+  /// The Pension Fund Administrator, e.g. "FCMB Pensions Ltd".
+  providerName String?
+  /// Where the combined contribution is paid.
+  remittanceBankName      String?
+  remittanceAccountNumber String?
+
+  /// The employer's share as a percentage OF THE EMPLOYEE'S contribution.
+  ///
+  /// Expressed this way because one number then covers both arrangements seen
+  /// in practice: a school matching its staff pound for pound is 100, and
+  /// Nigeria's statutory 10% employer against 8% employee is 125. A
+  /// percentage of salary would need a definition of salary too, and schools
+  /// disagree about what counts towards it.
+  employerMatchPercent Int @default(100)
+
+  /// Which deduction component carries the employee's contribution. Schools
+  /// name it differently and the register has to find it.
+  componentLabel String @default("Pension")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pension_settings")
 }
 
 /// How this school wants its salary voucher laid out.
