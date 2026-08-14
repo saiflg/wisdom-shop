@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Param, Patch, Post, Put, Res } from "@nestjs/common";
+import { Body, Controller, Get, Header, Param, Patch, Post, Put, Query, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Roles } from "@/auth/decorators/roles.decorator";
@@ -11,6 +11,8 @@ import { SetSalaryComponentsDto } from "./dto/set-salary-components.dto";
 import { CreatePayrollRunDto } from "./dto/create-payroll-run.dto";
 import { DownloadVoucherDto } from "./dto/download-voucher.dto";
 import { SaveVoucherSettingsDto } from "./dto/save-voucher-settings.dto";
+import { LoansService } from "./loans.service";
+import { CloseLoanDto, CreateLoanDto, RepayLoanDto } from "./dto/loan.dto";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 /**
@@ -29,7 +31,51 @@ export class PayrollController {
     private readonly payroll: PayrollService,
     private readonly pdf: PayslipPdfService,
     private readonly voucher: VoucherService,
+    private readonly loans: LoansService,
   ) {}
+
+  @Get("loans")
+  @ApiOperation({ summary: "Loans and salary advances, with what is still owed" })
+  listLoans(@Query("staffProfileId") staffProfileId?: string, @Query("includeSettled") includeSettled?: string) {
+    return this.loans.list({ staffProfileId, includeSettled: includeSettled === "true" });
+  }
+
+  @Post("loans")
+  @ApiOperation({ summary: "Record money lent to a member of staff" })
+  createLoan(@Body() dto: CreateLoanDto) {
+    return this.loans.create(dto);
+  }
+
+  @Get("loans/due")
+  @ApiOperation({
+    summary: "What payroll should recover this month",
+    description: "A preview: nothing is deducted until a payroll run applies it.",
+  })
+  loansDue() {
+    return this.loans.dueForPayroll();
+  }
+
+  @Get("loans/:id")
+  @ApiOperation({ summary: "One loan and every repayment against it" })
+  getLoan(@Param("id") id: string) {
+    return this.loans.get(id);
+  }
+
+  @Post("loans/:id/repayments")
+  @ApiOperation({
+    summary: "Record a repayment",
+    description:
+      "Supplying runId makes it idempotent: the database refuses a second repayment for the same loan and payroll run, so a re-run cannot deduct twice.",
+  })
+  repayLoan(@Param("id") id: string, @Body() dto: RepayLoanDto) {
+    return this.loans.repay(id, dto);
+  }
+
+  @Patch("loans/:id/close")
+  @ApiOperation({ summary: "Write off or cancel a loan" })
+  closeLoan(@Param("id") id: string, @Body() dto: CloseLoanDto) {
+    return this.loans.close(id, dto.status, dto.note);
+  }
 
   @Get("voucher-settings")
   @ApiOperation({ summary: "How this school's salary voucher is laid out" })

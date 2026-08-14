@@ -811,6 +811,7 @@ model StaffProfile {
 
   salaryComponents SalaryComponent[]
   payslips         Payslip[]
+  loans            StaffLoan[]
 
   @@map("staff_profiles")
 }
@@ -1033,6 +1034,80 @@ model PayrollRun {
   /// the same reasoning as the one-invoice-per-subscription-period index.
   @@unique([year, month])
   @@map("payroll_runs")
+}
+
+enum StaffLoanKind {
+  LOAN
+  SALARY_ADVANCE
+}
+
+enum StaffLoanStatus {
+  ACTIVE
+  SETTLED
+  WRITTEN_OFF
+  CANCELLED
+}
+
+/// Money the school has lent a member of staff, recovered from pay.
+model StaffLoan {
+  id             String       @id @default(cuid())
+  staffProfileId String
+  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id], onDelete: Cascade)
+
+  kind StaffLoanKind @default(LOAN)
+  /// Human-quotable, e.g. "LN-2026-0007". Unique so two clerks recording the
+  /// same agreement twice collide instead of creating two debts.
+  reference String @unique
+
+  principalCents Int
+  /// Maintained as repayments land, like FeeInvoice.paidCents, so a balance
+  /// never requires summing the repayment table at read time. The repayments
+  /// remain the record of truth if the two ever disagree.
+  repaidCents           Int @default(0)
+  monthlyDeductionCents Int @default(0)
+
+  issuedOn DateTime        @default(now())
+  status   StaffLoanStatus @default(ACTIVE)
+  note     String?
+
+  repayments StaffLoanRepayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([staffProfileId])
+  @@index([status])
+  @@map("staff_loans")
+}
+
+/// One recovery against a loan. Append-only: a mistaken repayment is reversed
+/// with a further record rather than edited away, because this is the school's
+/// answer to "you already took that off my salary".
+model StaffLoanRepayment {
+  id     String    @id @default(cuid())
+  loanId String
+  loan   StaffLoan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  /// Null for a repayment made in cash rather than through payroll.
+  runId String?
+
+  amountCents Int
+  paidOn      DateTime @default(now())
+  note        String?
+
+  createdAt DateTime @default(now())
+
+  /// THE guard against double recovery. Payroll gets re-run — a correction, a
+  /// late starter, somebody clicking twice — and without this a second pass
+  /// would quietly deduct the same instalment again. Enforced by the database
+  /// rather than by a check in the service, because an invariant a caller can
+  /// forget is not an invariant.
+  ///
+  /// NULL runIds are distinct in Postgres, so any number of cash repayments
+  /// can coexist, which is what we want.
+  @@unique([loanId, runId])
+  @@index([loanId])
+  @@map("staff_loan_repayments")
 }
 
 /// How this school wants its salary voucher laid out.
