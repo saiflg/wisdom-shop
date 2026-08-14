@@ -156,6 +156,17 @@ export class PromotionService {
     const changes = actionable(plan.decisions);
     const now = new Date();
 
+    // Which classes the children actually move into, so the teachers can
+    // follow them. Without this a promoted cohort lands in a class nobody
+    // teaches: the register is empty for last year's teacher, and the new
+    // class has no staff — which also silently locks every teacher out of the
+    // class chat, because posting there requires teaching the class.
+    const movedInto = new Map<string, string>();
+    for (const decision of changes) {
+      if (decision.toClassId) movedInto.set(decision.fromClassId, decision.toClassId);
+    }
+    let carried = 0;
+
     // One transaction: a partial promotion is the state nobody can reason
     // about. If it fails halfway, nothing moved and it can simply be run
     // again — which the ALREADY_DONE check makes safe anyway.
@@ -177,10 +188,51 @@ export class PromotionService {
           });
         }
       }
+
+      // Teachers follow their pupils.
+      //
+      // Copied rather than moved: last year's class keeps its record of who
+      // taught it, which is what a school needs when somebody asks about a
+      // mark awarded then. A class that already has staff is left alone, so
+      // this never overwrites an assignment somebody made deliberately, and
+      // re-running the promotion adds nothing further.
+      for (const [fromClassId, toClassId] of movedInto) {
+        const [existing, source, target] = await Promise.all([
+          tx.teachingAssignment.findFirst({ where: { classId: toClassId } }),
+          tx.teachingAssignment.findMany({ where: { classId: fromClassId } }),
+          tx.class.findUnique({ where: { id: toClassId }, select: { homeroomTeacherId: true } }),
+        ]);
+
+        if (!existing && source.length > 0) {
+          await tx.teachingAssignment.createMany({
+            data: source.map((assignment) => ({
+              classId: toClassId,
+              subjectId: assignment.subjectId,
+              teacherUserId: assignment.teacherUserId,
+              periodsPerWeek: assignment.periodsPerWeek,
+            })),
+          });
+          carried += source.length;
+        }
+
+        if (target && !target.homeroomTeacherId) {
+          const previous = await tx.class.findUnique({
+            where: { id: fromClassId },
+            select: { homeroomTeacherId: true },
+          });
+          if (previous?.homeroomTeacherId) {
+            await tx.class.update({
+              where: { id: toClassId },
+              data: { homeroomTeacherId: previous.homeroomTeacherId },
+            });
+          }
+        }
+      }
     });
 
     return {
       applied: changes.length,
+      teachingAssignmentsCarried: carried,
       summary: plan.summary,
       decisions: changes.map((d: PromotionDecision) => ({
         studentName: d.studentName,

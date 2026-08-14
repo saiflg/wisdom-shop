@@ -47,6 +47,16 @@ model User {
   passwordHash String?
   firstName    String
   lastName     String
+  /// When this person was last active, for the "online now" dot in a class
+  /// chat.
+  ///
+  /// Deliberately coarse. It is written when somebody opens a conversation,
+  /// not on every keystroke or every request: the question a child is asking
+  /// is "is anybody there", and answering it to the minute is enough. A
+  /// precise activity log of children would be surveillance, and this is a
+  /// presence indicator.
+  lastSeenAt   DateTime?
+
   /// Free text and deliberately not unique — two parents legitimately share
   /// a number, and a household landline is one address for a whole family.
   /// Normalisation to E.164 is left to whatever the school's SMS vendor

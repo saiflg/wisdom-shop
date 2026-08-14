@@ -147,7 +147,9 @@ export function ClassChat({ classId }: { classId: string }) {
         )}
 
         {!data.canPost && !data.locked && (
-          <p className="text-sm text-slate-500">You can read this conversation but not post in it.</p>
+          <p className="text-sm text-slate-500">
+            {data.cannotPostReason ?? "You can read this conversation but not post in it."}
+          </p>
         )}
 
         {problem && (

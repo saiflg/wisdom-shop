@@ -14,6 +14,7 @@ import {
   toMessageView,
   type ChatViewer,
 } from "./class-chat-rules";
+import { canSeePresence, describePresence } from "./presence";
 import type { LockConversationDto, PostMessageDto, ReportMessageDto } from "./dto/class-chat.dto";
 
 const PAGE_SIZE = 50;
@@ -42,14 +43,16 @@ export class ClassChatService {
       client.class.findFirst({
         where: { id: classId, deletedAt: null },
         include: {
-          homeroomTeacher: { select: { id: true, firstName: true, lastName: true, email: true } },
+          homeroomTeacher: {
+            select: { id: true, firstName: true, lastName: true, email: true, lastSeenAt: true },
+          },
         },
       }),
       client.enrollment.findMany({
         where: { classId, status: "ACTIVE" },
         include: {
           studentProfile: {
-            include: { user: { select: { id: true, firstName: true, lastName: true } } },
+            include: { user: { select: { id: true, firstName: true, lastName: true, lastSeenAt: true } } },
           },
         },
       }),
@@ -57,7 +60,7 @@ export class ClassChatService {
         where: { classId, teacherUserId: { not: null } },
         include: {
           subject: { select: { id: true, name: true } },
-          teacher: { select: { id: true, firstName: true, lastName: true } },
+          teacher: { select: { id: true, firstName: true, lastName: true, lastSeenAt: true } },
         },
       }),
       client.staffProfile.findMany({
@@ -68,12 +71,20 @@ export class ClassChatService {
 
     if (!klass) throw new NotFoundException("No class found with that id");
 
+    // A guardian is told nobody's presence at all — which of their child's
+    // classmates is online in the evening is another family's business.
+    const now = new Date();
+    const showPresence = canSeePresence(viewer);
+    const seen = (lastSeenAt: Date | null) =>
+      showPresence ? describePresence(lastSeenAt, now) : { presence: "AWAY" as const, online: false, label: "" };
+
     return {
       class: { id: klass.id, name: klass.name, gradeLevel: klass.gradeLevel, academicYear: klass.academicYear },
       classTeacher: klass.homeroomTeacher
         ? {
             id: klass.homeroomTeacher.id,
             name: `${klass.homeroomTeacher.firstName} ${klass.homeroomTeacher.lastName}`,
+            ...seen(klass.homeroomTeacher.lastSeenAt),
           }
         : null,
       subjectTeachers: teaching
@@ -82,6 +93,7 @@ export class ClassChatService {
           id: assignment.teacher!.id,
           name: `${assignment.teacher!.firstName} ${assignment.teacher!.lastName}`,
           subject: assignment.subject.name,
+          ...seen(assignment.teacher!.lastSeenAt),
         })),
       leadership: leaders.map((profile) => ({
         id: profile.user.id,
@@ -98,9 +110,25 @@ export class ClassChatService {
           // list tells thirty children who their classmates are; it is not a
           // contact list for them.
           studentCode: isStaff(viewer) ? enrollment.studentProfile.studentCode : null,
+          ...seen(enrollment.studentProfile.user.lastSeenAt),
         }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-      you: { canPost: canPost(viewer, { lockedAt: null }), isStaff: isStaff(viewer) },
+        // Online first, then alphabetically. The question the list answers is
+        // "who is about right now", and burying the two people who are here
+        // among thirty who are not answers it badly.
+        .sort((a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name)),
+      you: {
+        canPost: canPost(viewer, { lockedAt: null }),
+        isStaff: isStaff(viewer),
+        // Said out loud so a teacher who cannot post learns why here, rather
+        // than concluding the chat is broken. This exact confusion cost a
+        // support round trip: the teacher taught last year's class and the
+        // students had been promoted into a new one with nobody assigned.
+        cannotPostReason: canPost(viewer, { lockedAt: null })
+          ? null
+          : isStaff(viewer)
+            ? "You can read this class but not post in it — you are not assigned to teach it. An administrator can add you as its class teacher or give you a teaching assignment."
+            : "You can read this conversation but not post in it.",
+      },
     };
   }
 
@@ -108,6 +136,17 @@ export class ClassChatService {
     const client = await this.tenantPrisma.getClient();
     const viewer = await this.viewerFor(classId, user);
     if (!canReadConversation(viewer)) throw new ForbiddenException("You are not in this class");
+
+    // Presence is written here and nowhere else: opening a conversation is
+    // the one action that means "I am in this room". Updating it on every
+    // authenticated request would turn a presence dot into an activity log of
+    // children, which is a different and much worse thing.
+    //
+    // Fire-and-forget on purpose — a class chat must not fail to load because
+    // a presence write did.
+    void client.user
+      .update({ where: { id: user.id }, data: { lastSeenAt: new Date() } })
+      .catch(() => undefined);
 
     const conversation = await this.ensureConversation(classId);
 
@@ -128,6 +167,17 @@ export class ClassChatService {
       // students are being told about who is reading.
       notice: SUPERVISION_NOTICE,
       canPost: canPost(viewer, conversation),
+      // Why not, in words the reader can act on. A teacher who cannot post
+      // otherwise concludes the chat is broken; the actual cause is almost
+      // always that they are not assigned to this class — which happens by
+      // itself when a cohort is promoted into a new one.
+      cannotPostReason: canPost(viewer, conversation)
+        ? null
+        : conversation.lockedAt
+          ? null // The lock notice above already explains this one.
+          : isStaff(viewer)
+            ? "You are not assigned to teach this class, so you can read it but not post. An administrator can make you its class teacher or give you a teaching assignment."
+            : "You can read this conversation but not post in it.",
       canModerate: isStaff(viewer),
       messages: messages.reverse().map((message) => toMessageView(message, viewer)),
       hasMore: messages.length === PAGE_SIZE,

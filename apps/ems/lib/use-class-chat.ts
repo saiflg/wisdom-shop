@@ -4,7 +4,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./api";
 import { authHeaders, useAuthQueryState } from "./api-auth";
 
-export interface ClassMember {
+/**
+ * Whether somebody is about.
+ *
+ * Words, never a timestamp: the API deliberately never sends one, so a
+ * classmate cannot read back what time a child was online.
+ */
+export interface Presence {
+  presence: "ONLINE" | "RECENTLY" | "AWAY";
+  online: boolean;
+  label: string;
+}
+
+export interface ClassMember extends Presence {
   id: string;
   studentProfileId: string;
   name: string;
@@ -14,11 +26,17 @@ export interface ClassMember {
 
 export interface ClassMembers {
   class: { id: string; name: string; gradeLevel: string | null; academicYear: string };
-  classTeacher: { id: string; name: string } | null;
-  subjectTeachers: { id: string; name: string; subject: string }[];
+  classTeacher: ({ id: string; name: string } & Presence) | null;
+  subjectTeachers: ({ id: string; name: string; subject: string } & Presence)[];
   leadership: { id: string; name: string; role: string; jobTitle: string | null }[];
+  /** Online first, then alphabetical — sorted by the API. */
   students: ClassMember[];
-  you: { canPost: boolean; isStaff: boolean };
+  you: {
+    canPost: boolean;
+    isStaff: boolean;
+    /** Why not, in words a teacher can act on. Null when they can post. */
+    cannotPostReason: string | null;
+  };
 }
 
 export interface ChatMessage {
@@ -41,6 +59,8 @@ export interface Conversation {
   /** Shown to students, verbatim, above the messages. */
   notice: string;
   canPost: boolean;
+  /** Why not, in words the reader can act on. Null when they can post. */
+  cannotPostReason: string | null;
   canModerate: boolean;
   messages: ChatMessage[];
   hasMore: boolean;

@@ -64,7 +64,22 @@ export default function ClassPage() {
             <dl className="mt-3 space-y-3 text-sm">
               <div>
                 <dt className="text-xs uppercase tracking-wide text-slate-500">Class teacher</dt>
-                <dd className="mt-0.5 font-medium">{data.classTeacher?.name ?? "Not assigned yet"}</dd>
+                <dd className="mt-0.5 font-medium">
+                  {data.classTeacher ? (
+                    <>
+                      {data.classTeacher.name}
+                      {data.classTeacher.online && (
+                        <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                          Online
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    // Worth saying loudly: a class with no teacher assigned is
+                    // also a class whose teachers cannot post in its chat.
+                    <span className="text-amber-700 dark:text-amber-400">Not assigned yet</span>
+                  )}
+                </dd>
               </div>
 
               {data.subjectTeachers.length > 0 && (
@@ -106,8 +121,24 @@ export default function ClassPage() {
               <ul className="mt-3 space-y-1.5">
                 {data.students.map((student) => (
                   <li key={student.id} className="flex items-center gap-2 text-sm">
-                    <PersonPhoto userId={student.id} name={student.name} size="sm" />
+                    <span className="relative shrink-0">
+                      <PersonPhoto userId={student.id} name={student.name} size="sm" />
+                      {student.online && (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-950"
+                          aria-hidden
+                        />
+                      )}
+                    </span>
                     <span className="min-w-0 truncate">{student.name}</span>
+                    {/* Read out for screen readers rather than left as colour
+                        alone, which nobody using one would ever learn. */}
+                    {student.label && <span className="sr-only">{student.label}</span>}
+                    {student.presence === "RECENTLY" && (
+                      <span className="shrink-0 text-xs text-slate-400" aria-hidden>
+                        recently
+                      </span>
+                    )}
                     {student.studentCode && (
                       <span className="ml-auto shrink-0 font-mono text-xs text-slate-500">{student.studentCode}</span>
                     )}
