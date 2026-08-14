@@ -249,6 +249,11 @@ export class StaffService {
 
     return {
       id: user.id,
+      // The employment record's own id, distinct from the user's. Anything
+      // attached to somebody's employment rather than their login — a loan, a
+      // payslip — is keyed on this, and without it a caller has to guess or
+      // fetch each person again. Null for a user with no staff record.
+      staffProfileId: profile?.id ?? null,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,

@@ -144,7 +144,10 @@ export const NAV_GROUPS: NavGroup[] = [
       // done by different people on different days.
       { key: "nav.staff.voucher", href: "/payroll/voucher", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.welfare", roles: ADMIN_ONLY },
-      { key: "nav.staff.loans", roles: ADMIN_ONLY },
+      // Loans and salary advances are one register, not two: the same money
+      // recovered the same way, differing only in the word printed on the
+      // voucher. Gated on PAYROLL because recovery happens through it.
+      { key: "nav.staff.loans", href: "/payroll/loans", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.salaryAdvance", roles: ADMIN_ONLY },
       { key: "nav.staff.medicalAssistance", roles: ADMIN_ONLY },
       { key: "nav.staff.leave" },

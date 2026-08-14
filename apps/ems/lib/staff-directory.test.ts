@@ -12,6 +12,7 @@ import type { StaffMember } from "./use-staff";
 function member(overrides: Partial<StaffMember> = {}): StaffMember {
   return {
     id: "u1",
+    staffProfileId: "sp1",
     email: "ade.balogun@example.com",
     firstName: "Ade",
     lastName: "Balogun",
