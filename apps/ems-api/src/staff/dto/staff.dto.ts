@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsIn, IsISO8601, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import {
+  IsEmail,
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  Min,
+  MinLength,
+} from "class-validator";
 import { STRONG_PASSWORD_REGEX } from "@/schools/strong-password.regex";
 
 export const EMPLOYMENT_TYPES = ["FULL_TIME", "PART_TIME", "CONTRACT", "VOLUNTEER"] as const;
@@ -15,7 +26,7 @@ export const EMPLOYMENT_TYPES = ["FULL_TIME", "PART_TIME", "CONTRACT", "VOLUNTEE
 export const STAFF_ROLES = ["TEACHER", "SCHOOL_ADMIN"] as const;
 
 export class UpsertStaffProfileDto {
-  @ApiPropertyOptional({ description: "School-issued staff number — the key a re-imported spreadsheet matches on" })
+  @ApiPropertyOptional({ description: "School-issued staff number â€” the key a re-imported spreadsheet matches on" })
   @IsOptional()
   @IsString()
   @MaxLength(40)
@@ -48,7 +59,7 @@ export class UpsertStaffProfileDto {
   @MaxLength(120)
   bankName?: string;
 
-  @ApiPropertyOptional({ example: "011", description: "Sort code or routing number — not secret" })
+  @ApiPropertyOptional({ example: "011", description: "Sort code or routing number â€” not secret" })
   @IsOptional()
   @IsString()
   @MaxLength(20)
@@ -59,6 +70,16 @@ export class UpsertStaffProfileDto {
   @IsString()
   @MaxLength(160)
   accountName?: string;
+
+  @ApiPropertyOptional({
+    example: 2000000,
+    description:
+      "Recover this much per month, in minor units, towards this person's own children's school fees. Zero (the default) means the arrangement is off.",
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  childFeeDeductionCents?: number;
 
   @ApiPropertyOptional({ example: "Degree", description: "Printed on the salary voucher" })
   @IsOptional()
@@ -101,7 +122,7 @@ export class UpsertStaffProfileDto {
  *
  * Bank details are deliberately absent. They belong on the staff record
  * screen, where the masking and the audited reveal are visible next to the
- * field — entering an account number as one box among ten on a sign-up form
+ * field â€” entering an account number as one box among ten on a sign-up form
  * teaches that it is ordinary, and it is not.
  */
 export class RegisterStaffDto {
@@ -133,7 +154,7 @@ export class RegisterStaffDto {
 
   @ApiProperty({
     enum: STAFF_ROLES,
-    description: "SCHOOL_ADMIN grants administrator access to the whole school — every screen in this module included.",
+    description: "SCHOOL_ADMIN grants administrator access to the whole school â€” every screen in this module included.",
   })
   @IsIn(STAFF_ROLES)
   role!: (typeof STAFF_ROLES)[number];

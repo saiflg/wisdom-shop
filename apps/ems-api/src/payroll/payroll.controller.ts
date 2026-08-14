@@ -13,6 +13,7 @@ import { DownloadVoucherDto } from "./dto/download-voucher.dto";
 import { SaveVoucherSettingsDto } from "./dto/save-voucher-settings.dto";
 import { SavePensionSettingsDto } from "./dto/save-pension-settings.dto";
 import { StatutoryService } from "./statutory.service";
+import { StaffFeesService } from "./staff-fees.service";
 import { LoansService } from "./loans.service";
 import { CloseLoanDto, CreateLoanDto, RepayLoanDto } from "./dto/loan.dto";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
@@ -34,6 +35,7 @@ export class PayrollController {
     private readonly pdf: PayslipPdfService,
     private readonly voucher: VoucherService,
     private readonly statutory: StatutoryService,
+    private readonly staffFees: StaffFeesService,
     private readonly loans: LoansService,
   ) {}
 
@@ -78,6 +80,25 @@ export class PayrollController {
   @ApiOperation({ summary: "Write off or cancel a loan" })
   closeLoan(@Param("id") id: string, @Body() dto: CloseLoanDto) {
     return this.loans.close(id, dto.status, dto.note);
+  }
+
+  @Get("staff-fees")
+  @ApiOperation({
+    summary: "What would come off salaries towards staff children's fees",
+    description: "A preview: nothing is credited until a run applies it.",
+  })
+  staffFeesPreview() {
+    return this.staffFees.preview();
+  }
+
+  @Post("runs/:id/staff-fees")
+  @ApiOperation({
+    summary: "Settle staff children's fees from this run",
+    description:
+      "Idempotent by database constraint: every payment carries the reference payroll:<runId>, and fee payments are unique on (invoice, reference). Applying the same run twice credits nothing further.",
+  })
+  applyStaffFees(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.staffFees.apply(id, { id: user.id });
   }
 
   @Get("runs/:id/tax-register")
@@ -142,7 +163,7 @@ export class PayrollController {
   ) {
     // Revealing fifty account numbers at once is a bigger disclosure than the
     // single guarded reveal on a staff record. It defaults to masked, and the
-    // service writes one access-log row per person â€” refusing to reveal at
+    // service writes one access-log row per person, refusing to reveal at
     // all without a named viewer.
     const { buffer, filename } = await this.voucher.toWorkbook(id, {
       revealAccountNumbers: dto.includeAccountNumbers === true,
@@ -179,7 +200,7 @@ export class PayrollController {
   @Post("runs")
   @ApiOperation({
     summary: "Open a month's payroll",
-    description: "409 if that month has already been run â€” a month cannot be paid twice.",
+    description: "409 if that month has already been run Ã¢â‚¬â€ a month cannot be paid twice.",
   })
   createRun(@Body() dto: CreatePayrollRunDto) {
     return this.payroll.createRun(dto);
@@ -209,7 +230,7 @@ export class PayrollController {
   @Patch("runs/:id/paid")
   @ApiOperation({
     summary: "Record that the bank has been instructed",
-    description: "Recorded, never performed â€” this software does not move money.",
+    description: "Recorded, never performed Ã¢â‚¬â€ this software does not move money.",
   })
   markPaid(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.payroll.markPaid(id, user);

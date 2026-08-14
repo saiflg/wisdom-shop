@@ -5,6 +5,7 @@ import { PayrollService } from "./payroll.service";
 import { PayslipPdfService } from "./payslip-pdf.service";
 import { VoucherService } from "./voucher.service";
 import { StatutoryService } from "./statutory.service";
+import { StaffFeesService } from "./staff-fees.service";
 import { LoansService } from "./loans.service";
 
 @Module({
@@ -14,9 +15,10 @@ import { LoansService } from "./loans.service";
     PayslipPdfService,
     VoucherService,
     StatutoryService,
+    StaffFeesService,
     LoansService,
     TenantSecretsService,
   ],
-  exports: [PayrollService, VoucherService, StatutoryService, LoansService],
+  exports: [PayrollService, VoucherService, StatutoryService, StaffFeesService, LoansService],
 })
 export class PayrollModule {}

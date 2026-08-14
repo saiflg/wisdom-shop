@@ -155,6 +155,12 @@ export class StaffService {
       qualification: dto.qualification?.trim() || null,
       remark: dto.remark?.trim() || null,
       pensionPin: dto.pensionPin?.trim() || null,
+      // Undefined means "not part of this edit" and leaves the arrangement
+      // alone; a screen that omits the field must not silently switch off a
+      // fee recovery somebody agreed to.
+      ...(dto.childFeeDeductionCents === undefined
+        ? {}
+        : { childFeeDeductionCents: Math.max(0, Math.trunc(dto.childFeeDeductionCents)) }),
       ...(accountNumberEncrypted === undefined ? {} : { accountNumberEncrypted }),
     };
 
@@ -245,6 +251,7 @@ export class StaffService {
       qualification: string | null;
       remark: string | null;
       pensionPin: string | null;
+      childFeeDeductionCents: number;
     } | null;
   }) {
     const profile = user.staffProfile;
@@ -275,6 +282,7 @@ export class StaffService {
       // pension account but cannot move money out of it, and it is printed on
       // a schedule that leaves the building every month regardless.
       pensionPin: profile?.pensionPin ?? null,
+      childFeeDeductionCents: profile?.childFeeDeductionCents ?? 0,
       bank: toMaskedBankDetails(profile ?? {}, accountNumber),
     };
   }

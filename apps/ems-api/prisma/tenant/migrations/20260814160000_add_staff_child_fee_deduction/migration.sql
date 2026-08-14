@@ -1,0 +1,11 @@
+-- How much to recover from a staff member's salary each month towards their
+-- own children's school fees.
+--
+-- Zero means off, which is the default: a school must opt each person in,
+-- because deducting fees from somebody's wages without their agreement is not
+-- something to do by accident.
+--
+-- A cap rather than the whole balance. A teacher whose children owe a full
+-- term would otherwise lose an entire month's pay, and spreading it is the
+-- whole point of the arrangement.
+ALTER TABLE "staff_profiles" ADD COLUMN "childFeeDeductionCents" INTEGER NOT NULL DEFAULT 0;

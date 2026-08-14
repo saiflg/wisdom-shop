@@ -771,6 +771,18 @@ model StaffProfile {
   startDate      DateTime?
   endDate        DateTime?
 
+  /// How much to recover from this person's salary each month towards their
+  /// own children's school fees.
+  ///
+  /// Zero means the arrangement is off, which is the default: a school must
+  /// opt each member of staff in, because deducting fees from somebody's wages
+  /// without their agreement is not something to do by accident.
+  ///
+  /// A cap rather than the full balance. A teacher whose children owe a whole
+  /// term would otherwise see an entire month's pay disappear, and the point
+  /// of the arrangement is to spread it.
+  childFeeDeductionCents Int @default(0)
+
   /// The staff member's Retirement Savings Account PIN, printed on the
   /// schedule filed with the pension administrator. Free text: the format is
   /// the PFA's to define, not ours, and a school importing existing records
