@@ -94,6 +94,7 @@ export const en = {
   "nav.staff.nonTeaching": "Non-teaching staff",
   "nav.staff.hr": "HR",
   "nav.staff.payroll": "Payroll",
+  "nav.staff.voucher": "Salary voucher",
   "nav.staff.welfare": "Welfare",
   "nav.staff.loans": "Loans",
   "nav.staff.salaryAdvance": "Salary advance",

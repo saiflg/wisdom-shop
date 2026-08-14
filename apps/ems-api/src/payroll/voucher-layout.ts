@@ -238,7 +238,8 @@ export const DEFAULT_VOUCHER_COLUMNS: VoucherColumn[] = [
   { key: "employed", label: "Date Of Employment", source: { kind: "STAFF", field: "startDate" } },
   { key: "salary", label: "Salary", source: { kind: "COMPONENT", label: "Salary" }, money: true },
   { key: "service", label: "Year Of Service", source: { kind: "COMPONENT", label: "Year Of Service" }, money: true },
-  { key: "scheme", label: "Internal Scheme", source: { kind: "COMPONENT", label: "Internal Scheme" }, money: true },
+  // Gross comes from the payslip's own total, so removing an allowance column
+  // changes what is shown and never what is paid.
   { key: "gross", label: "Gross Salary", source: { kind: "TOTAL", of: "GROSS" }, money: true },
   { key: "others", label: "Others", source: { kind: "COMPONENT", label: "Others" }, money: true },
   { key: "hospital", label: "Hospital & Maternity", source: { kind: "COMPONENT", label: "Hospital & Maternity" }, money: true },

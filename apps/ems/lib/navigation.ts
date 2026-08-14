@@ -138,6 +138,11 @@ export const NAV_GROUPS: NavGroup[] = [
       // HR is where somebody goes to ask who has read whose bank details.
       { key: "nav.staff.hr", href: "/staff/access-log", roles: ADMIN_ONLY },
       { key: "nav.staff.payroll", href: "/payroll", roles: ADMIN_ONLY, module: "PAYROLL" },
+      // The document a bursar signs, and the screen where a school decides
+      // what that document looks like. Separate from the payroll run itself:
+      // running payroll and printing the voucher are different jobs, often
+      // done by different people on different days.
+      { key: "nav.staff.voucher", href: "/payroll/voucher", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.welfare", roles: ADMIN_ONLY },
       { key: "nav.staff.loans", roles: ADMIN_ONLY },
       { key: "nav.staff.salaryAdvance", roles: ADMIN_ONLY },
