@@ -7,6 +7,7 @@ function entry(overrides: Partial<GuardianEntry> = {}): GuardianEntry {
     firstName: "Amina",
     lastName: "Bello",
     email: "amina@example.com",
+    hasPassword: true,
     children: [
       {
         linkId: "l1",

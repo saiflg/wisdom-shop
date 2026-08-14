@@ -24,6 +24,12 @@ export interface GuardianLinkRow {
      * than render an empty cell.
      */
     email: string | null;
+    /**
+     * Whether a password is set. The hash itself never reaches this module —
+     * only whether one exists, so an office can see who still cannot sign in
+     * and send them an invitation.
+     */
+    hasPassword?: boolean;
   };
   studentProfile: {
     id: string;
@@ -45,6 +51,8 @@ export interface GuardianEntry {
   firstName: string;
   lastName: string;
   email: string | null;
+  /** Set, never set — the office needs to know which, to know whom to invite. */
+  hasPassword: boolean;
   children: GuardianChild[];
 }
 
@@ -74,6 +82,7 @@ export function groupGuardians(links: GuardianLinkRow[]): GuardianEntry[] {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        hasPassword: user.hasPassword ?? false,
         children: [],
       };
       byGuardian.set(user.id, entry);

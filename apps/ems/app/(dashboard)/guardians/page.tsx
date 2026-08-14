@@ -6,6 +6,7 @@ import { errorMessage } from "@/lib/api";
 import { useGuardianDirectory } from "@/lib/use-guardians";
 import { filterGuardians, householdSummary, withoutEmail } from "@/lib/guardian-directory";
 import { PersonPhoto } from "@/components/person-photo";
+import { GuardianInvite } from "@/components/guardian-invite";
 
 /**
  * Every family in the school.
@@ -112,6 +113,8 @@ export default function GuardiansPage() {
                   ))}
                 </ul>
               )}
+
+              <GuardianInvite guardian={guardian} />
             </div>
           </li>
         ))}

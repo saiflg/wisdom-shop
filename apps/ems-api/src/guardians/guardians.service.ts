@@ -73,7 +73,9 @@ export class GuardiansService {
     const links = await client.guardianLink.findMany({
       where: { studentProfile: { deletedAt: null } },
       include: {
-        guardianUser: { select: { id: true, firstName: true, lastName: true, email: true } },
+        guardianUser: {
+          select: { id: true, firstName: true, lastName: true, email: true, passwordHash: true },
+        },
         studentProfile: {
           select: {
             id: true,
@@ -87,7 +89,22 @@ export class GuardiansService {
       },
     });
 
-    return groupGuardians(links);
+    // The hash is reduced to a boolean here, before anything else sees the
+    // rows. Handing the raw record to the grouper and trimming it later is
+    // how a password hash reaches a screen the first time somebody adds a
+    // field to the directory.
+    return groupGuardians(
+      links.map((link) => ({
+        ...link,
+        guardianUser: {
+          id: link.guardianUser.id,
+          firstName: link.guardianUser.firstName,
+          lastName: link.guardianUser.lastName,
+          email: link.guardianUser.email,
+          hasPassword: Boolean(link.guardianUser.passwordHash),
+        },
+      })),
+    );
   }
 
   /**

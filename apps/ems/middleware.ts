@@ -39,13 +39,29 @@ const HEADER = "x-school-slug";
  */
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
+/**
+ * An invitation link carries its school in the path, not the query.
+ *
+ * Deliberately, because a query string is the part of a URL that reaches
+ * server logs, proxy logs and Referer headers, and the rest of that path is
+ * a one-time credential. Without this the layout would fall back to a stale
+ * cookie and paint the page in some other school's colours — the exact
+ * half-branded failure this file already exists to prevent.
+ */
+function slugFromPath(pathname: string): string | undefined {
+  return /^\/invite\/([^/]+)\//.exec(pathname)?.[1]?.trim().toLowerCase();
+}
+
 export function middleware(request: NextRequest) {
   const fromQuery = request.nextUrl.searchParams.get("schoolSlug")?.trim().toLowerCase();
+  const fromPath = slugFromPath(request.nextUrl.pathname);
   const fromCookie = request.cookies.get(COOKIE)?.value;
 
-  // The query wins: following a link for a different school should switch to
-  // it, not show the last one because a cookie outranked the URL.
-  const slug = [fromQuery, fromCookie].find((value) => value && SLUG.test(value));
+  // The URL wins over the cookie: following a link for a different school
+  // should switch to it, not show the last one because a cookie outranked
+  // the URL. Path and query are both "the URL"; neither can outrank the
+  // other because no route carries both.
+  const slug = [fromQuery, fromPath, fromCookie].find((value) => value && SLUG.test(value));
 
   const headers = new Headers(request.headers);
   // Always set, never deleted — set to empty when nothing resolved.
@@ -65,7 +81,9 @@ export function middleware(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers } });
 
-  if (fromQuery && slug === fromQuery) {
+  // Remembered from either form of URL, so a parent who finishes setting up
+  // and lands on the sign-in page still sees their own school's colours.
+  if (slug && (slug === fromQuery || slug === fromPath)) {
     response.cookies.set(COOKIE, slug, {
       maxAge: COOKIE_MAX_AGE,
       sameSite: "lax",

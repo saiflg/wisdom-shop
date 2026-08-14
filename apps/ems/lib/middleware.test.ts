@@ -64,6 +64,38 @@ describe("resolving the school for the layout", () => {
   });
 });
 
+describe("an invitation link, which carries its school in the path", () => {
+  it("takes the slug from the path", () => {
+    // The token is the rest of the path and must not reach a query string,
+    // so the slug travels there too — and the layout still has to find it,
+    // or the page is painted in some other school's colours.
+    expect(resolvedSlug("/invite/demo-academy/sometoken")).toBe("demo-academy");
+  });
+
+  it("lets the path beat a stale cookie", () => {
+    expect(resolvedSlug("/invite/other-school/sometoken", "demo-academy")).toBe("other-school");
+  });
+
+  it("remembers it, so the sign-in page after it still looks like their school", () => {
+    const response = middleware(requestFor("/invite/demo-academy/sometoken"));
+    expect(response.cookies.get(COOKIE)?.value).toBe("demo-academy");
+  });
+
+  it("refuses a slug the path cannot legitimately contain", () => {
+    expect(resolvedSlug("/invite/..%2F..%2Fetc/sometoken")).toBeNull();
+    expect(resolvedSlug("/invite/Not A Slug/sometoken")).toBeNull();
+  });
+
+  it("ignores a token-shaped first segment on some other route", () => {
+    // Only /invite/<slug>/… means anything; /students/demo-academy/… does not.
+    expect(resolvedSlug("/students/demo-academy/x")).toBeNull();
+  });
+
+  it("needs the segment after the slug, so a bare /invite/<slug> resolves nothing", () => {
+    expect(resolvedSlug("/invite/demo-academy")).toBeNull();
+  });
+});
+
 describe("what a slug may contain", () => {
   // Each of these would otherwise be handed to a lookup, or reflected into
   // a page, purely because someone put it in a query string.

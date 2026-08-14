@@ -69,6 +69,7 @@ model User {
   deletedAt DateTime?
 
   refreshTokens        RefreshToken[]
+  guardianInvitations  GuardianInvitation[]
   studentProfile       StudentProfile?
   guardianLinks        GuardianLink[]
   /// Storage key for this person's photograph, or null.
@@ -117,6 +118,52 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+/// An invitation for a parent to set up their own portal password.
+///
+/// The office creates one and sends the link; the parent chooses the
+/// password. Nobody at the school ever knows it — which is the whole point,
+/// because an administrator who types a parent's password can sign in as
+/// that family and read their child's record.
+///
+/// Only the SHA-256 digest of the token is stored, exactly like
+/// RefreshToken: a leak of this table hands out nothing usable. The plain
+/// token exists once, in the response to the administrator who created it,
+/// and is never stored, logged or recoverable.
+model GuardianInvitation {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  expiresAt DateTime
+
+  /// Set once, when the parent chooses their password. Single use is
+  /// enforced here rather than by deleting the row, so an office can still
+  /// see that an invitation was taken up and when.
+  acceptedAt DateTime?
+
+  /// Set when a newer invitation supersedes this one, or the office cancels
+  /// it outright.
+  revokedAt DateTime?
+
+  /// SUPERSEDED or CANCELLED. Both are "revoked" to the system and mean
+  /// completely different things to the parent holding the link: one has a
+  /// newer email waiting, the other has nothing to look for. Null on rows
+  /// written before this existed, and read as CANCELLED.
+  revokedReason String?
+
+  /// Who sent it, stored by value alongside the id so it still reads
+  /// correctly after that member of staff leaves.
+  createdByUserId String?
+  createdByName   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("guardian_invitations")
 }
 
 /// Named on a class page so a family knows who is in charge. Not a
