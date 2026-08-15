@@ -18,11 +18,17 @@ import { useAuthStore } from "@/store/auth-store";
 import { BoardDiagram, BoardText, ChalkThinking } from "@/components/lesson-board";
 import { ClassChat } from "@/components/class-chat";
 import { useMyClasses } from "@/lib/use-class-chat";
+import { useLessonVoice } from "@/lib/use-lesson-voice";
 
 export default function TutorLessonPage() {
   const params = useParams<{ id: string }>();
   const sessionId = params?.id ?? "";
   const user = useAuthStore((s) => s.user);
+
+  const board = useRef<HTMLDivElement>(null);
+  const [fullScreen, setFullScreen] = useState(false);
+  const voice = useLessonVoice();
+  const spokenUpTo = useRef<string | null>(null);
 
   const { data: session, isLoading, error } = useTutorSession(sessionId);
   const ask = useAskTutor(sessionId);
@@ -40,6 +46,35 @@ export default function TutorLessonPage() {
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [session?.turns?.length, busy]);
+
+  // Read each new thing the teacher says, once. Keyed on the turn's id rather
+  // than the count, so a refetch that returns the same transcript does not
+  // start the whole lesson again.
+  const turns = session?.turns;
+  useEffect(() => {
+    if (!voice.enabled || !turns?.length) return;
+    const last = turns[turns.length - 1];
+    if (!last || last.role !== "TUTOR" || spokenUpTo.current === last.id) return;
+    spokenUpTo.current = last.id;
+    voice.speak(last.content);
+  }, [turns, voice]);
+
+  // Stop talking the moment narration is switched off, rather than finishing
+  // the paragraph — somebody turning it off usually wants silence now.
+  useEffect(() => {
+    if (!voice.enabled) voice.stop();
+  }, [voice.enabled, voice]);
+
+  // Escape leaves full screen; the browser does the same for its own, and a
+  // child who cannot find the way out of a full-screen page is stuck.
+  useEffect(() => {
+    if (!fullScreen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullScreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullScreen]);
 
   // Only the student whose lesson it is may speak in it; everyone else is
   // reading a record. The API enforces this — the UI just does not pretend
@@ -85,7 +120,14 @@ export default function TutorLessonPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] flex-col space-y-4">
+    <div
+      ref={board}
+      className={
+        fullScreen
+          ? "fixed inset-0 z-50 flex flex-col space-y-4 overflow-y-auto bg-white p-6 dark:bg-slate-950"
+          : "flex h-[calc(100vh-9rem)] flex-col space-y-4"
+      }
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <Link href="/ai-teacher" className="text-xs font-semibold text-brand-600 hover:underline">
@@ -126,7 +168,32 @@ export default function TutorLessonPage() {
           )}
         </div>
 
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {voice.supported && (
+            <button
+              type="button"
+              onClick={() => voice.setEnabled((on) => !on)}
+              aria-pressed={voice.enabled}
+              title={voice.voiceName ? `Read aloud using ${voice.voiceName}` : "Read the lesson aloud"}
+              className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+                voice.enabled
+                  ? "border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
+                  : "border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
+              }`}
+            >
+              {voice.enabled ? (voice.speaking ? "Speaking…" : "Voice on") : "Read aloud"}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setFullScreen((on) => !on)}
+            aria-pressed={fullScreen}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
+          >
+            {fullScreen ? "Exit full screen" : "Full screen"}
+          </button>
+
           {canAct && isClass && session.status === "ACTIVE" && !session.finished && (
             <button
               type="button"
@@ -205,7 +272,56 @@ export default function TutorLessonPage() {
 
       {canAct ? (
         <div className="space-y-2">
-          {isClass && !session.finished && (
+          {/* After a lesson has been taught, the choice is put to the student
+              rather than leaving one button and hoping. A child who did not
+              follow it will press "Continue" anyway if that is the only thing
+              on the screen, and the lesson moves on without them. */}
+          {isClass && !session.finished && session.position > 0 && (session.turns?.length ?? 0) > 0 && !busy && (
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+              <p className="text-sm font-medium">Did that make sense so far?</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void run(() => continueClass.mutateAsync(), "Couldn't load the next lesson.")}
+                  disabled={busy}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
+                >
+                  Yes, carry on
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void run(
+                      () => ask.mutateAsync("Please explain that last part again, more slowly and with a simpler example."),
+                      "Couldn't ask for another explanation.",
+                    )
+                  }
+                  disabled={busy}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
+                >
+                  Explain it again
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void run(
+                      () => ask.mutateAsync("Can you give me one more example of that, please?"),
+                      "Couldn't ask for an example.",
+                    )
+                  }
+                  disabled={busy}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
+                >
+                  Another example
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Asking for more does not lose your place — the next lesson is still {session.currentLesson?.title ?? "waiting"}.
+              </p>
+            </div>
+          )}
+
+          {isClass && !session.finished && (session.position === 0 || (session.turns?.length ?? 0) === 0) && (
             <button
               type="button"
               onClick={() => void run(() => continueClass.mutateAsync(), "Couldn't load the next lesson.")}
@@ -254,11 +370,28 @@ export default function TutorLessonPage() {
           )}
         </div>
       ) : (
-        <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-900">
-          {session.status === "ENDED"
-            ? "This lesson has ended. Its transcript is kept as a record."
-            : "You are reading this lesson's transcript. Only the student can take part in it."}
-        </p>
+        // Loud enough to answer the question somebody actually asks, which is
+        // "where has the question box gone?" — the previous grey whisper was
+        // read as the feature being broken rather than as an explanation.
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+          {session.status === "ENDED" ? (
+            <p>This lesson has ended. Its transcript is kept as a record.</p>
+          ) : (
+            <>
+              <p className="font-semibold">There is no question box on this lesson because it is not yours.</p>
+              <p className="mt-1">
+                {session.startedByUser
+                  ? `${session.startedByUser.firstName} ${session.startedByUser.lastName} is the student taking it`
+                  : "Another student is taking it"}
+                , and only they can speak in it. You are reading the record.{" "}
+                <Link href="/ai-teacher" className="font-semibold underline">
+                  Start your own lesson
+                </Link>{" "}
+                to ask questions.
+              </p>
+            </>
+          )}
+        </div>
       )}
     </div>
   );
@@ -277,11 +410,31 @@ export default function TutorLessonPage() {
  * permanent decision they have to undo later.
  */
 function ClassmatesPanel() {
-  const { data: classes } = useMyClasses();
+  const { data: classes, isLoading } = useMyClasses();
   const [open, setOpen] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
 
   const first = classes?.[0];
+
+  // Said rather than silently omitted. Rendering nothing was defensible and
+  // read as a broken feature: an administrator opening a lesson saw a panel
+  // that simply was not there and reported the class chat as missing. Staff
+  // and parents belong to no class, which is the actual reason.
+  if (!isLoading && !first) {
+    return (
+      <aside className="shrink-0 xl:w-96">
+        <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-xs text-slate-500 dark:border-slate-700">
+          <span className="font-semibold">Class chat</span> is where the students of one class talk to each
+          other. You are not in a class, so there is nothing to show here — open a class from{" "}
+          <Link href="/classes" className="font-semibold text-brand-600 hover:underline">
+            Classes
+          </Link>{" "}
+          to see its conversation.
+        </p>
+      </aside>
+    );
+  }
+
   if (!first) return null;
   const classId = selected ?? first.id;
 
