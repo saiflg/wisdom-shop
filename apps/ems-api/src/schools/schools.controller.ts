@@ -7,8 +7,10 @@ import { PlatformRoles } from "@/platform-auth/decorators/platform-roles.decorat
 import { CurrentPlatformUser } from "@/platform-auth/decorators/current-platform-user.decorator";
 import type { AuthenticatedPlatformUser } from "@/platform-auth/interfaces/platform-jwt-payload.interface";
 import { SchoolsService } from "./schools.service";
+import { FleetMigrationsService } from "@/provisioning/fleet-migrations.service";
 import { MODULE_CATALOG } from "./school-modules";
 import { CreateSchoolDto } from "./dto/create-school.dto";
+import { ApplyMigrationsDto } from "./dto/apply-migrations.dto";
 import { ChangeSchoolStatusDto } from "./dto/change-school-status.dto";
 import { SetSchoolModulesDto, UpdateSchoolDto } from "./dto/update-school.dto";
 
@@ -19,7 +21,10 @@ import { SetSchoolModulesDto, UpdateSchoolDto } from "./dto/update-school.dto";
 @PlatformRoles("PLATFORM_ADMIN")
 @Controller("platform/schools")
 export class SchoolsController {
-  constructor(private readonly schools: SchoolsService) {}
+  constructor(
+    private readonly schools: SchoolsService,
+    private readonly fleet: FleetMigrationsService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: "Onboard a new school: creates its database, applies migrations, seeds its first admin" })
@@ -31,6 +36,30 @@ export class SchoolsController {
   @ApiOperation({ summary: "List all schools" })
   list() {
     return this.schools.list();
+  }
+
+  // Before `:id`, for the same reason as the catalog below: "migrations"
+  // would otherwise be read as a school id.
+  @Get("migrations")
+  @ApiOperation({
+    summary: "Which schools' databases are behind this build",
+    description:
+      "`prisma migrate deploy` runs once, at provisioning — nothing re-runs it, so a migration added today " +
+      "reaches only schools created after today. Read-only: this changes nothing.",
+  })
+  migrationStatus() {
+    return this.fleet.status();
+  }
+
+  @Post("migrations/apply")
+  @ApiOperation({
+    summary: "Bring schools up to date with this build",
+    description:
+      "One school at a time, never in parallel. A failure on one does not stop the rest, and every attempt is " +
+      "recorded against the school like any other provisioning step. Idempotent: a school already current is skipped.",
+  })
+  applyMigrations(@Body() dto: ApplyMigrationsDto) {
+    return this.fleet.apply({ schoolId: dto.schoolId });
   }
 
   // Before `:id`, or "modules" is read as a school id and every catalog
