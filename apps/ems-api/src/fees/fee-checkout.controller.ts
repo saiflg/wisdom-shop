@@ -1,4 +1,4 @@
-import { Controller, Headers, Param, Post, RawBodyRequest, Req } from "@nestjs/common";
+import { Controller, Headers, HttpCode, HttpStatus, Param, Post, RawBodyRequest, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { Public } from "@/auth/decorators/public.decorator";
@@ -39,6 +39,11 @@ export class FeeCheckoutController {
    */
   @Public()
   @Post("fees/webhooks/:provider/:schoolSlug")
+  // Stated as 200 in the comment below and meant it; @Post answers 201 by
+  // default. Both are 2xx and neither provider retries on 201, but Paystack's
+  // documentation asks for 200 and a route whose comment describes a
+  // different status than it returns is a trap for the next reader.
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Payment provider webhook (signed, unauthenticated)" })
   async webhook(
     @Param("provider") provider: string,
