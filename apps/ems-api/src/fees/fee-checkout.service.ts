@@ -6,6 +6,7 @@ import { TenancyService } from "@/tenancy/tenancy.service";
 import { TenantSecretsService } from "@/common/crypto/tenant-secrets.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import type { EnvConfig } from "@/config/env.validation";
+import { choosePayerEmail, explainRefusal } from "./payer-email";
 import { FeesService } from "./fees.service";
 import {
   amountToCredit,
@@ -193,22 +194,46 @@ export class FeeCheckoutService {
   /**
    * Who the gateway should send the receipt to.
    *
-   * A guardian first — they are the one paying — then the student's own
-   * address. Providers reject a checkout with no email, so there is a last
-   * resort that is obviously not a real inbox rather than a plausible one.
+   * A guardian first — they are the one paying — then the student, then the
+   * school's own billing address.
+   *
+   * This used to fall back to "fees@school.invalid" when a family had no
+   * address. `.invalid` is reserved by RFC 2606 so that it can never resolve,
+   * which means every provider refuses it: Paystack answers "Invalid Email
+   * Address Passed", and that reached the person paying as a flat refusal
+   * with nothing to act on. Seeded `.example` addresses fail identically.
+   *
+   * So nothing is invented any more. If no usable address exists the checkout
+   * is refused here, in words naming the child and the fix, rather than being
+   * handed to a gateway that will refuse it less helpfully.
    */
   private async payerEmailFor(studentProfileId: string): Promise<string> {
     const client = await this.tenantPrisma.getClient();
     const profile = await client.studentProfile.findUnique({
       where: { id: studentProfileId },
       include: {
-        user: { select: { email: true } },
+        user: { select: { email: true, firstName: true, lastName: true } },
         guardianLinks: { include: { guardianUser: { select: { email: true } } } },
       },
     });
 
-    const guardianEmail = profile?.guardianLinks.map((link) => link.guardianUser.email).find(Boolean);
-    return guardianEmail ?? profile?.user.email ?? "fees@school.invalid";
+    // The school's own outgoing address, which an administrator already sets
+    // under Settings → Communication. Reused rather than adding a second
+    // "school email" field for them to keep in step with the first.
+    const gateway = await client.emailGatewaySettings.findFirst({ select: { senderEmail: true } });
+
+    const choice = choosePayerEmail({
+      guardianEmails: (profile?.guardianLinks ?? []).map((link) => link.guardianUser.email),
+      studentEmail: profile?.user.email ?? null,
+      schoolEmail: gateway?.senderEmail ?? null,
+    });
+
+    if (!choice.email) {
+      const name = profile ? `${profile.user.firstName} ${profile.user.lastName}` : "this student";
+      throw new BadRequestException(explainRefusal(choice, name));
+    }
+
+    return choice.email;
   }
 
   /**
