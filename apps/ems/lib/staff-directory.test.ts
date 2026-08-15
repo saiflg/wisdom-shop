@@ -16,6 +16,7 @@ function member(overrides: Partial<StaffMember> = {}): StaffMember {
     email: "ade.balogun@example.com",
     firstName: "Ade",
     lastName: "Balogun",
+    hasPassword: true,
     roles: ["TEACHER"],
     staffNumber: "STF-001",
     jobTitle: "Head of Mathematics",

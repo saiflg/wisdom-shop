@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useStaff } from "@/lib/use-staff";
+import { StaffInvite } from "@/components/staff-invite";
 import { PersonPhoto } from "@/components/person-photo";
 import {
   bankSummary,
@@ -160,6 +161,19 @@ export default function StaffDirectoryPage() {
                   {bankSummary(member)}
                 </span>
               </Link>
+
+              {/* Outside the Link, not inside it: a button within an anchor is
+                  a nested interactive element, which is ambiguous to a screen
+                  reader and to a keyboard. Only shown for somebody who has
+                  never signed in — the rest are reachable from their record. */}
+              {!member.hasPassword && member.email && (
+                <div className="mt-1 flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                  <span>
+                    <strong>{member.firstName}</strong> has never signed in.
+                  </span>
+                  <StaffInvite member={member} />
+                </div>
+              )}
             </li>
           );
         })}

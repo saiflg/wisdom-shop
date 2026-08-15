@@ -84,7 +84,7 @@ export class SchemesOfWorkService {
 
     const isStaff = viewer.roles.some((role) => STAFF_ROLES.includes(role));
     if (!isStaff && record.status !== "PUBLISHED") {
-      // 404, not 403 â€” a student/guardian must not learn an unpublished
+      // 404, not 403 — a student/guardian must not learn an unpublished
       // scheme exists at all, same reasoning as students.service.ts.
       throw new NotFoundException("No scheme of work found with that id");
     }

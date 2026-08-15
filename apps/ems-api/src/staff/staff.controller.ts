@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Roles } from "@/auth/decorators/roles.decorator";
 import { CurrentUser } from "@/auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
+import { GuardianInvitationsService } from "@/guardians/guardian-invitations.service";
 import { StaffService } from "./staff.service";
 import { RegisterStaffDto, RevealAccountNumberDto, UpsertStaffProfileDto } from "./dto/staff.dto";
 
@@ -10,7 +11,37 @@ import { RegisterStaffDto, RevealAccountNumberDto, UpsertStaffProfileDto } from 
 @ApiBearerAuth()
 @Controller("staff")
 export class StaffController {
-  constructor(private readonly staff: StaffService) {}
+  constructor(
+    private readonly staff: StaffService,
+    private readonly invitations: GuardianInvitationsService,
+  ) {}
+
+  /**
+   * Invite a member of staff to set up their own password.
+   *
+   * The same mechanism parents use, and for the same reason: an
+   * administrator who types a colleague's password knows how to sign in as
+   * them — and a teacher's account reaches every child's record in the
+   * school, so it matters more here, not less.
+   */
+  @Post(":userId/invitations")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Invite a member of staff to set up their own password",
+    description:
+      "Returns the one-time link, once. It is not stored and cannot be read back. Creating one cancels any " +
+      "invitation to that person still outstanding.",
+  })
+  invite(@Param("userId") userId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.invitations.invite(userId, { id: user.id });
+  }
+
+  @Get(":userId/invitations")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({ summary: "Every invitation sent to one member of staff" })
+  listInvitations(@Param("userId") userId: string) {
+    return this.invitations.forGuardian(userId);
+  }
 
   @Get()
   @Roles("SCHOOL_ADMIN")

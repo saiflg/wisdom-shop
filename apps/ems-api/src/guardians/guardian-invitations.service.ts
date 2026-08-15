@@ -49,14 +49,23 @@ export class GuardianInvitationsService {
       where: { id: guardianUserId, deletedAt: null },
       select: { id: true, email: true, firstName: true, lastName: true, roles: true },
     });
-    if (!guardian) throw new NotFoundException("No guardian found with that id");
-    if (!guardian.roles.includes("GUARDIAN")) {
-      throw new BadRequestException("That person is not a guardian");
+    if (!guardian) throw new NotFoundException("No account found with that id");
+
+    // Guardians *and* staff. The mechanism was written for parents and is
+    // identical for a teacher: an administrator who types a colleague's
+    // password knows how to sign in as them, and a teacher's account reaches
+    // every child's record in the school. Students are excluded — a child's
+    // password is set by the office, and a mailbox is not something every
+    // pupil has.
+    const invitable = ["GUARDIAN", "TEACHER", "SCHOOL_ADMIN"];
+    if (!guardian.roles.some((role) => invitable.includes(role))) {
+      throw new BadRequestException("Only parents and staff can be invited to set up their own password");
     }
+
     // Nowhere to send it. The office needs an email address on file first,
     // and saying so is more use than a link they cannot deliver.
     if (!guardian.email) {
-      throw new BadRequestException("Add an email address for this parent before inviting them");
+      throw new BadRequestException("Add an email address for this person before inviting them");
     }
 
     const now = new Date();

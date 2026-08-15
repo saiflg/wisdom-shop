@@ -71,7 +71,7 @@ export class QuizzesService {
 
   /**
    * Staff get the quiz as stored, answers included. Everyone else gets only
-   * PUBLISHED quizzes, with the answer key stripped â€” see strip-answers.ts.
+   * PUBLISHED quizzes, with the answer key stripped — see strip-answers.ts.
    */
   async list(viewer: AuthenticatedUser, schemeOfWorkId?: string) {
     const client = await this.tenantPrisma.getClient();
@@ -98,7 +98,7 @@ export class QuizzesService {
     if (isStaff(viewer)) return record;
 
     if (record.status !== "PUBLISHED") {
-      // 404, not 403 â€” same reasoning as schemes-of-work.service.ts.
+      // 404, not 403 — same reasoning as schemes-of-work.service.ts.
       throw new NotFoundException("No quiz found with that id");
     }
     return { ...record, content: stripAnswers(record.content) };

@@ -12,6 +12,7 @@ import {
   type ChatMessage,
 } from "@/lib/use-class-chat";
 import { ChatAttachmentView } from "./chat-attachment";
+import { ClassPresenceStrip } from "./class-presence-strip";
 import { ACCEPTED_UPLOADS, formatSeconds, useVoiceRecorder } from "./chat-compose-extras";
 
 /**
@@ -106,6 +107,10 @@ export function ClassChat({ classId }: { classId: string }) {
       <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
         {data.notice}
       </p>
+
+      {/* "Is anybody there" is the first question a child has on opening
+          this, and answering it should not mean leaving for the class page. */}
+      <ClassPresenceStrip classId={classId} />
 
       <div className="max-h-[28rem] space-y-3 overflow-y-auto p-4">
         {data.messages.length === 0 && (

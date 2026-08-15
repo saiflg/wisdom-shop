@@ -32,6 +32,8 @@ export interface StaffMember {
   email: string | null;
   firstName: string;
   lastName: string;
+  /** False means the account exists but has never been set up. */
+  hasPassword: boolean;
   roles: string[];
   staffNumber: string | null;
   jobTitle: string | null;
@@ -43,7 +45,12 @@ export interface StaffMember {
 
 export interface RegisterStaffInput {
   email: string;
-  password: string;
+  /**
+   * Optional, and better left out — omitting it means the person is invited
+   * and chooses their own, rather than the office knowing how to sign in as
+   * a colleague whose account reaches every child's record.
+   */
+  password?: string;
   firstName: string;
   lastName: string;
   role: StaffRole;

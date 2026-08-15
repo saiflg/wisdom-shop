@@ -86,7 +86,7 @@ export class LessonPlansService {
 
     const isStaff = viewer.roles.some((role) => STAFF_ROLES.includes(role));
     if (!isStaff && record.status !== "PUBLISHED") {
-      // 404, not 403 â€” same reasoning as schemes-of-work.service.ts.
+      // 404, not 403 — same reasoning as schemes-of-work.service.ts.
       throw new NotFoundException("No lesson plan found with that id");
     }
     return record;

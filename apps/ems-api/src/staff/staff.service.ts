@@ -56,7 +56,13 @@ export class StaffService {
   async register(dto: RegisterStaffDto) {
     const client = await this.tenantPrisma.getClient();
 
-    const passwordHash = await argon2.hash(dto.password);
+    // Optional now. Leaving it out creates the account with no password and
+    // no way in until the office sends an invitation, which is the better
+    // path: an administrator who types a colleague's password knows how to
+    // sign in as them, and a teacher's account reaches every child's record
+    // in the school. The password route stays for bulk imports and for
+    // schools that genuinely want it.
+    const passwordHash = dto.password ? await argon2.hash(dto.password) : null;
     const employment =
       dto.staffNumber || dto.jobTitle || dto.employmentType || dto.startDate
         ? {
@@ -287,6 +293,11 @@ export class StaffService {
     firstName: string;
     lastName: string;
     roles: string[];
+    /**
+     * Whether a password is set — never the hash itself. The office needs to
+     * know who still cannot sign in, so it knows whom to invite.
+     */
+    passwordHash?: string | null;
     staffProfile: {
       id: string;
       staffNumber: string | null;
@@ -322,6 +333,9 @@ export class StaffService {
       firstName: user.firstName,
       lastName: user.lastName,
       roles: user.roles,
+      // The hash itself never leaves this method; only whether one exists, so
+      // the office can see who has never signed in and invite them.
+      hasPassword: Boolean(user.passwordHash),
       staffNumber: profile?.staffNumber ?? null,
       jobTitle: profile?.jobTitle ?? null,
       employmentType: profile?.employmentType ?? null,

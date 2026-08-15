@@ -26,7 +26,7 @@ export const EMPLOYMENT_TYPES = ["FULL_TIME", "PART_TIME", "CONTRACT", "VOLUNTEE
 export const STAFF_ROLES = ["TEACHER", "SCHOOL_ADMIN"] as const;
 
 export class UpsertStaffProfileDto {
-  @ApiPropertyOptional({ description: "School-issued staff number â€” the key a re-imported spreadsheet matches on" })
+  @ApiPropertyOptional({ description: "School-issued staff number — the key a re-imported spreadsheet matches on" })
   @IsOptional()
   @IsString()
   @MaxLength(40)
@@ -59,7 +59,7 @@ export class UpsertStaffProfileDto {
   @MaxLength(120)
   bankName?: string;
 
-  @ApiPropertyOptional({ example: "011", description: "Sort code or routing number â€” not secret" })
+  @ApiPropertyOptional({ example: "011", description: "Sort code or routing number — not secret" })
   @IsOptional()
   @IsString()
   @MaxLength(20)
@@ -132,7 +132,7 @@ export class UpsertStaffProfileDto {
  *
  * Bank details are deliberately absent. They belong on the staff record
  * screen, where the masking and the audited reveal are visible next to the
- * field â€” entering an account number as one box among ten on a sign-up form
+ * field — entering an account number as one box among ten on a sign-up form
  * teaches that it is ordinary, and it is not.
  */
 export class RegisterStaffDto {
@@ -141,14 +141,25 @@ export class RegisterStaffDto {
   @MaxLength(255)
   email!: string;
 
-  @ApiProperty({ description: "Min 10 chars, upper/lower/number/symbol" })
+  /**
+   * Optional, and better left out.
+   *
+   * Omitting it creates the account with no way in until an invitation is
+   * sent, and the member of staff chooses their own password. Supplying one
+   * means somebody in the office knows how to sign in as a colleague whose
+   * account reaches every child's record in the school.
+   */
+  @ApiPropertyOptional({
+    description: "Min 10 chars, upper/lower/number/symbol. Omit it and invite them instead.",
+  })
+  @IsOptional()
   @IsString()
   @MinLength(10)
   @MaxLength(128)
   @Matches(STRONG_PASSWORD_REGEX, {
     message: "password must include an uppercase letter, lowercase letter, number, and symbol",
   })
-  password!: string;
+  password?: string;
 
   @ApiProperty()
   @IsString()
@@ -164,7 +175,7 @@ export class RegisterStaffDto {
 
   @ApiProperty({
     enum: STAFF_ROLES,
-    description: "SCHOOL_ADMIN grants administrator access to the whole school â€” every screen in this module included.",
+    description: "SCHOOL_ADMIN grants administrator access to the whole school — every screen in this module included.",
   })
   @IsIn(STAFF_ROLES)
   role!: (typeof STAFF_ROLES)[number];
