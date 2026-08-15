@@ -278,7 +278,8 @@ model ClassMessage {
 
   createdAt DateTime @default(now())
 
-  reports ClassMessageReport[]
+  reports     ClassMessageReport[]
+  attachments ClassMessageAttachment[]
 
   /// The query this table exists to serve: one conversation, newest last.
   @@index([conversationId, createdAt])
@@ -292,6 +293,45 @@ model ClassMessage {
 /// Separate from deletion on purpose: reporting is something a student can
 /// do, deleting is not, and a report that quietly deleted the message would
 /// hand every class a way to silence anyone.
+/// A photograph, voice note or PDF attached to a class message.
+///
+/// Its own table rather than columns on ClassMessage, because a message with
+/// no attachment is the overwhelming majority and four null columns on every
+/// row of the busiest table in the product is the wrong trade.
+///
+/// The bytes live on disk under a per-school key; only the key is here, and
+/// it never appears in a URL. Reading one goes through an authorised route
+/// that re-checks the reader against the *message* — an attachment has no
+/// independent notion of who may see it, so a withdrawn message cannot leave
+/// a fetchable photograph behind.
+model ClassMessageAttachment {
+  id        String       @id @default(cuid())
+  messageId String
+  message   ClassMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  /// `schools/<schoolId>/attachments/<uuid>.<ext>` — see storage.ts. The
+  /// filename is a UUID, so nothing a child typed is ever part of a path.
+  storageKey String
+
+  /// IMAGE, AUDIO or DOCUMENT. Decided from the sniffed content type at
+  /// upload, never from the name or the extension the browser claimed.
+  kind        String
+  contentType String
+  byteSize    Int
+
+  /// What the uploader called it, sanitised for display only. Kept because
+  /// "chapter-4-notes.pdf" tells a classmate more than a UUID does.
+  displayName String
+
+  /// Voice notes only. Lets the player show a length before it downloads.
+  durationSeconds Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+  @@map("class_message_attachments")
+}
+
 model ClassMessageReport {
   id        String       @id @default(cuid())
   messageId String

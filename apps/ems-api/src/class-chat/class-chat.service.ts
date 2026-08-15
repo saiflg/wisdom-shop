@@ -15,13 +15,39 @@ import {
   type ChatViewer,
 } from "./class-chat-rules";
 import { canSeePresence, describePresence } from "./presence";
+import { ClassAttachmentsService, type UploadedAttachment } from "./attachments.service";
 import type { LockConversationDto, PostMessageDto, ReportMessageDto } from "./dto/class-chat.dto";
 
 const PAGE_SIZE = 50;
 
 @Injectable()
 export class ClassChatService {
-  constructor(private readonly tenantPrisma: TenantPrismaService) {}
+  /**
+   * Whether this viewer may read the message an attachment belongs to.
+   *
+   * Passed to the attachment service as a callback rather than duplicated
+   * there: an attachment has no independent notion of who may see it, and a
+   * second copy of this rule is how a file outlives its conversation.
+   */
+  async canReadMessage(
+    message: { conversationId: string; deletedAt: Date | null },
+    user: AuthenticatedUser,
+  ): Promise<boolean> {
+    const client = await this.tenantPrisma.getClient();
+    const conversation = await client.classConversation.findUnique({
+      where: { id: message.conversationId },
+      select: { classId: true },
+    });
+    if (!conversation) return false;
+
+    const viewer = await this.viewerFor(conversation.classId, user);
+    return canReadConversation(viewer);
+  }
+
+  constructor(
+    private readonly tenantPrisma: TenantPrismaService,
+    private readonly attachments: ClassAttachmentsService,
+  ) {}
 
   /**
    * Everyone in a class, and who is responsible for it.
@@ -157,6 +183,7 @@ export class ClassChatService {
       },
       orderBy: { createdAt: "desc" },
       take: PAGE_SIZE,
+      include: { attachments: true },
     });
 
     return {
@@ -184,7 +211,16 @@ export class ClassChatService {
     };
   }
 
-  async post(classId: string, dto: PostMessageDto, user: AuthenticatedUser) {
+  /**
+   * Say something, optionally with a photograph, voice note or PDF.
+   *
+   * The file arrives in the same request as the message rather than being
+   * uploaded first and referenced by id. Two steps would mean a client
+   * handing back metadata the server has to trust — the type, the size, the
+   * key — and the whole point of the allowlist is that none of that is taken
+   * on trust. One request, validated once, written once.
+   */
+  async post(classId: string, dto: PostMessageDto, user: AuthenticatedUser, file?: UploadedAttachment) {
     const client = await this.tenantPrisma.getClient();
     const viewer = await this.viewerFor(classId, user);
     const conversation = await this.ensureConversation(classId);
@@ -209,12 +245,21 @@ export class ClassChatService {
     ]);
 
     const problem = checkMessage({
-      body: dto.body,
+      // A photograph on its own is a perfectly good message, so an empty body
+      // is allowed when something is attached. Without this, sending a
+      // picture would require inventing a caption for it.
+      body: dto.body ?? "",
+      allowEmpty: Boolean(file),
       lastPostedAt: last?.createdAt ?? null,
       recentCount,
       now,
     });
     if (problem) throw new BadRequestException(explainProblem(problem));
+
+    // Validated and written to disk before the message row exists. A file
+    // refused here means no message at all, which is what a child expects
+    // when the thing they wanted to send was the picture.
+    const stored = file ? await this.attachments.upload(file, dto.durationSeconds) : null;
 
     const author = await client.user.findUniqueOrThrow({
       where: { id: user.id },
@@ -227,8 +272,23 @@ export class ClassChatService {
         authorUserId: user.id,
         authorName: `${author.firstName} ${author.lastName}`,
         authorRole: author.roles.includes("TEACHER") || author.roles.includes("SCHOOL_ADMIN") ? "STAFF" : "STUDENT",
-        body: dto.body.trim(),
+        body: dto.body?.trim() ?? "",
+        ...(stored
+          ? {
+              attachments: {
+                create: {
+                  storageKey: stored.key,
+                  kind: stored.kind,
+                  contentType: stored.contentType,
+                  byteSize: stored.byteSize,
+                  displayName: stored.displayName,
+                  durationSeconds: stored.durationSeconds,
+                },
+              },
+            }
+          : {}),
       },
+      include: { attachments: true },
     });
 
     return toMessageView(message, viewer);

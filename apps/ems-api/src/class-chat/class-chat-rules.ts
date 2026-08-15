@@ -33,6 +33,16 @@ export interface StoredMessage {
   createdAt: Date;
   deletedAt: Date | null;
   deletedByUserId: string | null;
+  attachments?: StoredAttachment[];
+}
+
+export interface StoredAttachment {
+  id: string;
+  kind: string;
+  contentType: string;
+  byteSize: number;
+  displayName: string;
+  durationSeconds: number | null;
 }
 
 /** Staff can read any class conversation; students only their own. */
@@ -109,6 +119,12 @@ export type MessageProblem = "empty" | "too-long" | "too-fast" | "too-many";
  */
 export function checkMessage(input: {
   body: string;
+  /**
+   * True when something is attached. A photograph on its own is a perfectly
+   * good message, and demanding a caption for it would make sending a picture
+   * harder than sending words.
+   */
+  allowEmpty?: boolean;
   /** When this author last posted here, if ever. */
   lastPostedAt: Date | null;
   /** How many they have posted here within the burst window. */
@@ -116,7 +132,7 @@ export function checkMessage(input: {
   now: Date;
 }): MessageProblem | null {
   const trimmed = input.body.trim();
-  if (!trimmed) return "empty";
+  if (!trimmed && !input.allowEmpty) return "empty";
   if (trimmed.length > MAX_MESSAGE_LENGTH) return "too-long";
 
   if (input.lastPostedAt && input.now.getTime() - input.lastPostedAt.getTime() < MIN_INTERVAL_MS) {
@@ -149,7 +165,20 @@ export interface MessageView {
   deleted: boolean;
   /** Present only for staff: what a removed message actually said. */
   removedBody?: string;
+  /** Always an array; empty for a message with nothing attached or removed. */
+  attachments: AttachmentView[];
   mine: boolean;
+}
+
+export interface AttachmentView {
+  id: string;
+  kind: string;
+  contentType: string;
+  byteSize: number;
+  displayName: string;
+  durationSeconds: number | null;
+  /** Authorised route, never a guessable public address. */
+  url: string;
 }
 
 /**
@@ -176,6 +205,22 @@ export function toMessageView(message: StoredMessage, viewer: ChatViewer): Messa
     createdAt: message.createdAt,
     deleted,
     ...(deleted && staff ? { removedBody: message.body } : {}),
+    // A removed message shows no attachments to anybody, staff included.
+    // The row survives for moderation, but a photograph that is still
+    // rendered after the message carrying it was taken down has not been
+    // taken down. The download route refuses these independently.
+    attachments: deleted
+      ? []
+      : (message.attachments ?? []).map((attachment) => ({
+          id: attachment.id,
+          kind: attachment.kind,
+          contentType: attachment.contentType,
+          byteSize: attachment.byteSize,
+          displayName: attachment.displayName,
+          durationSeconds: attachment.durationSeconds,
+          /** The only address these bytes have: authorised, never guessable. */
+          url: `/v1/class-chat/attachments/${attachment.id}`,
+        })),
     mine: message.authorUserId === viewer.userId,
   };
 }

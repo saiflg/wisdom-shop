@@ -39,6 +39,18 @@ export interface ClassMembers {
   };
 }
 
+export interface ChatAttachment {
+  id: string;
+  kind: "IMAGE" | "AUDIO" | "DOCUMENT";
+  contentType: string;
+  byteSize: number;
+  displayName: string;
+  /** Voice notes only. */
+  durationSeconds: number | null;
+  /** Authorised route — needs the bearer token, so it is fetched, not linked. */
+  url: string;
+}
+
 export interface ChatMessage {
   id: string;
   authorUserId: string;
@@ -49,6 +61,8 @@ export interface ChatMessage {
   deleted: boolean;
   /** Staff only: what a removed message actually said. */
   removedBody?: string;
+  /** Always present; empty for a message with nothing attached or removed. */
+  attachments: ChatAttachment[];
   mine: boolean;
 }
 
@@ -128,6 +142,48 @@ export function usePostMessage(classId: string) {
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["class", classId, "chat"] }),
   });
+}
+
+/**
+ * Post with a photograph, voice note or PDF.
+ *
+ * One request carrying both, matching the API: uploading first and then
+ * referencing the result would mean the server trusting a client's account of
+ * what the file is.
+ */
+export function usePostMessageWithFile(classId: string) {
+  const { accessToken } = useAuthQueryState();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ body, file, durationSeconds }: { body: string; file: File; durationSeconds?: number }) => {
+      const form = new FormData();
+      if (body.trim()) form.append("body", body.trim());
+      if (durationSeconds) form.append("durationSeconds", String(Math.round(durationSeconds)));
+      form.append("file", file, file.name);
+
+      // No Content-Type header: the browser must set it, because only it
+      // knows the multipart boundary it generated.
+      return apiFetch<ChatMessage>(`/v1/classes/${classId}/chat/file`, {
+        method: "POST",
+        headers: authHeaders(accessToken),
+        body: form,
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["class", classId, "chat"] }),
+  });
+}
+
+/**
+ * Fetch an attachment's bytes as a blob URL.
+ *
+ * These are authorised routes, so an <img src> pointing straight at one would
+ * arrive without the bearer token and 401. The bytes are fetched with the
+ * token and turned into an object URL the browser can render.
+ */
+export async function fetchAttachment(url: string, accessToken: string | null): Promise<string> {
+  const res = await fetch(url, { headers: authHeaders(accessToken) as HeadersInit });
+  if (!res.ok) throw new Error("Couldn't load that file.");
+  return URL.createObjectURL(await res.blob());
 }
 
 export function useRemoveMessage(classId: string) {

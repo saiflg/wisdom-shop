@@ -6,10 +6,13 @@ import {
   useConversation,
   useLockConversation,
   usePostMessage,
+  usePostMessageWithFile,
   useRemoveMessage,
   useReportMessage,
   type ChatMessage,
 } from "@/lib/use-class-chat";
+import { ChatAttachmentView } from "./chat-attachment";
+import { ACCEPTED_UPLOADS, formatSeconds, useVoiceRecorder } from "./chat-compose-extras";
 
 /**
  * The class conversation.
@@ -26,10 +29,16 @@ export function ClassChat({ classId }: { classId: string }) {
   const report = useReportMessage(classId);
   const lock = useLockConversation(classId);
 
+  const withFile = usePostMessageWithFile(classId);
+  const recorder = useVoiceRecorder();
+
   const [draft, setDraft] = useState("");
+  const [pending, setPending] = useState<File | null>(null);
+  const [pendingSeconds, setPendingSeconds] = useState<number | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const filePicker = useRef<HTMLInputElement>(null);
   const count = data?.messages.length ?? 0;
 
   // Scroll on arrival and on each new message, not on every poll — otherwise
@@ -47,11 +56,25 @@ export function ClassChat({ classId }: { classId: string }) {
     );
   }
 
+  const finishRecording = async () => {
+    const captured = await recorder.stop();
+    if (captured) {
+      setPending(captured.file);
+      setPendingSeconds(captured.seconds);
+    }
+  };
+
   const send = async () => {
     setProblem(null);
     setNote(null);
     try {
-      await post.mutateAsync(draft);
+      if (pending) {
+        await withFile.mutateAsync({ body: draft, file: pending, durationSeconds: pendingSeconds });
+        setPending(null);
+        setPendingSeconds(undefined);
+      } else {
+        await post.mutateAsync(draft);
+      }
       setDraft("");
     } catch (err) {
       // The API's own wording — "Slow down a moment before sending another
@@ -120,29 +143,107 @@ export function ClassChat({ classId }: { classId: string }) {
         )}
 
         {data.canPost && (
-          <div className="flex flex-wrap gap-2">
-            <label htmlFor="chat-draft" className="sr-only">
-              Message your class
-            </label>
-            <input
-              id="chat-draft"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && draft.trim()) void send();
-              }}
-              placeholder="Message your class…"
-              maxLength={2000}
-              className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            />
-            <button
-              type="button"
-              onClick={() => void send()}
-              disabled={post.isPending || !draft.trim()}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
-            >
-              Send
-            </button>
+          <div className="space-y-2">
+            {/* Chosen but not yet sent, so a child can see what they picked
+                and change their mind before the class does. */}
+            {pending && (
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs dark:bg-slate-800">
+                <span className="min-w-0 truncate">
+                  {pending.type.startsWith("audio/") ? "Voice note" : pending.name} ready to send
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPending(null)}
+                  className="shrink-0 font-semibold text-brand-600 hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+
+            {recorder.recording && (
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-800 dark:bg-red-950/40 dark:text-red-200">
+                <span className="flex items-center gap-2">
+                  <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-red-600" />
+                  Recording {formatSeconds(recorder.seconds)}
+                </span>
+                <span className="flex gap-2">
+                  <button type="button" onClick={() => void finishRecording()} className="font-semibold underline">
+                    Stop
+                  </button>
+                  <button type="button" onClick={recorder.cancel} className="font-semibold underline">
+                    Cancel
+                  </button>
+                </span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <label htmlFor="chat-draft" className="sr-only">
+                Message your class
+              </label>
+              <input
+                id="chat-draft"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && (draft.trim() || pending)) void send();
+                }}
+                placeholder={pending ? "Add a caption (optional)…" : "Message your class…"}
+                maxLength={2000}
+                className="min-w-[10rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+              />
+
+              <input
+                ref={filePicker}
+                type="file"
+                accept={ACCEPTED_UPLOADS}
+                className="hidden"
+                onChange={(event) => {
+                  const chosen = event.target.files?.[0] ?? null;
+                  setPending(chosen);
+                  // Cleared so choosing the same file twice still fires.
+                  event.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => filePicker.current?.click()}
+                disabled={post.isPending || withFile.isPending || recorder.recording}
+                title="Attach a photo or PDF"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
+              >
+                <span aria-hidden>📎</span>
+                <span className="sr-only">Attach a photo or PDF</span>
+              </button>
+
+              {recorder.supported && !recorder.recording && (
+                <button
+                  type="button"
+                  onClick={() => void recorder.start()}
+                  disabled={post.isPending || withFile.isPending || Boolean(pending)}
+                  title="Record a voice note"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
+                >
+                  <span aria-hidden>🎤</span>
+                  <span className="sr-only">Record a voice note</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => void send()}
+                disabled={post.isPending || withFile.isPending || (!draft.trim() && !pending)}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
+              >
+                {withFile.isPending ? "Sending…" : "Send"}
+              </button>
+            </div>
+
+            {recorder.error && <p className="text-xs text-red-600">{recorder.error}</p>}
+            <p className="text-xs text-slate-500">
+              Photos, voice notes and PDFs only. Your teachers can see everything you share here.
+            </p>
           </div>
         )}
 
@@ -201,6 +302,13 @@ function Message({
           {staffAuthor && " · teacher"}
         </p>
         <p className="mt-0.5 whitespace-pre-wrap break-words">{message.body}</p>
+
+        {/* The API sends an empty list for a removed message, so a withdrawn
+            photograph disappears here without this component deciding
+            anything about who may see it. */}
+        {(message.attachments ?? []).map((attachment) => (
+          <ChatAttachmentView key={attachment.id} attachment={attachment} />
+        ))}
         {/* Staff see what a removed message said. Students never do, including
             the author — see toMessageView. */}
         {message.deleted && message.removedBody && (

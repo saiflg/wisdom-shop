@@ -220,3 +220,72 @@ describe("isStaff", () => {
     expect(isStaff({ roles: [] })).toBe(false);
   });
 });
+
+describe("attachments in a message view", () => {
+  const student = viewer({ userId: "u2", roles: ["STUDENT"] });
+  const teacher = viewer({ userId: "t1", roles: ["TEACHER"], enrolled: false, teachesClass: true });
+
+  const photo = {
+    id: "a1",
+    kind: "IMAGE",
+    contentType: "image/jpeg",
+    byteSize: 90_000,
+    displayName: "my-diagram.jpg",
+    durationSeconds: null,
+  };
+
+  it("carries an attachment on an ordinary message", () => {
+    const view = toMessageView(message({ attachments: [photo] }), student);
+    expect(view.attachments).toHaveLength(1);
+    expect(view.attachments[0]?.displayName).toBe("my-diagram.jpg");
+  });
+
+  it("addresses it through the authorised route and never a storage key", () => {
+    const view = toMessageView(message({ attachments: [photo] }), student);
+    expect(view.attachments[0]?.url).toBe("/v1/class-chat/attachments/a1");
+    expect(JSON.stringify(view)).not.toMatch(/schools\/|storageKey/);
+  });
+
+  it("is always an array, so a caller never has to guard", () => {
+    expect(toMessageView(message(), student).attachments).toEqual([]);
+  });
+
+  it("DROPS attachments from a removed message, for students AND staff", () => {
+    // A photograph still rendered after the message carrying it was taken
+    // down has not been taken down. Staff keep the text for moderation; the
+    // picture is not part of that, and the download route refuses it too.
+    const removed = message({ attachments: [photo], deletedAt: new Date(), deletedByUserId: "t1" });
+    expect(toMessageView(removed, student).attachments).toEqual([]);
+    expect(toMessageView(removed, teacher).attachments).toEqual([]);
+    // The text is still there for staff, which is the existing rule.
+    expect(toMessageView(removed, teacher).removedBody).toBe("Does anyone have the maths homework?");
+  });
+});
+
+describe("checkMessage with an attachment", () => {
+  const base = { lastPostedAt: null, recentCount: 0, now: new Date("2026-08-10T09:00:00.000Z") };
+
+  it("still refuses an empty message with nothing attached", () => {
+    expect(checkMessage({ ...base, body: "   " })).toBe("empty");
+  });
+
+  it("allows an empty caption when a file is attached", () => {
+    // Demanding a caption would make sending a picture harder than words.
+    expect(checkMessage({ ...base, body: "", allowEmpty: true })).toBeNull();
+  });
+
+  it("still enforces the rate limits on a message carrying a file", () => {
+    // Otherwise attaching a file is a way round the flood protection.
+    const tooFast = checkMessage({
+      ...base,
+      body: "",
+      allowEmpty: true,
+      lastPostedAt: new Date("2026-08-10T08:59:59.500Z"),
+    });
+    expect(tooFast).toBe("too-fast");
+  });
+
+  it("still enforces the length limit on a caption", () => {
+    expect(checkMessage({ ...base, body: "x".repeat(5000), allowEmpty: true })).toBe("too-long");
+  });
+});

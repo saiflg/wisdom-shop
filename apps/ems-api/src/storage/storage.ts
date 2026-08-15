@@ -38,6 +38,23 @@ export const REJECTED_IMAGE_TYPES = ["image/svg+xml"];
 
 export const BRANDING_PREFIX = "branding";
 export const PHOTO_PREFIX = "photos";
+export const ATTACHMENT_PREFIX = "attachments";
+
+/**
+ * Extensions storable as a class-chat attachment.
+ *
+ * A separate list from the image one on purpose. Attachments admit audio and
+ * PDF, which must never become storable as a school logo — the logo route is
+ * reachable unauthenticated from every school's login page, and widening one
+ * list to serve both would quietly widen that.
+ */
+const ATTACHMENT_EXTENSIONS = [".png", ".jpg", ".webp", ".gif", ".webm", ".ogg", ".m4a", ".mp3", ".pdf"];
+
+const SAFE_ATTACHMENT_NAME = new RegExp(
+  `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:${ATTACHMENT_EXTENSIONS.map((extension) =>
+    extension.replace(".", "\\."),
+  ).join("|")})$`,
+);
 
 /**
  * Matches exactly what `buildBrandingKey` produces, and nothing else.
@@ -124,6 +141,41 @@ export function isPhotoKeyForSchool(key: string, schoolId: string): boolean {
   const prefix = `schools/${schoolId}/${PHOTO_PREFIX}/`;
   if (!key.startsWith(prefix)) return false;
   return isSafeStoredName(key.slice(prefix.length));
+}
+
+/**
+ * `schools/<schoolId>/attachments/<uuid>.<ext>`.
+ *
+ * Like a photograph and unlike a logo: there is no public route for these.
+ * A file one child sent another is never at a guessable address, so the key
+ * never appears in a URL and the bytes come back only through an authorised
+ * route that re-checks who is asking.
+ */
+export function buildAttachmentKey(schoolId: string, extension: string): string {
+  if (!SAFE_SCHOOL_ID.test(schoolId)) {
+    throw new Error(`Refusing to build a storage key for school id: ${schoolId}`);
+  }
+  const ext = extension.startsWith(".") ? extension.toLowerCase() : "";
+  if (!ATTACHMENT_EXTENSIONS.includes(ext)) {
+    throw new Error(`Refusing to build an attachment key for extension: ${extension}`);
+  }
+  return `schools/${schoolId}/${ATTACHMENT_PREFIX}/${randomUUID()}${ext}`;
+}
+
+/**
+ * True when a stored key really belongs to this school's attachments.
+ *
+ * Checked before any read. The key comes from our own database, so this
+ * guards against a bug rather than an attacker — a key that somehow points
+ * at another school's directory must fail to load rather than succeed
+ * quietly. It is the only thing standing between two tenants on a shared
+ * storage root.
+ */
+export function isAttachmentKeyForSchool(key: string, schoolId: string): boolean {
+  if (!SAFE_SCHOOL_ID.test(schoolId)) return false;
+  const prefix = `schools/${schoolId}/${ATTACHMENT_PREFIX}/`;
+  if (!key.startsWith(prefix)) return false;
+  return SAFE_ATTACHMENT_NAME.test(key.slice(prefix.length));
 }
 
 /** The bare filename of a stored key, for building a public URL. */
