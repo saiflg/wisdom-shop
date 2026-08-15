@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { errorMessage } from "@/lib/api";
 import { useGuardianDirectory } from "@/lib/use-guardians";
-import { filterGuardians, householdSummary, withoutEmail } from "@/lib/guardian-directory";
+import { filterGuardians, householdSummary, neverSignedIn, unreachable, withoutEmail } from "@/lib/guardian-directory";
 import { PersonPhoto } from "@/components/person-photo";
 import { GuardianInvite } from "@/components/guardian-invite";
+import { GuardianContact } from "@/components/guardian-contact";
 
 /**
  * Every family in the school.
@@ -19,7 +20,9 @@ export default function GuardiansPage() {
   const [query, setQuery] = useState("");
 
   const shown = useMemo(() => filterGuardians(guardians ?? [], query), [guardians, query]);
-  const unreachable = useMemo(() => withoutEmail(guardians ?? []), [guardians]);
+  const noEmail = useMemo(() => withoutEmail(guardians ?? []), [guardians]);
+  const cannotReach = useMemo(() => unreachable(guardians ?? []), [guardians]);
+  const waiting = useMemo(() => neverSignedIn(guardians ?? []), [guardians]);
 
   return (
     <div className="space-y-6">
@@ -52,10 +55,28 @@ export default function GuardiansPage() {
 
       {/* Surfaced before somebody sends an email announcement and assumes it
           arrived. These parents need a phone call or a letter home. */}
-      {unreachable.length > 0 && (
+      {noEmail.length > 0 && (
         <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          {unreachable.length} {unreachable.length === 1 ? "family has" : "families have"} no email address on
-          file — an emailed announcement will not reach {unreachable.length === 1 ? "them" : "them"}.
+          {noEmail.length} {noEmail.length === 1 ? "family has" : "families have"} no email address on file — an
+          emailed announcement will not reach them.
+          {cannotReach.length > 0 && (
+            <>
+              {" "}
+              <strong>
+                {cannotReach.length} of {noEmail.length === cannotReach.length ? "those" : "them"} have no phone
+                number either, so there is no way to reach them at all.
+              </strong>
+            </>
+          )}
+        </p>
+      )}
+
+      {/* The other half of the same problem: the school believes these
+          families can see their child's marks, and they cannot. */}
+      {waiting.length > 0 && (
+        <p className="rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          {waiting.length} {waiting.length === 1 ? "parent has" : "parents have"} never signed in. Invite them
+          below so they can see attendance, homework and results.
         </p>
       )}
 
@@ -94,9 +115,7 @@ export default function GuardiansPage() {
                 {guardian.firstName} {guardian.lastName}
               </p>
               <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{householdSummary(guardian)}</p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                {guardian.email ?? <span className="text-amber-700 dark:text-amber-400">No email on file</span>}
-              </p>
+              <GuardianContact guardian={guardian} />
 
               {guardian.children.length > 0 && (
                 <ul className="mt-2 flex flex-wrap gap-2">

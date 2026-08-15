@@ -67,3 +67,22 @@ export function householdSummary(entry: GuardianEntry): string {
 export function withoutEmail(entries: GuardianEntry[]): GuardianEntry[] {
   return entries.filter((entry) => !entry.email);
 }
+
+/**
+ * Families with no way to reach them at all.
+ *
+ * A sharper problem than having no email address, and a different one. A
+ * parent with only a telephone number is contactable — by a person, on a
+ * telephone — and lumping them in with the genuinely unreachable tells an
+ * office to chase an address it does not need. This is the same rule the
+ * API's parents overview uses to raise its alert; the two must agree, or the
+ * dashboard and the directory will contradict each other.
+ */
+export function unreachable(entries: GuardianEntry[]): GuardianEntry[] {
+  return entries.filter((entry) => !entry.email && !entry.phone);
+}
+
+/** Parents whose account exists but has never been set up. */
+export function neverSignedIn(entries: GuardianEntry[]): GuardianEntry[] {
+  return entries.filter((entry) => Boolean(entry.email) && !entry.hasPassword);
+}

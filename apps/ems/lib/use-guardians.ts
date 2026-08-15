@@ -19,9 +19,30 @@ export interface GuardianEntry {
   lastName: string;
   /** Null for a parent recorded from paper with only a phone number. */
   email: string | null;
+  /** Stored exactly as the office typed it; never reformatted. */
+  phone: string | null;
   /** False means the account exists but has never been set up. */
   hasPassword: boolean;
+  /** "Email and phone on file", "No way to reach them" — words, for scanning. */
+  reachability: string;
   children: GuardianChild[];
+}
+
+export interface ContactRecord {
+  guardianUserId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  hasPassword: boolean;
+  reachability: string;
+  /** Which fields the save actually altered. Empty means nothing changed. */
+  changed: string[];
+}
+
+/** Absent leaves a field alone; null clears it. The two are not the same. */
+export interface ContactInput {
+  email?: string | null;
+  phone?: string | null;
 }
 
 export type InvitationState = "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
@@ -58,6 +79,44 @@ export function useGuardianDirectory() {
     queryKey: ["guardians"],
     enabled,
     queryFn: () => apiFetch<GuardianEntry[]>("/v1/guardians", { headers: authHeaders(accessToken) }),
+  });
+}
+
+export function useUpdateGuardianContact() {
+  const accessToken = useAuthQueryState().accessToken;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ guardianUserId, ...input }: ContactInput & { guardianUserId: string }) =>
+      apiFetch<ContactRecord>(`/v1/guardians/${guardianUserId}/contact`, {
+        method: "PATCH",
+        headers: authHeaders(accessToken),
+        body: input,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["guardians"] }),
+  });
+}
+
+/** What the school holds for the signed-in parent. */
+export function useMyContact() {
+  const { accessToken, enabled } = useAuthQueryState();
+  return useQuery({
+    queryKey: ["my-contact"],
+    enabled,
+    queryFn: () => apiFetch<ContactRecord>("/v1/guardians/me/contact", { headers: authHeaders(accessToken) }),
+  });
+}
+
+export function useUpdateMyContact() {
+  const accessToken = useAuthQueryState().accessToken;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ContactInput) =>
+      apiFetch<ContactRecord>("/v1/guardians/me/contact", {
+        method: "PATCH",
+        headers: authHeaders(accessToken),
+        body: input,
+      }),
+    onSuccess: (record) => queryClient.setQueryData(["my-contact"], record),
   });
 }
 

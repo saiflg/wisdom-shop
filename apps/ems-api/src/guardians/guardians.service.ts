@@ -4,6 +4,15 @@ import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { CreateGuardianDto } from "./dto/create-guardian.dto";
 import { groupGuardians } from "./guardian-directory";
 import { buildOverview, type OverviewInput } from "./parents-overview";
+import {
+  changedFields,
+  cleanEmail,
+  cleanPhone,
+  contactProblem,
+  describeReachability,
+  parentChangeProblem,
+  type ContactInput,
+} from "./guardian-contact";
 
 @Injectable()
 export class GuardiansService {
@@ -74,7 +83,7 @@ export class GuardiansService {
       where: { studentProfile: { deletedAt: null } },
       include: {
         guardianUser: {
-          select: { id: true, firstName: true, lastName: true, email: true, passwordHash: true },
+          select: { id: true, firstName: true, lastName: true, email: true, phone: true, passwordHash: true },
         },
         studentProfile: {
           select: {
@@ -101,10 +110,124 @@ export class GuardiansService {
           firstName: link.guardianUser.firstName,
           lastName: link.guardianUser.lastName,
           email: link.guardianUser.email,
+          phone: link.guardianUser.phone,
           hasPassword: Boolean(link.guardianUser.passwordHash),
         },
       })),
     );
+  }
+
+  /**
+   * Correct a parent's email address or telephone number.
+   *
+   * The office's version. It may change both, because the office can see who
+   * it is talking to — a parent standing at the desk, or a voice it knows on
+   * the telephone.
+   */
+  async updateContact(guardianUserId: string, input: ContactInput, viewer?: { id: string }) {
+    const client = await this.tenantPrisma.getClient();
+
+    const guardian = await client.user.findFirst({
+      where: { id: guardianUserId, deletedAt: null },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true, passwordHash: true, roles: true },
+    });
+    if (!guardian) throw new NotFoundException("No guardian found with that id");
+    if (!guardian.roles.includes("GUARDIAN")) throw new BadRequestException("That person is not a guardian");
+
+    const current = {
+      email: guardian.email,
+      phone: guardian.phone,
+      hasPassword: Boolean(guardian.passwordHash),
+    };
+
+    const problem = contactProblem(current, input);
+    if (problem) throw new BadRequestException(problem);
+
+    const changed = changedFields(current, input);
+    // Nothing to write. Reported honestly rather than as a save, so an
+    // office is not told it changed something it did not.
+    if (changed.length === 0) return this.presentContact(guardian.id, current, guardian, []);
+
+    const data: { email?: string | null; phone?: string | null } = {};
+    if (changed.includes("email")) data.email = cleanEmail(input.email);
+    if (changed.includes("phone")) data.phone = cleanPhone(input.phone);
+
+    try {
+      const updated = await client.user.update({
+        where: { id: guardianUserId },
+        data,
+        select: { id: true, firstName: true, lastName: true, email: true, phone: true, passwordHash: true },
+      });
+
+      return this.presentContact(
+        updated.id,
+        { email: updated.email, phone: updated.phone, hasPassword: Boolean(updated.passwordHash) },
+        updated,
+        changed,
+      );
+    } catch (error) {
+      // The email is unique across the school. Somebody else already has it,
+      // which in a school usually means two parents sharing one address and
+      // an office trying to record the second — worth saying plainly rather
+      // than as "internal server error".
+      if ((error as { code?: string }).code === "P2002") {
+        throw new ConflictException("Another person at this school already uses that email address");
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * The parent's own version.
+   *
+   * Their telephone number only. Email is what they sign in with, and an
+   * account that can rewrite its own login identifier turns a session that
+   * should not have been open into a permanent one — so that one goes
+   * through the office, who can see who they are talking to.
+   */
+  async updateMyContact(viewer: { id: string; roles: string[] }, input: ContactInput) {
+    if (!viewer.roles.includes("GUARDIAN")) {
+      throw new BadRequestException("Only a parent or guardian has contact details to change here");
+    }
+
+    const refused = parentChangeProblem(input);
+    if (refused) throw new BadRequestException(refused);
+
+    return this.updateContact(viewer.id, input);
+  }
+
+  async myContact(viewer: { id: string }) {
+    const client = await this.tenantPrisma.getClient();
+    const me = await client.user.findFirst({
+      where: { id: viewer.id, deletedAt: null },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true, passwordHash: true },
+    });
+    if (!me) throw new NotFoundException("No account found");
+
+    return this.presentContact(
+      me.id,
+      { email: me.email, phone: me.phone, hasPassword: Boolean(me.passwordHash) },
+      me,
+      [],
+    );
+  }
+
+  /** Built by hand so a password hash can never ride along in a spread. */
+  private presentContact(
+    id: string,
+    contact: { email: string | null; phone: string | null; hasPassword: boolean },
+    person: { firstName: string; lastName: string },
+    changed: string[],
+  ) {
+    return {
+      guardianUserId: id,
+      name: `${person.firstName} ${person.lastName}`,
+      email: contact.email,
+      phone: contact.phone,
+      hasPassword: contact.hasPassword,
+      reachability: describeReachability(contact),
+      changed,
+    };
   }
 
   /**

@@ -10,6 +10,8 @@
  * in a browser.
  */
 
+import { describeReachability } from "./guardian-contact";
+
 export interface GuardianLinkRow {
   id: string;
   relationship: string;
@@ -24,6 +26,13 @@ export interface GuardianLinkRow {
      * than render an empty cell.
      */
     email: string | null;
+    /**
+     * The number the office actually rings. Shown because the overview has
+     * always judged a family unreachable on email *and* phone, while the
+     * directory displayed only the first of the two — so a parent with a
+     * perfectly good telephone number looked like a gap in the records.
+     */
+    phone?: string | null;
     /**
      * Whether a password is set. The hash itself never reaches this module —
      * only whether one exists, so an office can see who still cannot sign in
@@ -51,8 +60,11 @@ export interface GuardianEntry {
   firstName: string;
   lastName: string;
   email: string | null;
+  phone: string | null;
   /** Set, never set — the office needs to know which, to know whom to invite. */
   hasPassword: boolean;
+  /** "Email and phone on file", "No way to reach them" — words, for scanning. */
+  reachability: string;
   children: GuardianChild[];
 }
 
@@ -82,7 +94,9 @@ export function groupGuardians(links: GuardianLinkRow[]): GuardianEntry[] {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phone: user.phone ?? null,
         hasPassword: user.hasPassword ?? false,
+        reachability: describeReachability({ email: user.email, phone: user.phone ?? null }),
         children: [],
       };
       byGuardian.set(user.id, entry);

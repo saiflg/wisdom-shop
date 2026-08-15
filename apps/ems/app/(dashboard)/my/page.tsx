@@ -11,6 +11,7 @@ import {
 } from "@/lib/use-portal";
 import { PersonPhoto } from "@/components/person-photo";
 import { ParentThread } from "@/components/parent-thread";
+import { MyContactDetails } from "@/components/my-contact-details";
 import { useAuthStore } from "@/store/auth-store";
 
 const CARD = "rounded-xl border border-slate-200 p-4 dark:border-slate-800";
@@ -202,6 +203,10 @@ export default function MyPage() {
             <ParentThread studentProfileId={data.child.studentProfileId} />
           </section>
         )}
+
+        {/* Guardians only, for the same reason: a child has no business
+            editing the number the school rings when they are taken ill. */}
+        {isGuardian && <MyContactDetails />}
 
         <section className={CARD} aria-labelledby="results-heading">
           <h2 id="results-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Roles } from "@/auth/decorators/roles.decorator";
 import { CurrentUser } from "@/auth/decorators/current-user.decorator";
@@ -6,6 +6,7 @@ import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface"
 import { GuardiansService } from "./guardians.service";
 import { GuardianInvitationsService } from "./guardian-invitations.service";
 import { CreateGuardianDto } from "./dto/create-guardian.dto";
+import { UpdateContactDto } from "./dto/update-contact.dto";
 
 @ApiTags("guardians")
 @ApiBearerAuth()
@@ -40,6 +41,42 @@ export class GuardiansController {
   @ApiOperation({ summary: "Link a guardian (existing or new) to a student" })
   create(@Body() dto: CreateGuardianDto) {
     return this.guardians.create(dto);
+  }
+
+  // Declared before the :guardianUserId routes below so "me" is never read
+  // as somebody's id. Guardians only — this is the one pair of routes on
+  // this controller a family may reach.
+  @Get("me/contact")
+  @Roles("GUARDIAN")
+  @ApiOperation({ summary: "The contact details the school holds for you" })
+  myContact(@CurrentUser() user: AuthenticatedUser) {
+    return this.guardians.myContact({ id: user.id });
+  }
+
+  @Patch("me/contact")
+  @Roles("GUARDIAN")
+  @ApiOperation({
+    summary: "Correct your own telephone number",
+    description:
+      "Phone only. The email address is what you sign in with, so changing it goes through the school office.",
+  })
+  updateMyContact(@Body() dto: UpdateContactDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.guardians.updateMyContact({ id: user.id, roles: user.roles }, dto);
+  }
+
+  @Patch(":guardianUserId/contact")
+  @ApiOperation({
+    summary: "Correct a parent's email address or telephone number",
+    description:
+      "Refuses to clear the email of a parent who signs in with it — that would not tidy a record, it would " +
+      "lock them out of their child's.",
+  })
+  updateContact(
+    @Param("guardianUserId") guardianUserId: string,
+    @Body() dto: UpdateContactDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.guardians.updateContact(guardianUserId, dto, { id: user.id });
   }
 
   @Post(":guardianUserId/invitations")

@@ -1,4 +1,11 @@
-import { filterGuardians, householdSummary, matchesGuardianQuery, withoutEmail } from "./guardian-directory";
+import {
+  filterGuardians,
+  householdSummary,
+  matchesGuardianQuery,
+  neverSignedIn,
+  unreachable,
+  withoutEmail,
+} from "./guardian-directory";
 import type { GuardianEntry } from "./use-guardians";
 
 function entry(overrides: Partial<GuardianEntry> = {}): GuardianEntry {
@@ -7,7 +14,9 @@ function entry(overrides: Partial<GuardianEntry> = {}): GuardianEntry {
     firstName: "Amina",
     lastName: "Bello",
     email: "amina@example.com",
+    phone: "0803 123 4567",
     hasPassword: true,
+    reachability: "Email and phone on file",
     children: [
       {
         linkId: "l1",
@@ -114,5 +123,40 @@ describe("withoutEmail", () => {
   it("finds the families an email announcement would miss", () => {
     const families = [entry(), entry({ guardianUserId: "g2", firstName: "Segun", email: null })];
     expect(withoutEmail(families).map((f) => f.firstName)).toEqual(["Segun"]);
+  });
+});
+
+describe("unreachable", () => {
+  it("counts only families with neither an email nor a phone", () => {
+    // A parent with a telephone number is contactable — by a person, on a
+    // telephone. Lumping them in with the genuinely unreachable tells an
+    // office to chase an address it does not need.
+    const families = [
+      entry(),
+      entry({ guardianUserId: "g2", firstName: "Segun", email: null }),
+      entry({ guardianUserId: "g3", firstName: "Ngozi", email: null, phone: null }),
+    ];
+    expect(unreachable(families).map((f) => f.firstName)).toEqual(["Ngozi"]);
+  });
+
+  it("agrees with the API's rule, so the dashboard and directory cannot contradict each other", () => {
+    // Same predicate as isUnreachable in parents-overview.ts.
+    expect(unreachable([entry({ email: null, phone: "0803" })])).toEqual([]);
+    expect(unreachable([entry({ email: "a@b.com", phone: null })])).toEqual([]);
+  });
+});
+
+describe("neverSignedIn", () => {
+  it("finds accounts that exist on paper and have never been set up", () => {
+    const families = [
+      entry(),
+      entry({ guardianUserId: "g2", firstName: "Segun", hasPassword: false }),
+    ];
+    expect(neverSignedIn(families).map((f) => f.firstName)).toEqual(["Segun"]);
+  });
+
+  it("ignores a parent with no email, because there is nowhere to send an invitation", () => {
+    const families = [entry({ email: null, phone: "0803", hasPassword: false })];
+    expect(neverSignedIn(families)).toEqual([]);
   });
 });
