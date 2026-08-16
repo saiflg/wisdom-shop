@@ -100,9 +100,10 @@ export function AppHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-1">
-        <HeaderButton label={t("header.aiAssistant")} onClick={() => toggle("none")} disabled>
-          ✨
-        </HeaderButton>
+        {/* The AI assistant button was permanently disabled — a control that
+            can never be pressed is worse than no control, because it reads as
+            broken rather than absent. Removed; the AI features that do exist
+            are on their own screens under Academics and Examination. */}
 
         <div className="relative">
           <HeaderButton label={t("header.notifications")} onClick={() => toggle("notifications")}>

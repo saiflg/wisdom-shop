@@ -60,8 +60,12 @@ export const NAV_GROUPS: NavGroup[] = [
       // behind it — it tells staff so rather than showing a broken page.
       { key: "nav.dashboard.my", href: "/my", module: "PORTAL" },
       { key: "nav.dashboard.overview", href: "/dashboard" },
-      { key: "nav.dashboard.analytics" },
-      { key: "nav.dashboard.notifications" },
+      // "Analytics" and "Notifications" used to sit here with no page behind
+      // them. Analytics is what the overview above already is, and there was
+      // never anything for Notifications to open. Both are removed rather
+      // than given a screen: a menu item that does nothing teaches people the
+      // product is broken, and inventing a page to justify one is how a
+      // sidebar fills up with screens nobody opens twice.
       // Here rather than under Settings, which is admin-only: a student who
       // needs larger text must be able to reach this themselves, and every
       // role sees this group.
@@ -77,9 +81,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.students.registration", href: "/students", roles: ADMIN_ONLY },
       { key: "nav.students.bulkImport", href: "/data-exchange", roles: ADMIN_ONLY, module: "DATA_EXCHANGE" },
       { key: "nav.students.list", href: "/students" },
-      { key: "nav.students.portal" },
+      // The portal is a real screen and was reachable only from the Dashboard
+      // group. A student looking for "my school" looks under Students.
+      { key: "nav.students.portal", href: "/my", module: "PORTAL" },
       { key: "nav.students.attendance", href: "/attendance", module: "ATTENDANCE" },
-      { key: "nav.students.academicRecords" },
+      // The academic record a school actually keeps is the released results
+      // list; this pointed at nothing while that screen already existed.
+      { key: "nav.students.academicRecords", href: "/results", roles: STAFF, module: "GRADING" },
       { key: "nav.students.behaviour" },
       { key: "nav.students.medical" },
       { key: "nav.students.hostel" },
@@ -161,12 +169,18 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.staff.childFees", href: "/payroll/staff-fees", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.paye", href: "/payroll/tax", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.pension", href: "/payroll/pension", roles: ADMIN_ONLY, module: "PAYROLL" },
-      { key: "nav.staff.salaryAdvance", roles: ADMIN_ONLY },
+      // Points at the loan register, for the reason given above it: a salary
+      // advance IS a loan here, differing only in the word on the voucher.
+      // It was the one entry in this group whose feature existed and whose
+      // menu item still said "soon".
+      { key: "nav.staff.salaryAdvance", href: "/payroll/loans", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.medicalAssistance", roles: ADMIN_ONLY },
       { key: "nav.staff.leave" },
       { key: "nav.staff.attendance" },
       { key: "nav.staff.performance", roles: ADMIN_ONLY },
-      { key: "nav.staff.portal" },
+      // Staff have the same portal families and students do — their own
+      // timetable, their own messages. It existed and was unreachable here.
+      { key: "nav.staff.portal", href: "/my", module: "PORTAL" },
     ],
   },
   {
@@ -183,7 +197,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.academics.liveClassroom" },
       { key: "nav.academics.timetable", href: "/timetable", module: "TIMETABLE" },
       { key: "nav.academics.homework", href: "/homework", module: "HOMEWORK" },
-      { key: "nav.academics.assignments" },
+      // An assignment and a piece of homework are the same record here — one
+      // screen sets, collects and marks both. Two menu items for one feature
+      // is how somebody concludes the other one is missing.
+      { key: "nav.academics.assignments", href: "/homework", module: "HOMEWORK" },
     ],
   },
   {
@@ -214,7 +231,10 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "nav.finance.fees", href: "/fee-structures", roles: ADMIN_ONLY },
       { key: "nav.finance.invoices", href: "/invoices" },
-      { key: "nav.finance.payments" },
+      // Payments are recorded against the invoice they settle — there is no
+      // separate ledger, and a page listing payments detached from what they
+      // paid for would be a worse view of the same rows.
+      { key: "nav.finance.payments", href: "/invoices" },
       { key: "nav.finance.discounts", roles: ADMIN_ONLY },
       { key: "nav.finance.scholarships", roles: ADMIN_ONLY },
       { key: "nav.finance.accounting", roles: ADMIN_ONLY },
@@ -230,10 +250,15 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.messaging.templates", href: "/messaging/templates", roles: ADMIN_ONLY },
       { key: "nav.messaging.outbox", href: "/messaging/outbox", roles: ADMIN_ONLY },
       { key: "nav.messaging.internal", href: "/parent-messages", roles: STAFF, module: "MESSAGING" },
-      { key: "nav.messaging.email", roles: ADMIN_ONLY },
-      { key: "nav.messaging.sms", roles: ADMIN_ONLY },
-      { key: "nav.messaging.whatsapp", roles: ADMIN_ONLY },
-      { key: "nav.messaging.push", roles: ADMIN_ONLY },
+      // All four are configured on one screen, and all four said "soon" while
+      // that screen existed. Linked separately rather than collapsed into the
+      // Settings entry for the same reason Parents links to messaging and
+      // fees: somebody looking for "SMS" looks under Messaging, not under
+      // Settings → Communication gateways.
+      { key: "nav.messaging.email", href: "/settings/communication", roles: ADMIN_ONLY },
+      { key: "nav.messaging.sms", href: "/settings/communication", roles: ADMIN_ONLY },
+      { key: "nav.messaging.whatsapp", href: "/settings/communication", roles: ADMIN_ONLY },
+      { key: "nav.messaging.push", href: "/settings/communication", roles: ADMIN_ONLY },
       { key: "nav.messaging.announcements" },
       { key: "nav.messaging.newsletters", roles: STAFF },
     ],
@@ -245,7 +270,11 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "nav.settings.schoolProfile" },
       { key: "nav.settings.branding", href: "/settings/branding" },
-      { key: "nav.settings.users" },
+      // Every login in a school belongs to a member of staff, a student or a
+      // guardian, and each is managed where that person is. The staff
+      // directory is the closest thing to a user list — and it is where
+      // invitations and password resets now live.
+      { key: "nav.settings.users", href: "/staff" },
       { key: "nav.settings.roles" },
       { key: "nav.settings.permissions" },
       { key: "nav.settings.languages" },
