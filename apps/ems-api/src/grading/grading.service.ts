@@ -12,6 +12,7 @@ import {
   type BandInput,
   type MarkInput,
 } from "./grading-math";
+import { bySubject, buildTranscript } from "./transcript";
 import type {
   CreateAssessmentDto,
   PublishResultsDto,
@@ -493,6 +494,71 @@ export class GradingService {
    * question. Same visibility rule as `reportCard`: PUBLISHED only for a
    * family, and a 404 for somebody else's child rather than a 403.
    */
+  /**
+   * A student's whole academic record, across every year.
+   *
+   * Published terms only, for everybody — see transcript.ts. The same
+   * visibility rule as a report card otherwise: a family may ask for their
+   * own child and gets a 404 for anybody else's, never a 403.
+   *
+   * A student who has left still has a transcript. That is very nearly the
+   * point of one, so the soft-delete filter applied almost everywhere else is
+   * deliberately absent here.
+   */
+  async transcript(studentProfileId: string, viewer: AuthenticatedUser) {
+    const client = await this.tenantPrisma.getClient();
+
+    if (!isStaff(viewer)) {
+      const visible = await this.visibleStudentProfileIds(viewer);
+      if (!visible.has(studentProfileId)) throw new NotFoundException("No transcript found for that student");
+    }
+
+    const student = await client.studentProfile.findUnique({
+      where: { id: studentProfileId },
+      include: { user: { select: { firstName: true, lastName: true } } },
+    });
+    if (!student) throw new NotFoundException("No transcript found for that student");
+
+    const rows = await client.termResult.findMany({
+      where: { studentProfileId },
+      include: {
+        class: { select: { name: true } },
+        subjects: { include: { subject: { select: { name: true } } } },
+      },
+    });
+
+    const transcript = buildTranscript(
+      rows.map((row) => ({
+        academicYear: row.academicYear,
+        term: row.term,
+        className: row.class?.name ?? null,
+        status: row.status,
+        overallPercentHundredths: row.overallPercentHundredths,
+        publishedAt: row.publishedAt,
+        subjects: row.subjects.map((subject) => ({
+          subjectName: subject.subject.name,
+          percentHundredths: subject.percentHundredths,
+          gradeLabel: subject.gradeLabel,
+          gradePoint: subject.gradePoint,
+        })),
+      })),
+    );
+
+    return {
+      student: {
+        studentProfileId,
+        name: `${student.user.firstName} ${student.user.lastName}`,
+        studentCode: student.studentCode,
+        /** Said on the document itself: a transcript for a leaver is normal. */
+        stillEnrolled: student.deletedAt === null,
+      },
+      ...transcript,
+      bySubject: bySubject(transcript),
+      /** A transcript is a snapshot, and says when it was taken. */
+      issuedAt: new Date(),
+    };
+  }
+
   async resultsForStudent(studentProfileId: string, viewer: AuthenticatedUser) {
     const client = await this.tenantPrisma.getClient();
 

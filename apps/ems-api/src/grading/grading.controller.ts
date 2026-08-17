@@ -119,6 +119,19 @@ export class GradingController {
     return this.grading.listResults(classId, academicYear, term, user);
   }
 
+
+  @Get("transcripts/:studentProfileId")
+  @ApiOperation({
+    summary: "A student's whole academic record, across every year",
+    description:
+      "Published terms only, for everybody including staff: a transcript containing an unpublished term is a " +
+      "document that changes after it has been issued. A family asking after another family's child gets a 404. " +
+      "A student who has left still has one — that is nearly the point of it.",
+  })
+  transcript(@Param("studentProfileId") studentProfileId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.grading.transcript(studentProfileId, user);
+  }
+
   @Get("report-cards/:studentProfileId")
   @ApiQuery({ name: "academicYear", required: true })
   @ApiQuery({ name: "term", required: true })

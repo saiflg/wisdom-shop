@@ -49,6 +49,7 @@ const ALLOWED_WITHOUT_ROLES: Record<string, string> = {
   "classes/classes.controller.ts:GET :id": "names only",
   "grading/grading.controller.ts:GET results": "released results, scoped by viewer",
   "grading/grading.controller.ts:GET report-cards/:studentProfileId": "404s for another family's child",
+  "grading/grading.controller.ts:GET transcripts/:studentProfileId": "404s for another family's child; published terms only, for everybody",
   "homework/homework.controller.ts:GET /": "a student sees their own class's work",
   "homework/homework.controller.ts:GET :id": "scoped by viewer",
   "homework/homework.controller.ts:POST :id/submit": "a student submits their own work",

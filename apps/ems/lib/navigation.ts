@@ -218,7 +218,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.examination.results", href: "/results", roles: STAFF, module: "GRADING" },
       { key: "nav.examination.resultTemplates", roles: ADMIN_ONLY },
       { key: "nav.examination.reportCards", href: "/report-cards", module: "DOCUMENTS" },
-      { key: "nav.examination.transcript" },
+      // Staff only: it spans every year a child has been at the school, and
+      // a family reads the individual report cards instead.
+      { key: "nav.examination.transcript", href: "/transcripts", roles: STAFF, module: "GRADING" },
     ],
   },
   {
