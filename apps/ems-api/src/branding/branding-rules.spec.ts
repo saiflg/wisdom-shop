@@ -148,12 +148,23 @@ describe("toPublicBranding", () => {
     const result = toPublicBranding({ schoolName: "St Marys", branding, logoUrl: "/x.png" });
     expect(Object.keys(result).sort()).toEqual([
       "accentColor",
+      // Public on purpose: the login page is the first screen anybody sees
+      // and should already be in the school's language. It reveals nothing a
+      // visitor could not infer from the page they are looking at.
+      "defaultLocale",
       "logoUrl",
       "onPrimaryColor",
       "primaryColor",
       "schoolName",
       "tagline",
     ]);
+  });
+
+  it("defaults the language rather than omitting it for a school with no branding row", () => {
+    // Same rule as the colours: a school that never opened the page must
+    // behave identically to one that did.
+    const result = toPublicBranding({ schoolName: "St Marys", branding: null, logoUrl: null });
+    expect(result.defaultLocale).toBe("en");
   });
 
   it("never leaks the raw storage key, only the URL the caller was given", () => {

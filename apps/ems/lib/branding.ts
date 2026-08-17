@@ -19,6 +19,11 @@ export interface Branding {
   primaryColor: string;
   accentColor: string;
   onPrimaryColor: string;
+  /**
+   * The language this school's console opens in. A default, not an
+   * instruction — anybody who has chosen for themselves keeps their choice.
+   */
+  defaultLocale?: string;
 }
 
 export interface ResolvedBranding {

@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, MaxLength, Matches, ValidateIf } from "class-validator";
+import { IsIn, IsOptional, IsString, MaxLength, Matches, ValidateIf } from "class-validator";
+import { SUPPORTED_LOCALES } from "../locale-policy";
 
 /**
  * Six- or three-digit hex only, checked here as well as in branding-rules so
@@ -32,4 +33,18 @@ export class UpdateBrandingDto {
   @IsOptional()
   @Matches(HEX, { message: "accentColor must be a hex colour such as #0f766e" })
   accentColor?: string;
+
+  /**
+   * The language the console opens in for this school.
+   *
+   * Validated against what the build actually ships rather than as a free
+   * string: a school saving "sw" would otherwise store a preference that
+   * silently never applies.
+   */
+  @ApiPropertyOptional({ enum: SUPPORTED_LOCALES as unknown as string[], example: "fr" })
+  @IsOptional()
+  @IsIn(SUPPORTED_LOCALES as unknown as string[], {
+    message: "defaultLocale must be one of: " + SUPPORTED_LOCALES.join(", "),
+  })
+  defaultLocale?: string;
 }

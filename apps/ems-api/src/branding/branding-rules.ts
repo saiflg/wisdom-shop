@@ -108,6 +108,8 @@ export interface BrandingLike {
   logoKey: string | null;
   primaryColor: string;
   accentColor: string;
+  /** Optional so a caller with an older row shape still compiles. */
+  defaultLocale?: string;
 }
 
 /** What the login page — and therefore the whole internet — may see. */
@@ -118,6 +120,7 @@ export interface PublicBranding {
   primaryColor: string;
   accentColor: string;
   onPrimaryColor: string;
+  defaultLocale: string;
 }
 
 /**
@@ -146,5 +149,11 @@ export function toPublicBranding(params: {
     primaryColor: primary,
     accentColor: accent,
     onPrimaryColor: readableTextOn(primary),
+    // Carried onto the public endpoint too: the login page is the first
+    // screen anybody sees, and it should already be in the school's language.
+    // Defaulted here rather than left undefined, so a school with no branding
+    // row behaves identically to one with a default row — the rule this whole
+    // module follows.
+    defaultLocale: params.branding?.defaultLocale ?? "en",
   };
 }

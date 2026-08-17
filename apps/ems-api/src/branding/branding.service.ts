@@ -4,6 +4,7 @@ import type { PrismaClient as TenantPrismaClient } from "ems-tenant-client";
 import type { EnvConfig } from "@/config/env.validation";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import { TenancyService } from "@/tenancy/tenancy.service";
+import { DEFAULT_LOCALE, normaliseLocale } from "./locale-policy";
 import { StorageService } from "@/storage/storage.service";
 import {
   ALLOWED_IMAGE_TYPES,
@@ -36,6 +37,7 @@ interface BrandingRow {
   logoKey: string | null;
   primaryColor: string;
   accentColor: string;
+  defaultLocale: string;
 }
 
 const EMPTY: BrandingRow = {
@@ -45,6 +47,7 @@ const EMPTY: BrandingRow = {
   logoKey: null,
   primaryColor: DEFAULT_PRIMARY_COLOR,
   accentColor: DEFAULT_ACCENT_COLOR,
+  defaultLocale: DEFAULT_LOCALE,
 };
 
 @Injectable()
@@ -88,6 +91,11 @@ export class BrandingService {
       ...(dto.tagline !== undefined ? { tagline: emptyToNull(dto.tagline) } : {}),
       ...(dto.primaryColor !== undefined ? { primaryColor: normaliseHexColor(dto.primaryColor) } : {}),
       ...(dto.accentColor !== undefined ? { accentColor: normaliseHexColor(dto.accentColor) } : {}),
+      // Normalised, so "en-GB" from a browser is stored as the language it
+      // plainly is rather than as a code nothing matches later.
+      ...(dto.defaultLocale !== undefined
+        ? { defaultLocale: normaliseLocale(dto.defaultLocale) ?? DEFAULT_LOCALE }
+        : {}),
       updatedByUserId: this.tenantPrisma.currentUserId,
     };
 
@@ -221,6 +229,9 @@ export class BrandingService {
       logoKey: row.logoKey,
       primaryColor: row.primaryColor,
       accentColor: row.accentColor,
+      // Sent on the public endpoint too: the login page is the first screen
+      // anybody sees, and it should already be in the school's language.
+      defaultLocale: row.defaultLocale,
     };
   }
 

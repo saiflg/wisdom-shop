@@ -498,6 +498,14 @@ model BrandingSettings {
   primaryColor String @default("#1d4ed8")
   accentColor  String @default("#0f766e")
 
+  /// The language the console opens in for this school.
+  ///
+  /// A default, not an instruction: anybody who picks a language for
+  /// themselves keeps it. Stored as a bare code ("en", "fr") and resolved
+  /// through locale-policy.ts, which falls back rather than breaking the
+  /// console if the language is later withdrawn.
+  defaultLocale String @default("en")
+
   updatedByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

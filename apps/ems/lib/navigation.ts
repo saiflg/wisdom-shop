@@ -278,7 +278,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.settings.users", href: "/staff" },
       { key: "nav.settings.roles" },
       { key: "nav.settings.permissions" },
-      { key: "nav.settings.languages" },
+      // The console ships English and French; this is where a school chooses
+      // which one it opens in, and where anybody overrides it for themselves.
+      { key: "nav.settings.languages", href: "/settings/languages" },
       { key: "nav.settings.paymentGateways", href: "/settings/payments" },
       { key: "nav.settings.communicationGateways", href: "/settings/communication" },
       { key: "nav.settings.ai", href: "/curriculum-settings" },
