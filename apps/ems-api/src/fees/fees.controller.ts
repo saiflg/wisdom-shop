@@ -20,6 +20,14 @@ import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 @ApiTags("fees")
 @ApiBearerAuth()
 @RequiresModule("FEES")
+// Deny by default. Every route here is SCHOOL_ADMIN unless it deliberately
+// widens, and the two that do are the family-facing reads below, which scope
+// themselves by viewer in the service.
+//
+// This class had no class-level @Roles and every money route opted in by
+// hand — until a set of new ones did not, and a teacher could discount a
+// bill. Forgetting a decorator should cost access, not grant it.
+@Roles("SCHOOL_ADMIN")
 @Controller("fees")
 export class FeesController {
   constructor(
@@ -174,6 +182,9 @@ export class FeesController {
   }
 
   @Get("invoices")
+  // Widened deliberately: FeesService.listInvoices scopes by viewer, and a
+  // family reading their own bill is the point of the portal.
+  @Roles("SCHOOL_ADMIN", "TEACHER", "STUDENT", "GUARDIAN")
   @ApiQuery({ name: "studentProfileId", required: false })
   @ApiOperation({
     summary: "Invoices — guardians and students see only their own",
@@ -184,6 +195,8 @@ export class FeesController {
   }
 
   @Get("invoices/:id")
+  // Same: getInvoice 404s for a family asking after somebody else's child.
+  @Roles("SCHOOL_ADMIN", "TEACHER", "STUDENT", "GUARDIAN")
   @ApiOperation({
     summary: "One invoice with its lines and payments",
     description: "A family asking for someone else's invoice gets a 404, not a 403.",
