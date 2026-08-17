@@ -235,8 +235,13 @@ export const NAV_GROUPS: NavGroup[] = [
       // separate ledger, and a page listing payments detached from what they
       // paid for would be a worse view of the same rows.
       { key: "nav.finance.payments", href: "/invoices" },
-      { key: "nav.finance.discounts", roles: ADMIN_ONLY },
-      { key: "nav.finance.scholarships", roles: ADMIN_ONLY },
+      // Money off one bill is granted on that bill, where the balance and
+      // the payments are already in front of you. A separate page would be a
+      // worse view of the same rows, so this points at the invoices.
+      { key: "nav.finance.discounts", href: "/invoices", roles: ADMIN_ONLY },
+      // Its own screen, unlike discounts: a scholarship is a decision about
+      // a child that outlives any single invoice.
+      { key: "nav.finance.scholarships", href: "/scholarships", roles: ADMIN_ONLY },
       { key: "nav.finance.accounting", roles: ADMIN_ONLY },
       { key: "nav.finance.budget", roles: ADMIN_ONLY },
       { key: "nav.finance.expenses", roles: ADMIN_ONLY },

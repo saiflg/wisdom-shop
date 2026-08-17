@@ -6,6 +6,7 @@ import { ApiError, errorMessage } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import { PdfButton } from "@/components/pdf-button";
 import type { TranslationKey } from "@/lib/i18n";
+import { InvoiceDiscounts } from "@/components/invoice-discounts";
 import {
   FEE_PAYMENT_METHODS,
   formatMoney,
@@ -241,6 +242,13 @@ function InvoiceDetail({ invoice }: { invoice: FeeInvoice }) {
           </li>
         </ul>
       </div>
+
+      {/* Beneath the lines and above the payments, which is the order the
+          question is asked in: what were we charged, what came off, what did
+          we pay. Renders its own breakdown, including when nothing has been
+          taken off — a bill with no discount should look the same as one
+          whose discount was removed. */}
+      <InvoiceDiscounts invoiceId={invoice.id} />
 
       <div>
         <p className="text-sm font-medium">{t("fees.invoices.payments")}</p>
