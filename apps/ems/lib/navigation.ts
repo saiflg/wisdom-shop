@@ -286,7 +286,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.settings.ai", href: "/curriculum-settings" },
       { key: "nav.settings.backup" },
       { key: "nav.settings.security" },
-      { key: "nav.settings.auditLogs" },
+      // Assembled from the trails the product already keeps — bank-detail
+      // reveals, attendance amendments, payments, payroll approvals,
+      // announcements, invitations, moderation. Read-only by construction.
+      { key: "nav.settings.auditLogs", href: "/settings/audit-log" },
     ],
   },
 ];

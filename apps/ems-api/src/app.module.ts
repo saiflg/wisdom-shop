@@ -47,6 +47,7 @@ import { TenantSecretsModule } from "./common/crypto/tenant-secrets.module";
 import { SettingsModule } from "./settings/settings.module";
 import { StorageModule } from "./storage/storage.module";
 import { BrandingModule } from "./branding/branding.module";
+import { AuditModule } from "@/audit/audit.module";
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { BrandingModule } from "./branding/branding.module";
     PlatformAuthModule,
     SchoolsModule,
     ClassChatModule,
+    AuditModule,
     PeopleModule,
     ParentMessagesModule,
     AuthModule,
