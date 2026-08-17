@@ -175,7 +175,10 @@ export const NAV_GROUPS: NavGroup[] = [
       // menu item still said "soon".
       { key: "nav.staff.salaryAdvance", href: "/payroll/loans", roles: ADMIN_ONLY, module: "PAYROLL" },
       { key: "nav.staff.medicalAssistance", roles: ADMIN_ONLY },
-      { key: "nav.staff.leave" },
+      // Every member of staff, not admin-only: asking for leave is the
+      // commonest thing anybody does here, and an approvals list nobody can
+      // submit to is half a feature.
+      { key: "nav.staff.leave", href: "/staff/leave" },
       { key: "nav.staff.attendance" },
       { key: "nav.staff.performance", roles: ADMIN_ONLY },
       // Staff have the same portal families and students do — their own

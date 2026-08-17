@@ -70,6 +70,7 @@ model User {
 
   refreshTokens        RefreshToken[]
   guardianInvitations  GuardianInvitation[]
+  leaveRequests        LeaveRequest[]       @relation("LeaveRequester")
   studentProfile       StudentProfile?
   guardianLinks        GuardianLink[]
   /// Storage key for this person's photograph, or null.
@@ -915,6 +916,49 @@ enum EmploymentType {
 /// from `User` rather than bolted onto it because a login and an employment
 /// record have different lifetimes: an account can be disabled while the
 /// employment record must survive for payroll history.
+/// A member of staff asking for time off, and the school's answer.
+///
+/// Attached to the user rather than the employment record: a request
+/// outlives a change of job title, and the person who decides it is a
+/// different user who must be recorded by name.
+model LeaveRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("LeaveRequester", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// ANNUAL, SICK, MATERNITY, PATERNITY, COMPASSIONATE, STUDY or UNPAID.
+  /// Only ANNUAL comes out of the allowance — see leave.ts.
+  type String
+
+  /// Date only, UTC midnight, inclusive at both ends. The cost in working
+  /// days is computed, never stored: a stored total would drift the moment
+  /// somebody corrected a date.
+  fromDate DateTime
+  toDate   DateTime
+
+  reason String?
+
+  /// REQUESTED, APPROVED, DECLINED or CANCELLED.
+  status String @default("REQUESTED")
+
+  /// Who decided, stored by value like every other actor here. Nobody may
+  /// decide their own request — enforced in leave.ts, not by convention.
+  decidedAt        DateTime?
+  decidedByUserId  String?
+  decidedByName    String?
+  decisionNote     String?
+
+  requestedByName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// The query this serves: one person's leave, and the school's diary.
+  @@index([userId, fromDate])
+  @@index([status, fromDate])
+  @@map("leave_requests")
+}
+
 model StaffProfile {
   id     String @id @default(cuid())
   userId String @unique
@@ -940,6 +984,11 @@ model StaffProfile {
   /// section because that is where a gap has to be filled. An enum would need
   /// a migration every time a school opened a new wing.
   section String?
+
+  /// Annual leave allowance in working days. Zero means the school is not
+  /// tracking allowances — NOT that this person has none, which is why the
+  /// balance reads "no allowance set" rather than "0 days remaining".
+  leaveEntitlementDays Int @default(0)
 
   /// How much to recover from this person's salary each month towards their
   /// own children's school fees.

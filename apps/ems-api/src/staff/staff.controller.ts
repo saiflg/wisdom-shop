@@ -1,11 +1,13 @@
-import { Body, Controller, Get, Param, Post, Put } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Roles } from "@/auth/decorators/roles.decorator";
 import { CurrentUser } from "@/auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { GuardianInvitationsService } from "@/guardians/guardian-invitations.service";
 import { StaffService } from "./staff.service";
+import { LeaveService } from "./leave.service";
 import { RegisterStaffDto, RevealAccountNumberDto, UpsertStaffProfileDto } from "./dto/staff.dto";
+import { DecideLeaveDto, RequestLeaveDto, SetEntitlementDto } from "./dto/leave.dto";
 
 @ApiTags("staff")
 @ApiBearerAuth()
@@ -14,7 +16,73 @@ export class StaffController {
   constructor(
     private readonly staff: StaffService,
     private readonly invitations: GuardianInvitationsService,
+    private readonly leave: LeaveService,
   ) {}
+
+  @Get("leave")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "What needs a decision, and who is away soon",
+    description: "The two questions an office has about leave, on one screen.",
+  })
+  leaveOverview(@CurrentUser() user: AuthenticatedUser) {
+    return this.leave.overview(user);
+  }
+
+  @Post("leave")
+  @Roles("SCHOOL_ADMIN", "TEACHER")
+  @ApiOperation({
+    summary: "Ask for time off",
+    description:
+      "Weekends are not counted. An administrator may record one for somebody who telephoned in, but it is " +
+      "still not theirs to approve.",
+  })
+  requestLeave(@Body() dto: RequestLeaveDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.leave.request(dto, user);
+  }
+
+  @Patch("leave/:id/decide")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Approve or decline a request",
+    description: "Refused if it is your own: an administrator asking for a fortnight is asking somebody else.",
+  })
+  decideLeave(
+    @Param("id") id: string,
+    @Body() dto: DecideLeaveDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.leave.decide(id, dto.approve, dto.note, user);
+  }
+
+  @Patch("leave/:id/cancel")
+  @Roles("SCHOOL_ADMIN", "TEACHER")
+  @ApiOperation({ summary: "Take back your own request, before it starts" })
+  cancelLeave(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.leave.cancel(id, user);
+  }
+
+  @Get(":userId/leave")
+  @Roles("SCHOOL_ADMIN", "TEACHER")
+  @ApiOperation({
+    summary: "One person's leave, and what is left of their allowance",
+    description: "Your own, or anybody's if you are an administrator. A teacher has no business in a colleague's.",
+  })
+  staffLeave(@Param("userId") userId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.leave.forStaff(userId, user);
+  }
+
+  @Put(":userId/leave-entitlement")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({ summary: "Set an annual allowance. Zero means the school is not tracking it." })
+  setEntitlement(
+    @Param("userId") userId: string,
+    @Body() dto: SetEntitlementDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.leave.setEntitlement(userId, dto.days, user);
+  }
+
 
   /**
    * Invite a member of staff to set up their own password.
