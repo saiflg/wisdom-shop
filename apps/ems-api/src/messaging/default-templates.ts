@@ -44,6 +44,22 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     body: "{{schoolName}}: invoice {{invoiceNumber}} for {{studentName}} is due — {{amount}}.",
   },
   {
+    event: "FEE_PAYMENT_RECEIVED",
+    channel: "EMAIL",
+    subject: "Receipt {{receiptNumber}} — payment received for {{studentName}}",
+    body:
+      "Dear {{guardianName}},\n\nThank you. We have received {{amountPaid}} by {{method}} on {{paidOn}} " +
+      "towards invoice {{invoiceNumber}} for {{studentName}}.\n\n{{balance}}\n\n" +
+      "Please keep receipt number {{receiptNumber}} for your records.\n\n{{schoolName}}",
+  },
+  {
+    event: "FEE_PAYMENT_RECEIVED",
+    channel: "SMS",
+    body:
+      "{{schoolName}}: received {{amountPaid}} for {{studentName}} ({{invoiceNumber}}). " +
+      "{{balance}} Receipt {{receiptNumber}}.",
+  },
+  {
     event: "RESULTS_PUBLISHED",
     channel: "EMAIL",
     subject: "{{studentName}}'s results for {{term}} are ready",

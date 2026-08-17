@@ -7,6 +7,7 @@ import { CommunicationSettingsService } from "@/settings/communication-settings.
 import { buildDedupeKey, renderTemplate, validateTemplate, type RenderContext } from "./render-template";
 import { resolveRecipients, type GuardianLinkInput } from "./resolve-recipients";
 import { gatewayHealth, type GatewayHealth } from "./gateway-health";
+import { DEFAULT_TEMPLATES, type DefaultTemplate } from "./default-templates";
 
 const UNIQUE_VIOLATION = "P2002";
 const SEND_TIMEOUT_MS = 15_000;
@@ -138,9 +139,7 @@ export class MessagingService {
     const channels = input.channels ?? DEFAULT_CHANNELS;
 
     for (const channel of channels) {
-      const template = await client.messageTemplate.findUnique({
-        where: { event_channel: { event: input.event, channel } },
-      });
+      const template = await this.templateFor(input.event, channel);
       if (!template || !template.enabled) continue;
 
       const { recipients, skipped } = resolveRecipients(linkInputs, input.studentProfileId, channel);
@@ -409,6 +408,57 @@ export class MessagingService {
         sms: Boolean((sms as { apiKeyMasked?: string; senderId?: string } | null)?.senderId),
       },
     );
+  }
+
+  /**
+   * This school's wording for an event, seeding the shipped default if it has
+   * none.
+   *
+   * Templates are created at provisioning, so a school onboarded before an
+   * event existed has no row for it — and `dispatch` skips any event with no
+   * template. That made adding a new notification a silent no-op for every
+   * existing customer: the code sent nothing, logged nothing, and the first
+   * sign was a family saying they were never told.
+   *
+   * Written rather than merely used, so the new wording appears in the
+   * template editor where a school can change it. Idempotent by the unique
+   * index on (event, channel), so two simultaneous events cannot both create
+   * one.
+   */
+  private async templateFor(event: MessageEvent, channel: MessageChannel) {
+    const client = await this.tenantPrisma.getClient();
+
+    const existing = await client.messageTemplate.findUnique({
+      where: { event_channel: { event, channel } },
+    });
+    if (existing) return existing;
+
+    const fallback = DEFAULT_TEMPLATES.find(
+      (candidate: DefaultTemplate) => candidate.event === event && candidate.channel === channel,
+    );
+    // No default either — this channel genuinely has nothing to say for this
+    // event, which is a decision rather than an omission.
+    if (!fallback) return null;
+
+    this.logger.log(`Seeding missing ${event}/${channel} template for this school`);
+    try {
+      return await client.messageTemplate.create({
+        data: {
+          event,
+          channel,
+          subject: fallback.subject ?? null,
+          body: fallback.body,
+          enabled: true,
+        },
+      });
+    } catch (error) {
+      // Lost a race with another request doing the same thing; theirs is as
+      // good as ours.
+      if ((error as { code?: string }).code === UNIQUE_VIOLATION) {
+        return client.messageTemplate.findUnique({ where: { event_channel: { event, channel } } });
+      }
+      throw error;
+    }
   }
 
   async listTemplates() {

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { FeeInvoiceStatus, PrismaClient as TenantPrismaClient, RoleName } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import { MessagingService } from "@/messaging/messaging.service";
@@ -14,6 +14,7 @@ import {
   formatFeeInvoiceNumber,
   summariseFees,
 } from "./fees-math";
+import { buildReceipt, formatReceiptNumber } from "./receipts";
 import type {
   CreateFeeInvoiceDto,
   CreateFeeStructureDto,
@@ -48,6 +49,8 @@ const INVOICE_INCLUDE = {
 
 @Injectable()
 export class FeesService {
+  private readonly logger = new Logger(FeesService.name);
+
   constructor(
     private readonly tenantPrisma: TenantPrismaService,
     private readonly messaging: MessagingService,
@@ -368,9 +371,18 @@ export class FeesService {
     });
     const recordedByName = actor ? `${actor.firstName} ${actor.lastName}` : viewer.id;
 
+    let payment: { id: string; receiptNumber: string | null; receivedAt: Date };
     try {
-      await client.$transaction([
-        client.feePayment.create({
+      payment = await client.$transaction(async (tx) => {
+        // The number is claimed inside the same transaction as the insert
+        // that uses it, exactly as invoice numbers are — counting rows
+        // outside would hand two simultaneous payments the same receipt.
+        const counted = await tx.financeSettings.update({
+          where: { id: (await tx.financeSettings.findFirstOrThrow({ select: { id: true } })).id },
+          data: { receiptCounter: { increment: 1 } },
+        });
+
+        const created = await tx.feePayment.create({
           data: {
             invoiceId,
             amountCents: dto.amountCents,
@@ -378,15 +390,20 @@ export class FeesService {
             reference: dto.reference ?? null,
             receivedAt: dto.receivedAt ? new Date(dto.receivedAt) : new Date(),
             note: dto.note,
+            receiptNumber: formatReceiptNumber(counted.receiptCounter),
             recordedByUserId: viewer.id,
             recordedByName,
           },
-        }),
-        client.feeInvoice.update({
+          select: { id: true, receiptNumber: true, receivedAt: true },
+        });
+
+        await tx.feeInvoice.update({
           where: { id: invoiceId },
           data: { paidCents: outcome.paidCents, status: outcome.status },
-        }),
-      ]);
+        });
+
+        return created;
+      });
     } catch (error) {
       if ((error as { code?: string }).code === UNIQUE_VIOLATION) {
         // The reference has already been recorded against this invoice — a
@@ -396,7 +413,78 @@ export class FeesService {
       throw error;
     }
 
+    // After the money is safely recorded, never as part of the transaction: a
+    // mail server being slow must not roll back a payment. Failures land in
+    // the outbox, and the dashboard says so.
+    await this.confirmPayment({
+      invoiceId,
+      amountCents: dto.amountCents,
+      method: dto.method,
+      receiptNumber: payment.receiptNumber,
+      receivedAt: payment.receivedAt,
+      paidCents: outcome.paidCents,
+    });
+
     return this.getInvoice(invoiceId, viewer);
+  }
+
+  /**
+   * Tells the family their money arrived.
+   *
+   * Both payment paths end here — a bursar recording cash and a gateway
+   * webhook produce the same confirmation, because a parent should not be
+   * able to tell from the receipt how the school found out.
+   *
+   * Never throws: the payment is already recorded and correct, and a
+   * notification failure must not make it look otherwise.
+   */
+  private async confirmPayment(input: {
+    invoiceId: string;
+    amountCents: number;
+    method: string;
+    receiptNumber: string | null;
+    receivedAt: Date;
+    paidCents: number;
+  }): Promise<void> {
+    try {
+      const client = await this.tenantPrisma.getClient();
+      const invoice = await client.feeInvoice.findUnique({
+        where: { id: input.invoiceId },
+        include: { studentProfile: { include: { user: { select: { firstName: true, lastName: true } } } } },
+      });
+      if (!invoice || !input.receiptNumber) return;
+
+      const receipt = buildReceipt({
+        receiptNumber: input.receiptNumber,
+        invoiceNumber: invoice.invoiceNumber,
+        studentName: `${invoice.studentProfile.user.firstName} ${invoice.studentProfile.user.lastName}`,
+        amountCents: input.amountCents,
+        totalCents: invoice.totalCents,
+        paidCents: input.paidCents,
+        currency: invoice.currency,
+        method: input.method,
+        receivedAt: input.receivedAt,
+      });
+
+      await this.messaging.notify({
+        event: "FEE_PAYMENT_RECEIVED",
+        studentProfileId: invoice.studentProfileId,
+        // The receipt number, not the invoice: a second payment against the
+        // same invoice is a second confirmation, and deduping on the invoice
+        // would silently swallow it.
+        dedupeParts: [receipt.receiptNumber],
+        context: {
+          receiptNumber: receipt.receiptNumber,
+          invoiceNumber: receipt.invoiceNumber,
+          amountPaid: receipt.amountPaid,
+          balance: receipt.balance,
+          method: receipt.method,
+          paidOn: receipt.paidOn,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Payment confirmation failed for invoice ${input.invoiceId}: ${String(error)}`);
+    }
   }
 
   /**
@@ -430,31 +518,55 @@ export class FeesService {
       return { refused: (error as Error).message };
     }
 
+    let payment: { receiptNumber: string | null; receivedAt: Date };
     try {
-      await input.client.$transaction([
-        input.client.feePayment.create({
+      payment = await input.client.$transaction(async (tx) => {
+        const settings = await tx.financeSettings.findFirstOrThrow({ select: { id: true } });
+        const counted = await tx.financeSettings.update({
+          where: { id: settings.id },
+          data: { receiptCounter: { increment: 1 } },
+        });
+
+        const created = await tx.feePayment.create({
           data: {
             invoiceId: input.invoiceId,
             amountCents: input.amountCents,
             method: "GATEWAY",
             reference: input.reference,
             note: input.note,
+            receiptNumber: formatReceiptNumber(counted.receiptCounter),
             // No school user was involved. Recording one would be a lie in
             // the one table that answers "who took the money".
             recordedByUserId: "gateway",
             recordedByName: input.recordedByName,
           },
-        }),
-        input.client.feeInvoice.update({
+          select: { receiptNumber: true, receivedAt: true },
+        });
+
+        await tx.feeInvoice.update({
           where: { id: input.invoiceId },
           data: { paidCents: outcome.paidCents, status: outcome.status },
-        }),
-      ]);
+        });
+
+        return created;
+      });
     } catch (error) {
       // The unique index on (invoiceId, reference) IS the idempotency here.
       if ((error as { code?: string }).code === UNIQUE_VIOLATION) return "duplicate";
       throw error;
     }
+
+    // A parent paying online gets the same receipt as one paying at the desk.
+    // A replayed webhook returns above and never reaches here, so a duplicate
+    // callback cannot produce a second confirmation.
+    await this.confirmPayment({
+      invoiceId: input.invoiceId,
+      amountCents: input.amountCents,
+      method: "GATEWAY",
+      receiptNumber: payment.receiptNumber,
+      receivedAt: payment.receivedAt,
+      paidCents: outcome.paidCents,
+    });
 
     return "recorded";
   }

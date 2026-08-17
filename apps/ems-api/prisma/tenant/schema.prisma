@@ -1574,6 +1574,7 @@ enum MessageEvent {
   ATTENDANCE_ABSENT
   FEE_INVOICE_ISSUED
   FEE_INVOICE_OVERDUE
+  FEE_PAYMENT_RECEIVED
   RESULTS_PUBLISHED
   MANUAL
 }
@@ -1901,6 +1902,10 @@ model FinanceSettings {
   /// different feature, not a free one.
   currency       String @default("NGN")
   invoiceCounter Int    @default(0)
+  /// A separate sequence from invoices, claimed the same way: a school
+  /// reconciling receipts should not have to explain why receipt 5 follows
+  /// receipt 2.
+  receiptCounter Int    @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2034,6 +2039,11 @@ model FeePayment {
   reference  String?
   receivedAt DateTime @default(now())
   note       String?
+
+  /// Human-readable, unique, and quoted by a parent arguing about a payment
+  /// months later. Nullable only because payments recorded before receipts
+  /// existed have none — every new one gets one.
+  receiptNumber String? @unique
 
   /// Stored by value rather than as a foreign key, for the same reason as
   /// AttendanceAmendment and SchoolLifecycleEvent: deleting a departed

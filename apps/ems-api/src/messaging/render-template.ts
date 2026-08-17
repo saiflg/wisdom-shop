@@ -37,6 +37,19 @@ export const EVENT_PLACEHOLDERS: Record<MessageEvent, readonly string[]> = {
   ATTENDANCE_ABSENT: ["schoolName", "guardianName", "studentName", "className", "date"],
   FEE_INVOICE_ISSUED: ["schoolName", "guardianName", "studentName", "invoiceNumber", "amount", "dueDate"],
   FEE_INVOICE_OVERDUE: ["schoolName", "guardianName", "studentName", "invoiceNumber", "amount", "dueDate"],
+  // A receipt has to answer four questions without being read twice: how
+  // much arrived, what for, what is left, and a number to quote later.
+  FEE_PAYMENT_RECEIVED: [
+    "schoolName",
+    "guardianName",
+    "studentName",
+    "receiptNumber",
+    "invoiceNumber",
+    "amountPaid",
+    "balance",
+    "method",
+    "paidOn",
+  ],
   RESULTS_PUBLISHED: ["schoolName", "guardianName", "studentName", "term", "academicYear", "className"],
   MANUAL: ["schoolName", "guardianName", "studentName"],
 };
