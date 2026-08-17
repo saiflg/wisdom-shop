@@ -378,6 +378,7 @@ model Class {
   teachingAssignments TeachingAssignment[]
   assignments         Assignment[]
   exams               Exam[]
+  announcements       Announcement[]
 
   @@index([academicYear])
   @@map("classes")
@@ -1619,12 +1620,60 @@ enum MessageStatus {
 /// register, re-raising invoices or republishing results cannot notify a
 /// family twice. The unique index below is the guarantee; application
 /// bookkeeping would race.
+/// One thing a school told a crowd.
+///
+/// The individual sends live in Message like everything else, so there is one
+/// outbox and one delivery path rather than a parallel system nobody
+/// maintains. This row is the announcement itself: what was said, who it was
+/// aimed at, and who pressed send.
+///
+/// Kept after sending, not deleted: "did the school tell us about the
+/// closure, and when" is a question schools are asked, and the answer has to
+/// survive the messages being tidied away.
+model Announcement {
+  id      String @id @default(cuid())
+  title   String
+  body    String
+  /// WHOLE_SCHOOL, ALL_PARENTS, ALL_STAFF or CLASS.
+  audience String
+  /// Set only when audience is CLASS.
+  classId  String?
+  class    Class?  @relation(fields: [classId], references: [id], onDelete: SetNull)
+
+  /// EMAIL, SMS, or both.
+  channels String[]
+
+  /// Stored by value alongside the id so it still reads correctly after that
+  /// member of staff leaves — the same reasoning as a payslip's staff name.
+  sentByUserId String?
+  sentByName   String?
+
+  /// How many people it actually reached, and how many were skipped, frozen
+  /// at send time. Recomputing later would answer a different question: the
+  /// school roll changes, and "who did we tell" must not.
+  reached Int @default(0)
+  skipped Int @default(0)
+
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  messages Message[]
+
+  @@index([sentAt])
+  @@map("announcements")
+}
+
 model Message {
   id         String           @id @default(cuid())
   event      MessageEvent
   channel    MessageChannel
   templateId String?
   template   MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  /// Set when this send was part of an announcement, so the outbox can group
+  /// four hundred rows under the one thing that caused them.
+  announcementId String?
+  announcement   Announcement? @relation(fields: [announcementId], references: [id], onDelete: SetNull)
 
   /// The guardian or staff user this went to. Nullable so a message survives
   /// the deletion of the account it was addressed to — the record of what a
@@ -1661,6 +1710,7 @@ model Message {
   @@index([status])
   @@index([studentProfileId])
   @@index([event, createdAt])
+  @@index([announcementId])
   @@map("messages")
 }
 

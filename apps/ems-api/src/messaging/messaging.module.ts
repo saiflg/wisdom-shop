@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { SettingsModule } from "@/settings/settings.module";
 import { MessagingController } from "./messaging.controller";
 import { MessagingService } from "./messaging.service";
+import { AnnouncementsService } from "./announcements.service";
 
 /**
  * Exported so attendance, fees and grading can notify without importing each
@@ -11,7 +12,7 @@ import { MessagingService } from "./messaging.service";
 @Module({
   imports: [SettingsModule],
   controllers: [MessagingController],
-  providers: [MessagingService],
+  providers: [MessagingService, AnnouncementsService],
   exports: [MessagingService],
 })
 export class MessagingModule {}

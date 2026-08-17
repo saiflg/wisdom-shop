@@ -1,9 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import type { MessageEvent, MessageStatus } from "ems-tenant-client";
 import { Roles } from "@/auth/decorators/roles.decorator";
+import { CurrentUser } from "@/auth/decorators/current-user.decorator";
+import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { MessagingService } from "./messaging.service";
+import { AnnouncementsService } from "./announcements.service";
 import { UpdateTemplateDto } from "./dto/messaging.dto";
+import { AnnouncementDto } from "./dto/announcement.dto";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("messaging")
@@ -11,7 +15,49 @@ import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 @RequiresModule("MESSAGING")
 @Controller("messaging")
 export class MessagingController {
-  constructor(private readonly messaging: MessagingService) {}
+  constructor(
+    private readonly messaging: MessagingService,
+    private readonly announcements: AnnouncementsService,
+  ) {}
+
+  @Get("announcements")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({ summary: "What the school has announced, most recent first" })
+  listAnnouncements() {
+    return this.announcements.list();
+  }
+
+  @Post("announcements/preview")
+  @HttpCode(HttpStatus.OK)
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "How many people this would reach, and who would be missed",
+    description:
+      "Sends nothing. An announcement cannot be recalled and text messages cost money per head, so the count " +
+      "comes before the button rather than after it.",
+  })
+  previewAnnouncement(@Body() dto: AnnouncementDto) {
+    return this.announcements.preview(dto);
+  }
+
+  @Post("announcements")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Send an announcement",
+    description:
+      "Every send carries one dedupe key, so the outbox's unique index makes a second press harmless rather " +
+      "than sending the school a second copy.",
+  })
+  sendAnnouncement(@Body() dto: AnnouncementDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.announcements.send(dto, user);
+  }
+
+  @Get("announcements/:id")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({ summary: "One announcement, and how each individual send went" })
+  announcement(@Param("id") id: string) {
+    return this.announcements.detail(id);
+  }
 
   @Get("templates")
   @Roles("SCHOOL_ADMIN")

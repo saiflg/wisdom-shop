@@ -53,6 +53,58 @@ export class MessagingService {
     }
   }
 
+  /**
+   * Send one already-composed message to one address.
+   *
+   * The announcement path needs this: its text is typed by a person rather
+   * than rendered from a template, and its recipients are a crowd rather than
+   * one child's guardians. Everything after composing is identical, so it
+   * reuses `record` and `deliver` rather than growing a second delivery path
+   * that would drift from this one and be discovered when a school says
+   * nothing arrived.
+   *
+   * Returns "duplicate" when the outbox's unique index refuses a second copy
+   * to the same address — which is how pressing send twice stays harmless.
+   */
+  async sendComposed(args: {
+    channel: MessageChannel;
+    recipientUserId: string | null;
+    recipientName: string;
+    recipientAddress: string;
+    subject: string | null;
+    body: string;
+    dedupeKey: string;
+    announcementId?: string;
+  }): Promise<"sent" | "duplicate"> {
+    const client = await this.tenantPrisma.getClient();
+
+    let created: { id: string };
+    try {
+      created = await client.message.create({
+        data: {
+          event: "MANUAL",
+          channel: args.channel,
+          recipientUserId: args.recipientUserId,
+          recipientName: args.recipientName,
+          recipientAddress: args.recipientAddress,
+          subject: args.subject,
+          body: args.body,
+          status: "QUEUED",
+          dedupeKey: args.dedupeKey,
+          ...(args.announcementId ? { announcementId: args.announcementId } : {}),
+        },
+        select: { id: true },
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === UNIQUE_VIOLATION) return "duplicate";
+      throw error;
+    }
+
+    // Never throws — failures are recorded on the row and shown in the outbox.
+    await this.deliver(created);
+    return "sent";
+  }
+
   private async dispatch(input: NotifyInput): Promise<NotifyOutcome> {
     const client = await this.tenantPrisma.getClient();
     const outcome: NotifyOutcome = { queued: 0, skipped: 0, duplicates: 0 };

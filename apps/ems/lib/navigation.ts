@@ -259,7 +259,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.messaging.sms", href: "/settings/communication", roles: ADMIN_ONLY },
       { key: "nav.messaging.whatsapp", href: "/settings/communication", roles: ADMIN_ONLY },
       { key: "nav.messaging.push", href: "/settings/communication", roles: ADMIN_ONLY },
-      { key: "nav.messaging.announcements" },
+      // Admin-only: it reaches every family in the school at once.
+      { key: "nav.messaging.announcements", href: "/messaging/announcements", roles: ADMIN_ONLY },
       { key: "nav.messaging.newsletters", roles: STAFF },
     ],
   },
