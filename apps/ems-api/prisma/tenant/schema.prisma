@@ -402,6 +402,7 @@ model StudentProfile {
   parentThread      ParentThread?
   attendanceRecords AttendanceRecord[]
   absenceNotes      AbsenceNote[]
+  scholarships      Scholarship[]
   feeInvoices       FeeInvoice[]
   marks             Mark[]
   termResults       TermResult[]
@@ -1984,8 +1985,12 @@ model FeeInvoice {
   currency     String
   /// Both integer minor units. `paidCents` is maintained as payments land so
   /// a balance never requires summing the payment table at read time.
-  totalCents Int
-  paidCents  Int              @default(0)
+  /// `totalCents` is what is PAYABLE. A discount lowers it, so every
+  /// existing payment rule keeps working untouched; the gross the fee lines
+  /// add up to is totalCents + discountCents.
+  totalCents    Int
+  discountCents Int              @default(0)
+  paidCents     Int              @default(0)
   status     FeeInvoiceStatus @default(DRAFT)
   dueDate    DateTime?
   issuedAt   DateTime?
@@ -1995,8 +2000,9 @@ model FeeInvoice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lines    FeeInvoiceLine[]
-  payments FeePayment[]
+  lines     FeeInvoiceLine[]
+  payments  FeePayment[]
+  discounts FeeDiscount[]
 
   /// Generating a class's invoices twice must not charge a family twice.
   ///
@@ -2036,6 +2042,85 @@ enum FeePaymentMethod {
 /// What actually came in. Append-only: a mistaken payment is reversed with a
 /// further record, never edited away, because this is the school's answer to
 /// "we already paid".
+/// Money taken off one invoice.
+///
+/// Its own rows rather than a column, because a family asking "why is this
+/// less than my neighbour's" deserves the list, and because withdrawing one
+/// award must not disturb another. A row produced by a standing award points
+/// back at it.
+model FeeDiscount {
+  id        String     @id @default(cuid())
+  invoiceId String
+  invoice   FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  label String
+  /// PERCENT or FIXED — how it was expressed when it was granted.
+  kind  String
+  /// Percentage points, or minor units. Kept so "20% off" still reads as a
+  /// percentage next year, when the invoice total has been forgotten.
+  value Int
+  /// What it actually came to on this invoice, after capping. This is the
+  /// number the arithmetic uses; `value` is how it was described.
+  amountCents Int
+
+  reason String?
+
+  /// Set when a standing award produced this. Null for a one-off.
+  scholarshipId String?
+  scholarship   Scholarship? @relation(fields: [scholarshipId], references: [id], onDelete: SetNull)
+
+  /// Stored by value, like every other actor in this schema: who granted a
+  /// family money must still read correctly after they leave.
+  grantedByUserId String?
+  grantedByName   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+  @@index([scholarshipId])
+  @@map("fee_discounts")
+}
+
+/// A standing entitlement that produces a discount on every invoice raised
+/// while it runs.
+///
+/// Attached to a student rather than an invoice: a scholarship is a decision
+/// about a child, and it has to keep applying to bills that do not exist yet.
+model Scholarship {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  name    String
+  /// Who is paying for it, if anybody — a foundation, a person, the school.
+  sponsor String?
+
+  kind  String
+  value Int
+
+  /// Inclusive at both ends. No end date means it runs until withdrawn,
+  /// which is the common case for a full scholarship.
+  startDate DateTime?
+  endDate   DateTime?
+
+  /// ACTIVE or WITHDRAWN. Withdrawn rather than deleted: the discounts it
+  /// already produced stay on the invoices they were granted against, and a
+  /// school has to be able to explain them.
+  status String @default("ACTIVE")
+
+  awardedByUserId String?
+  awardedByName   String?
+  withdrawnReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  discounts FeeDiscount[]
+
+  @@index([studentProfileId])
+  @@map("scholarships")
+}
+
 model FeePayment {
   id          String           @id @default(cuid())
   invoiceId   String

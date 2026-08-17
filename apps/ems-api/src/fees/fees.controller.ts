@@ -4,6 +4,7 @@ import { Roles } from "@/auth/decorators/roles.decorator";
 import { CurrentUser } from "@/auth/decorators/current-user.decorator";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { FeesService } from "./fees.service";
+import { DiscountsService } from "./discounts.service";
 import {
   CreateFeeInvoiceDto,
   CreateFeeStructureDto,
@@ -13,6 +14,7 @@ import {
   UpdateFinanceSettingsDto,
   VoidInvoiceDto,
 } from "./dto/fees.dto";
+import { AwardScholarshipDto, GrantDiscountDto, WithdrawScholarshipDto } from "./dto/discounts.dto";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("fees")
@@ -20,7 +22,75 @@ import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 @RequiresModule("FEES")
 @Controller("fees")
 export class FeesController {
-  constructor(private readonly fees: FeesService) {}
+  constructor(
+    private readonly fees: FeesService,
+    private readonly discounts: DiscountsService,
+  ) {}
+
+  @Get("scholarships")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Standing awards, and how many bills each has actually reduced",
+    description: "An award nobody has used is worth questioning, so the count is shown.",
+  })
+  listScholarships(@Query("studentProfileId") studentProfileId?: string) {
+    return this.discounts.listAwards(studentProfileId);
+  }
+
+  @Post("scholarships")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Award a scholarship to a student",
+    description:
+      "Standing: it reduces every invoice raised while it runs, including ones that do not exist yet. That is " +
+      "the difference between this and a discount.",
+  })
+  award(@Body() dto: AwardScholarshipDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.discounts.award(dto, user);
+  }
+
+  @Patch("scholarships/:id/withdraw")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Stop an award",
+    description:
+      "Withdrawn, never deleted: the discounts it already granted stay on the invoices they were granted " +
+      "against, because a school has to be able to explain a bill it has already sent.",
+  })
+  withdrawScholarship(@Param("id") id: string, @Body() dto: WithdrawScholarshipDto) {
+    return this.discounts.withdraw(id, dto.reason);
+  }
+
+  @Get("invoices/:id/discounts")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({ summary: "What has been taken off one invoice, and what it now comes to" })
+  invoiceDiscounts(@Param("id") id: string) {
+    return this.discounts.forInvoice(id);
+  }
+
+  @Post("invoices/:id/discounts")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Take money off one invoice",
+    description:
+      "Refused if it would take the payable amount below what the family has already paid — that is not a " +
+      "discount, it is a refund, and refunds are not modelled here.",
+  })
+  grantDiscount(
+    @Param("id") id: string,
+    @Body() dto: GrantDiscountDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.discounts.grant(id, dto, user);
+  }
+
+  @Delete("discounts/:id")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({ summary: "Undo a discount. The money goes back on the bill; payments are untouched." })
+  revokeDiscount(@Param("id") id: string) {
+    return this.discounts.revoke(id);
+  }
+
 
   @Get("settings")
   @Roles("SCHOOL_ADMIN")

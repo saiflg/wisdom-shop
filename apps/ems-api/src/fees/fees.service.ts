@@ -15,6 +15,8 @@ import {
   summariseFees,
 } from "./fees-math";
 import { buildReceipt, formatReceiptNumber } from "./receipts";
+import { discountValue, type DiscountKind } from "./fee-discounts";
+import { DiscountsService } from "./discounts.service";
 import type {
   CreateFeeInvoiceDto,
   CreateFeeStructureDto,
@@ -54,6 +56,7 @@ export class FeesService {
   constructor(
     private readonly tenantPrisma: TenantPrismaService,
     private readonly messaging: MessagingService,
+    private readonly discounts: DiscountsService,
   ) {}
 
   // ---------------------------------------------------------------- settings
@@ -206,11 +209,36 @@ export class FeesService {
 
     for (const studentProfileId of studentIds) {
       try {
+        // A scholarship is standing, so it has to reach bills that did not
+        // exist when it was granted. Resolved before the invoice is written
+        // so the family is never told a figure that is about to change.
+        const awards = await this.discounts.applicableAwards(studentProfileId, new Date());
+
         const invoice = await client.$transaction(async (tx) => {
           const counted = await tx.financeSettings.update({
             where: { id: settings.id },
             data: { invoiceCounter: { increment: 1 } },
           });
+
+          // Percentages are taken against the gross, so every award is worth
+          // the same whatever order they land in — see fee-discounts.ts.
+          let payable = total;
+          const granted: { label: string; kind: string; value: number; amountCents: number; scholarshipId: string }[] = [];
+
+          for (const award of awards) {
+            const worth = discountValue({ kind: award.kind as DiscountKind, value: award.value }, total);
+            const capped = Math.min(worth, payable);
+            if (capped <= 0) continue;
+            payable -= capped;
+            granted.push({
+              label: award.name,
+              kind: award.kind,
+              value: award.value,
+              amountCents: capped,
+              scholarshipId: award.id,
+            });
+          }
+
           return tx.feeInvoice.create({
             data: {
               invoiceNumber: formatFeeInvoiceNumber(counted.invoiceCounter),
@@ -219,15 +247,30 @@ export class FeesService {
               academicYear: structure.academicYear,
               term: structure.term,
               currency: settings.currency,
-              totalCents: total,
+              totalCents: payable,
+              discountCents: total - payable,
               // Raised as ISSUED, not DRAFT: generating invoices for a class
               // is the deliberate act of billing them.
-              status: deriveInvoiceStatus(total, 0, "ISSUED"),
+              status: deriveInvoiceStatus(payable, 0, "ISSUED"),
               issuedAt: new Date(),
               dueDate,
               lines: {
                 create: structure.items.map((item) => ({ label: item.label, amountCents: item.amountCents })),
               },
+              ...(granted.length > 0
+                ? {
+                    discounts: {
+                      create: granted.map((row) => ({
+                        label: row.label,
+                        kind: row.kind,
+                        value: row.value,
+                        amountCents: row.amountCents,
+                        scholarshipId: row.scholarshipId,
+                        reason: "Applied automatically from a scholarship",
+                      })),
+                    },
+                  }
+                : {}),
             },
           });
         });
@@ -242,7 +285,11 @@ export class FeesService {
           dedupeParts: [invoice.invoiceNumber],
           context: {
             invoiceNumber: invoice.invoiceNumber,
-            amount: formatMoney(total, settings.currency),
+            // The amount the family is actually asked for, after any
+            // scholarship. Telling them the gross and billing them less is
+            // confusing; telling them the gross and billing them MORE would
+            // be worse, and this is the same number either way.
+            amount: formatMoney(invoice.totalCents, settings.currency),
             dueDate: dueDate ? dueDate.toISOString().slice(0, 10) : "—",
           },
         });
