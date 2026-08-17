@@ -6,6 +6,7 @@ import { getTenantContext } from "@/tenancy/tenant-context";
 import { CommunicationSettingsService } from "@/settings/communication-settings.service";
 import { buildDedupeKey, renderTemplate, validateTemplate, type RenderContext } from "./render-template";
 import { resolveRecipients, type GuardianLinkInput } from "./resolve-recipients";
+import { gatewayHealth, type GatewayHealth } from "./gateway-health";
 
 const UNIQUE_VIOLATION = "P2002";
 const SEND_TIMEOUT_MS = 15_000;
@@ -369,6 +370,46 @@ export class MessagingService {
   }
 
   // ------------------------------------------------------------------ reads
+
+  /**
+   * Whether this school's messages are actually arriving.
+   *
+   * Reads the recent outbox rather than testing a connection: what matters is
+   * whether real messages to real families got through, and a test send can
+   * succeed while every genuine one fails on an address the test never used.
+   *
+   * Bounded to the last 50, so a school that fixed its password last week is
+   * not still accused because of what happened before.
+   */
+  async gatewayHealth(): Promise<GatewayHealth> {
+    const client = await this.tenantPrisma.getClient();
+
+    const recent = await client.message.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: { channel: true, status: true, statusReason: true },
+    });
+
+    const [email, sms] = await Promise.all([
+      this.communication.getEmail().catch(() => null),
+      this.communication.getSms().catch(() => null),
+    ]);
+
+    return gatewayHealth(
+      recent.map((row) => ({
+        channel: row.channel as "EMAIL" | "SMS",
+        status: row.status,
+        statusReason: row.statusReason,
+      })),
+      {
+        // "Configured" means there is somewhere to send to. A host with no
+        // password is still configured and still failing, which is exactly
+        // the case worth reporting.
+        email: Boolean((email as { host?: string } | null)?.host),
+        sms: Boolean((sms as { apiKeyMasked?: string; senderId?: string } | null)?.senderId),
+      },
+    );
+  }
 
   async listTemplates() {
     const client = await this.tenantPrisma.getClient();

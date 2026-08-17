@@ -78,6 +78,18 @@ export class MessagingController {
     return this.messaging.updateTemplate(id, dto);
   }
 
+  @Get("health")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Are this school's messages actually arriving?",
+    description:
+      "Read from the recent outbox rather than by testing a connection: what matters is whether real messages " +
+      "to real families got through. A gateway that is simply not set up is reported as such, not as a fault.",
+  })
+  health() {
+    return this.messaging.gatewayHealth();
+  }
+
   @Get("outbox")
   @Roles("SCHOOL_ADMIN")
   @ApiQuery({ name: "status", required: false })

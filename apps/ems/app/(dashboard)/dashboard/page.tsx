@@ -11,6 +11,7 @@ import { useLessonPlans } from "@/lib/use-lesson-plans";
 import { useQuizzes } from "@/lib/use-quizzes";
 import { useCurriculumSettings } from "@/lib/use-curriculum-settings";
 import { useAuthStore } from "@/store/auth-store";
+import { GatewayHealthBanner } from "@/components/gateway-health-banner";
 import type { TranslationKey } from "@/lib/i18n";
 
 /**
@@ -49,6 +50,11 @@ export default function DashboardPage() {
           {schoolSlug ? ` · ${schoolSlug}` : ""}
         </p>
       </div>
+
+      {/* Above the counters, because a school whose messages are silently
+          failing needs to know that before it reads how many subjects it
+          has. Renders nothing when all is well. */}
+      <GatewayHealthBanner />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label={t("dashboard.students")} value={students.data?.length} href="/students" />
