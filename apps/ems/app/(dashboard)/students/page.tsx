@@ -9,6 +9,8 @@ import { ApiError } from "@/lib/api";
 import { useStudents, useCreateStudent } from "@/lib/use-students";
 import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
+import { useBranding } from "@/lib/branding-context";
+import { admissionNumberExample } from "@/lib/admission-example";
 
 const createStudentSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -25,6 +27,11 @@ export default function StudentsPage() {
   const [showForm, setShowForm] = useState(false);
 
   const form = useForm<CreateStudentValues>({ resolver: zodResolver(createStudentSchema) });
+
+  // Shown as the example, so an administrator sees their own school's
+  // letters rather than a made-up "ABC/2026/0001".
+  const branding = useBranding();
+  const admissionExample = admissionNumberExample(branding?.schoolName);
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
@@ -58,11 +65,22 @@ export default function StudentsPage() {
         <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <FormField label="First name" error={form.formState.errors.firstName?.message} {...form.register("firstName")} />
           <FormField label="Last name" error={form.formState.errors.lastName?.message} {...form.register("lastName")} />
-          <FormField
-            label="Student code (optional)"
-            error={form.formState.errors.studentCode?.message}
-            {...form.register("studentCode")}
-          />
+          {/* Left blank on purpose most of the time. A school arriving from
+              paper types the number a child already carries; everyone else
+              lets the office issue one, which is how a roll stops reading
+              "76854433" next to "ADM-NEW-1". */}
+          <div>
+            <FormField
+              label="Admission number (optional)"
+              error={form.formState.errors.studentCode?.message}
+              placeholder="Leave blank to issue one automatically"
+              {...form.register("studentCode")}
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Leave this blank and the school issues the next one — {admissionExample}. Type a number only if
+              this child already has one.
+            </p>
+          </div>
           {formError && (
             <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
               {formError}
