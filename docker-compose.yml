@@ -180,3 +180,26 @@ services:
     volumes:
       - ./apps/ems-api:/workspace/apps/ems-api
       - /workspace/apps/ems-api/node_modules
+
+  # A mail server for development that accepts everything and delivers
+  # nothing — every message is caught and shown at http://localhost:8025
+  # instead of reaching a real person.
+  #
+  # This exists because the alternative was worse in both directions. Pointed
+  # at a real provider, dev and demo runs send genuine email to whatever
+  # address happens to be in the seed data, and a wrong password silently
+  # loses every message (which is what happened: 48 failures, 0 delivered).
+  # Pointed here, there are no credentials to be wrong, nothing escapes the
+  # machine, and the receipt a parent would receive can be read and shown.
+  #
+  # Dev only: it is absent from docker-compose.prod.yml on purpose, so
+  # production cannot accidentally swallow real mail.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "8025:8025"  # the inbox, in a browser
+      - "1025:1025"  # SMTP, for ems-api

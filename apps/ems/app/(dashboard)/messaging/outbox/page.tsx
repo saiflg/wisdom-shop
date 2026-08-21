@@ -73,6 +73,27 @@ export default function OutboxPage() {
   );
 }
 
+
+/**
+ * Whether there is a real address worth showing beside a recipient's name.
+ *
+ * The API cannot leave the address column empty — a unique index makes it
+ * the thing that keeps one recipient's row distinct from another's — so when
+ * there is nowhere to send a message it writes a sentinel instead:
+ * "unavailable:<userId>" for a parent with no phone or email, and
+ * "unlinked:<studentProfileId>" for a student nobody is linked to at all.
+ *
+ * Matched by shape rather than by listing the two prefixes, because the last
+ * time a sentinel was added this screen was not updated and "unlinked:cmsk…"
+ * appeared on it as though it were somebody's email address. A real address
+ * is an email or a telephone number; neither looks like this.
+ */
+const SENTINEL_ADDRESS = /^[a-z]+:[A-Za-z0-9_-]+$/;
+
+function isRealAddress(address: string): boolean {
+  return !SENTINEL_ADDRESS.test(address);
+}
+
 function MessageRow({ message }: { message: OutboxMessage }) {
   const { t } = useTranslation();
   const retry = useRetryMessage();
@@ -100,7 +121,7 @@ function MessageRow({ message }: { message: OutboxMessage }) {
           </p>
           <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
             {t("messaging.outbox.recipient")}: {message.recipientName}
-            {!message.recipientAddress.startsWith("unavailable:") && ` · ${message.recipientAddress}`}
+            {isRealAddress(message.recipientAddress) && ` · ${message.recipientAddress}`}
           </p>
           {message.studentProfile && (
             <p className="text-xs text-slate-500">
