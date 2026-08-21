@@ -207,9 +207,47 @@ export interface CheckoutStart {
 export function useStartCheckout(invoiceId: string) {
   const { accessToken } = useAuthQueryState();
   return useMutation({
-    mutationFn: () =>
+    // Takes the chosen provider, or nothing when the school has only one
+    // gateway and there is no choice to make.
+    mutationFn: (provider?: FeeProvider) =>
       apiFetch<CheckoutStart>(`/v1/fees/invoices/${invoiceId}/checkout`, {
         method: "POST",
+        headers: authHeaders(accessToken),
+        body: provider ? { provider } : {},
+      }),
+  });
+}
+
+export type FeeProvider = "PAYSTACK" | "OPAY" | "FLUTTERWAVE" | "STRIPE";
+
+export interface PaymentOption {
+  provider: FeeProvider;
+  label: string;
+  currency: string;
+  sandbox: boolean;
+}
+
+export interface PaymentOptions {
+  invoiceNumber: string;
+  outstandingCents: number;
+  settled: boolean;
+  options: PaymentOption[];
+}
+
+/**
+ * Which gateways this invoice can actually be paid through.
+ *
+ * A real query, unlike starting a checkout: it reads settings and creates
+ * nothing, so it is safe to run when the panel opens. `enabled` is left to
+ * the caller so it does not fire for invoices nobody is trying to pay.
+ */
+export function usePaymentOptions(invoiceId: string, enabled = true) {
+  const { accessToken, enabled: authed } = useAuthQueryState();
+  return useQuery({
+    queryKey: [...FEES_KEY, "payment-options", invoiceId],
+    enabled: authed && enabled,
+    queryFn: () =>
+      apiFetch<PaymentOptions>(`/v1/fees/invoices/${invoiceId}/payment-options`, {
         headers: authHeaders(accessToken),
       }),
   });

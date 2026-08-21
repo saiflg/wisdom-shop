@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import type { PaymentProvider } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import { TenantSecretsService, maskStored } from "@/common/crypto/tenant-secrets.service";
@@ -49,6 +49,8 @@ export class PaymentSettingsService {
       publicKey: dto.publicKey,
       currency: dto.currency?.toUpperCase(),
       enabled: dto.enabled,
+      merchantId: dto.merchantId,
+      sandbox: dto.sandbox,
       ...secretUpdateField("secretKeyEncrypted", dto.secretKey, (v) => this.secrets.encrypt(v)),
       ...secretUpdateField("webhookSecretEncrypted", dto.webhookSecret, (v) => this.secrets.encrypt(v)),
     };
@@ -114,6 +116,14 @@ export class PaymentSettingsService {
         return "https://api.paystack.co/transaction?perPage=1";
       case "FLUTTERWAVE":
         return "https://api.flutterwave.com/v3/subaccounts?page=1";
+      case "OPAY":
+        // OPay publishes no read-only endpoint that authenticates without
+        // creating something. Refusing is the honest answer: a "test" that
+        // silently checked nothing would be worse than none, because a
+        // school would trust it. See the test() guard above.
+        throw new BadRequestException(
+          "OPay has no read-only credential check. Save the details and take one real payment through the sandbox to confirm them.",
+        );
       case "STRIPE":
         return "https://api.stripe.com/v1/balance";
     }
@@ -127,6 +137,8 @@ export class PaymentSettingsService {
       webhookSecretEncrypted: string | null;
       currency: string | null;
       enabled: boolean;
+      merchantId?: string | null;
+      sandbox?: boolean;
     } | null,
   ) {
     return {
@@ -136,7 +148,16 @@ export class PaymentSettingsService {
       enabled: row?.enabled ?? false,
       secretKey: maskStored(this.secrets.tryDecrypt(row?.secretKeyEncrypted)),
       webhookSecret: maskStored(this.secrets.tryDecrypt(row?.webhookSecretEncrypted)),
-      configured: Boolean(row?.secretKeyEncrypted),
+      merchantId: row?.merchantId ?? null,
+      sandbox: row?.sandbox ?? false,
+      // OPay needs a merchant id as well as a key, so "configured" means
+      // something different for it — and a row that looks configured but
+      // cannot be called is exactly the trap this whole screen exists to
+      // avoid.
+      configured:
+        provider === "OPAY"
+          ? Boolean(row?.secretKeyEncrypted && row?.merchantId?.trim())
+          : Boolean(row?.secretKeyEncrypted),
     };
   }
 }

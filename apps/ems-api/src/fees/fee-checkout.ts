@@ -14,7 +14,22 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * wrongly — in either direction.
  */
 
-export type FeeProvider = "PAYSTACK" | "FLUTTERWAVE" | "STRIPE";
+export type FeeProvider = "PAYSTACK" | "FLUTTERWAVE" | "STRIPE" | "OPAY";
+
+/**
+ * Every provider this system knows how to talk to, in the order a Nigerian
+ * school is likely to want them. Exported so the settings screen and the
+ * payer's chooser cannot drift apart from what the code actually supports.
+ */
+export const FEE_PROVIDERS: FeeProvider[] = ["PAYSTACK", "OPAY", "FLUTTERWAVE", "STRIPE"];
+
+/** What a school and a parent call each provider. */
+export const PROVIDER_LABELS: Record<FeeProvider, string> = {
+  PAYSTACK: "Paystack",
+  OPAY: "OPay",
+  FLUTTERWAVE: "Flutterwave",
+  STRIPE: "Stripe",
+};
 
 export interface CheckoutRequest {
   url: string;
@@ -35,6 +50,18 @@ export interface CheckoutInput {
   reference: string;
   payerEmail: string;
   invoiceNumber: string;
+  /**
+   * OPay identifies the merchant in a header rather than in the key, so it
+   * needs one credential more than the others. Optional because no other
+   * provider has an equivalent.
+   */
+  merchantId?: string | null;
+  /**
+   * OPay publishes separate sandbox and live hosts. A school testing with
+   * sandbox keys against the live host gets an authentication error that
+   * looks exactly like a wrong key, so the choice is explicit.
+   */
+  sandbox?: boolean;
 }
 
 /**
@@ -101,6 +128,43 @@ export function buildCheckoutRequest(input: CheckoutInput): CheckoutRequest {
         }),
       };
 
+    case "OPAY": {
+      // The Cashier API: OPay hosts the payment page and sends the payer
+      // back to callbackUrl. Sandbox and live differ only by host.
+      const host = input.sandbox ? "https://testapi.opaycheckout.com" : "https://liveapi.opaycheckout.com";
+      return {
+        url: `${host}/api/v1/international/cashier/create`,
+        method: "POST",
+        headers: {
+          // OPay authenticates the cashier call with the PUBLIC key and
+          // identifies the merchant separately. The secret key signs
+          // callbacks and must never be sent here.
+          Authorization: `Bearer ${input.secretKey}`,
+          MerchantId: input.merchantId ?? "",
+          "Content-Type": "application/json",
+        },
+        body: json({
+          country: "NG",
+          reference: input.reference,
+          amount: {
+            // Minor units, like Paystack and unlike Flutterwave. Sent as a
+            // string because OPay's schema types it as one, and a number
+            // large enough to matter is safer as text either way.
+            total: String(input.amountCents),
+            currency: input.currency,
+          },
+          returnUrl: input.callbackUrl,
+          callbackUrl: input.callbackUrl,
+          cancelUrl: input.callbackUrl,
+          userInfo: { userEmail: input.payerEmail },
+          product: {
+            name: `School fees ${input.invoiceNumber}`,
+            description: `Fees for invoice ${input.invoiceNumber}`,
+          },
+        }),
+      };
+    }
+
     case "STRIPE":
       return {
         url: "https://api.stripe.com/v1/checkout/sessions",
@@ -137,6 +201,14 @@ export function checkoutUrlFrom(provider: FeeProvider, payload: unknown): string
     case "FLUTTERWAVE": {
       const data = body.data as { link?: unknown } | undefined;
       return typeof data?.link === "string" ? data.link : null;
+    }
+    case "OPAY": {
+      // OPay always answers 200 and puts the real outcome in `code`; only
+      // "00000" is success. Treating any 200 as a redirect would send a
+      // family to a page that does not exist.
+      if (typeof body.code === "string" && body.code !== "00000") return null;
+      const data = body.data as { cashierUrl?: unknown } | undefined;
+      return typeof data?.cashierUrl === "string" ? data.cashierUrl : null;
     }
     case "STRIPE":
       return typeof body.url === "string" ? body.url : null;
@@ -188,6 +260,22 @@ export function verifyWebhook(input: {
     case "FLUTTERWAVE": {
       // Flutterwave sends the secret hash itself rather than an HMAC.
       return signatureMatches(input.webhookSecret, input.signatureHeader)
+        ? { ok: true }
+        : { ok: false, reason: "Signature mismatch" };
+    }
+    case "OPAY": {
+      // OPay signs with HMAC SHA3-512 — not SHA-512. Node names it
+      // "sha3-512"; asking for the wrong one does not error, it produces a
+      // digest that never matches, which reads as an attack rather than a
+      // typo. Guarded so an OpenSSL build without SHA-3 fails closed
+      // instead of throwing out of a webhook handler.
+      let expected: string;
+      try {
+        expected = createHmac("sha3-512", input.webhookSecret).update(input.rawBody).digest("hex");
+      } catch {
+        return { ok: false, reason: "This server cannot compute SHA3-512" };
+      }
+      return signatureMatches(expected, input.signatureHeader)
         ? { ok: true }
         : { ok: false, reason: "Signature mismatch" };
     }
@@ -252,6 +340,37 @@ export function parsePaymentEvent(provider: FeeProvider, body: unknown): Payment
         typeof data?.id === "number" || typeof data?.id === "string"
           ? `flutterwave:${data.id}`
           : `flutterwave:${reference}`,
+    };
+  }
+
+  if (provider === "OPAY") {
+    const data = payload.payload ?? payload.data;
+    const record = (data ?? {}) as Record<string, unknown>;
+    const reference = typeof record.reference === "string" ? record.reference : null;
+
+    // OPay reports minor units as a string. Number("") is 0, not NaN, so an
+    // empty amount would otherwise read as a real payment of nothing.
+    const rawAmount = record.amount;
+    const amount =
+      typeof rawAmount === "number"
+        ? rawAmount
+        : typeof rawAmount === "string" && rawAmount.trim() !== "" && Number.isFinite(Number(rawAmount))
+          ? Number(rawAmount)
+          : null;
+
+    if (!reference || amount === null) return null;
+
+    return {
+      reference,
+      amountCents: Math.round(amount),
+      currency: typeof record.currency === "string" ? record.currency : null,
+      succeeded: record.status === "SUCCESS" || record.status === "successful",
+      eventId:
+        typeof record.transactionId === "string"
+          ? `opay:${record.transactionId}`
+          : typeof record.orderNo === "string"
+            ? `opay:${record.orderNo}`
+            : `opay:${reference}`,
     };
   }
 

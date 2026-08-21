@@ -1,4 +1,4 @@
-import { Controller, Headers, HttpCode, HttpStatus, Param, Post, RawBodyRequest, Req } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, RawBodyRequest, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { Public } from "@/auth/decorators/public.decorator";
@@ -7,11 +7,25 @@ import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface"
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 import { FeeCheckoutService } from "./fee-checkout.service";
 import type { FeeProvider } from "./fee-checkout";
+import { StartCheckoutDto } from "./dto/start-checkout.dto";
 
 @ApiTags("fee-checkout")
 @Controller()
 export class FeeCheckoutController {
   constructor(private readonly checkout: FeeCheckoutService) {}
+
+  @Get("fees/invoices/:id/payment-options")
+  @ApiBearerAuth()
+  @RequiresModule("FEES")
+  @ApiOperation({
+    summary: "The ways this invoice can be paid online",
+    description:
+      "Asked before the payer is shown anything, so a family is never offered a button that cannot work. An " +
+      "empty list is a normal answer: a school may take only cash.",
+  })
+  options(@Param("id") invoiceId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.checkout.paymentOptions(invoiceId, user);
+  }
 
   @Post("fees/invoices/:id/checkout")
   @ApiBearerAuth()
@@ -19,10 +33,16 @@ export class FeeCheckoutController {
   @ApiOperation({
     summary: "Start an online payment for one invoice",
     description:
-      "Returns where to send the payer. Refuses clearly when the school has not configured a gateway — a family should be told to pay the office, not handed a broken redirect.",
+      "Returns where to send the payer. Name a provider to choose between the gateways a school has switched " +
+      "on; omit it and the school's only gateway is used. Refuses clearly when the school has not configured " +
+      "a gateway — a family should be told to pay the office, not handed a broken redirect.",
   })
-  start(@Param("id") invoiceId: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.checkout.startCheckout(invoiceId, user);
+  start(
+    @Param("id") invoiceId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: StartCheckoutDto,
+  ) {
+    return this.checkout.startCheckout(invoiceId, user, dto.provider);
   }
 
   /**
@@ -51,6 +71,8 @@ export class FeeCheckoutController {
     @Req() req: RawBodyRequest<Request>,
     @Headers("x-paystack-signature") paystackSignature?: string,
     @Headers("verif-hash") flutterwaveHash?: string,
+    // OPay signs with HMAC SHA3-512 and sends the digest in its own header.
+    @Headers("authorization") opaySignature?: string,
   ) {
     const normalised = provider.toUpperCase() as FeeProvider;
     await this.checkout.handleWebhook({
@@ -59,7 +81,11 @@ export class FeeCheckoutController {
       // Never `req.body`: the signature covers the exact bytes sent, and
       // anything that re-encodes them invalidates it.
       rawBody: req.rawBody ?? Buffer.alloc(0),
-      signatureHeader: paystackSignature ?? flutterwaveHash,
+      signatureHeader:
+        normalised === "OPAY"
+          ? // OPay sends "Bearer <digest>"; the bare digest is what is compared.
+            opaySignature?.replace(/^Bearer\s+/i, "")
+          : (paystackSignature ?? flutterwaveHash),
     });
 
     // Always 200, always the same body. A provider retries on anything else,

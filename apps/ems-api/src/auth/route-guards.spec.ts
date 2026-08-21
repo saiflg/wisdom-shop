@@ -99,6 +99,9 @@ const ALLOWED_WITHOUT_ROLES: Record<string, string> = {
   "curriculum-settings/curriculum-settings.controller.ts:GET /": "read by every screen that renders a lesson",
   "schools/school-context.controller.ts:GET modules": "which modules this school bought, for the nav",
   "fees/fee-checkout.controller.ts:POST fees/invoices/:id/checkout": "a family pays its own bill; service scopes it",
+  "fees/fee-checkout.controller.ts:GET fees/invoices/:id/payment-options":
+    "same scoping as the checkout route — paymentOptions reads the invoice through FeesService.getInvoice, which " +
+    "404s another family's invoice before any gateway is named",
 
   // The AI teacher: a lesson belongs to the student taking it, and the
   // service refuses anybody else — including a teacher — from speaking in it.
