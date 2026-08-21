@@ -1952,6 +1952,36 @@ model SubjectResult {
 /// number can be claimed inside the same transaction as the insert that uses
 /// it. Counting rows outside the transaction hands two simultaneous requests
 /// the same invoice number — the lesson already paid for in platform billing.
+/// Where a school's admission numbers come from.
+///
+/// One row per school. Separate from branding (which is how the school
+/// looks) and from finance (which is what it is owed) because issuing a
+/// child's admission number is neither.
+model AdmissionSettings {
+  id String @id @default(cuid())
+
+  /// The school's letters, e.g. "DA". Null means derive them from the
+  /// school's name, which is right for almost every school and saves an
+  /// administrator a setup step they would not know they had to do.
+  abbreviation String?
+
+  /// The year `counter` belongs to. The serial restarts when the year
+  /// changes — that is the point of putting the year in the number, and a
+  /// school expects its first admission of 2027 to be 0001, not 0348.
+  counterYear Int @default(0)
+  counter     Int @default(0)
+
+  /// A school arriving from paper keeps its own numbering until it says
+  /// otherwise. Off means every new student gets a hand-typed code, exactly
+  /// as before this existed.
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admission_settings")
+}
+
 model FinanceSettings {
   id String @id @default(cuid())
   /// ISO 4217. Every amount in this school's finance tables is in this
@@ -2205,6 +2235,7 @@ enum PaymentProvider {
   PAYSTACK
   FLUTTERWAVE
   STRIPE
+  OPAY
 }
 
 /// One row per provider per school, so a school can configure several and
@@ -2217,6 +2248,16 @@ model PaymentGatewaySettings {
   webhookSecretEncrypted String?
   currency               String?
   enabled                Boolean         @default(false)
+
+  /// OPay only. It identifies the merchant in a request header rather than
+  /// in the key itself, so it needs one credential more than the others.
+  /// Null for every other provider, which is why it is not required.
+  merchantId String?
+
+  /// OPay only. Sandbox and live are different hosts, and sandbox keys sent
+  /// to the live host fail in a way that looks exactly like a wrong key.
+  /// Making the choice explicit turns a confusing error into a checkbox.
+  sandbox Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2321,6 +2362,15 @@ model TutorTurn {
   sequence Int
   role     TutorTurnRole
   content  String
+
+  /// True while the picture for this turn is still being drawn.
+  ///
+  /// The words are sent as soon as they exist and the drawing follows a few
+  /// seconds later, because the SVG is about seven tenths of what the model
+  /// writes and holding the reply for it cost twenty seconds. This is how a
+  /// student's screen knows to expect one rather than settling into a layout
+  /// without it. Cleared whether the drawing succeeds, fails or is declined.
+  diagramPending Boolean @default(false)
 
   /// An optional diagram for this turn, as SVG.
   ///
