@@ -25,7 +25,7 @@ interface DraftItem {
 }
 
 export default function FeeStructuresPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: settings } = useFinanceSettings();
   const { data: structures, isLoading } = useFeeStructures();
   const { data: classes } = useClasses();
@@ -200,7 +200,7 @@ export default function FeeStructuresPage() {
 }
 
 function StructureCard({ structure, currency }: { structure: FeeStructure; currency: string }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const generate = useGenerateInvoices(structure.id);
   const [dueDate, setDueDate] = useState("");
   const [result, setResult] = useState<string | null>(null);
@@ -271,7 +271,7 @@ function StructureCard({ structure, currency }: { structure: FeeStructure; curre
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       {structure._count && structure._count.invoices > 0 && (
         <p className="mt-2 text-xs text-slate-500">
-          {structure._count.invoices} {t("fees.structures.invoiceCount")}
+          {tPlural("fees.structures.invoiceCount", structure._count.invoices)}
         </p>
       )}
     </section>
