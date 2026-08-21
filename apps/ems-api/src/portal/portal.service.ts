@@ -139,7 +139,12 @@ export class PortalService {
       fees: (fees as FeesResult | null)?.summary ?? null,
       lessons: (lessons as LessonRow[]).slice(0, 5).map((lesson) => ({
         id: lesson.id,
-        topic: lesson.topic,
+        // The scheme's lesson when it differs from what the student typed —
+        // a parent reading "adverb, vowels, noun" for three lessons that all
+        // taught parts of speech has been told something untrue about their
+        // own child's tutoring.
+        topic: lesson.displayTitle ?? lesson.topic,
+        askedAbout: lesson.followsScheme ? lesson.topic : null,
         subject: lesson.subject?.name ?? null,
         status: lesson.status,
         percent: lesson.percent ?? 0,
@@ -306,6 +311,8 @@ interface FeesResult {
 interface LessonRow {
   id: string;
   topic: string;
+  displayTitle?: string;
+  followsScheme?: boolean;
   status: string;
   percent?: number;
   subject?: { name: string };

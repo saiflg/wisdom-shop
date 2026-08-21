@@ -197,6 +197,11 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.academics.lessonPlans", href: "/lesson-plans" },
       { key: "nav.academics.lessonNotes" },
       { key: "nav.academics.aiTeaching", href: "/ai-teacher", module: "AI_TEACHER" },
+      // The videos the AI Teacher is allowed to offer. Its own item because
+      // it is staff work, not something a student ever opens, and because
+      // the API accepted these long before anything in the app could reach
+      // them.
+      { key: "nav.academics.demonstrations", href: "/ai-teacher/demonstrations", module: "AI_TEACHER" },
       { key: "nav.academics.liveClassroom" },
       { key: "nav.academics.timetable", href: "/timetable", module: "TIMETABLE" },
       { key: "nav.academics.homework", href: "/homework", module: "HOMEWORK" },

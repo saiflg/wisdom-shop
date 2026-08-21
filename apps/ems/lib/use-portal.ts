@@ -73,7 +73,15 @@ export interface PortalHome {
   } | null;
   attendance: { total: number; presentRate: number | null; counts: Record<string, number> } | null;
   fees: { invoiced: number; collected: number; outstanding: number; invoiceCount: number } | null;
-  lessons: Array<{ id: string; topic: string; subject: string | null; status: string; percent: number }>;
+  lessons: Array<{
+    id: string;
+    topic: string;
+    /** The word the student typed, when the class actually follows the school's scheme. */
+    askedAbout?: string | null;
+    subject: string | null;
+    status: string;
+    percent: number;
+  }>;
   /** Published term results only — a draft is not a family's business. */
   results?: PortalResult[];
   /** Papers still to sit; anything submitted drops off. */

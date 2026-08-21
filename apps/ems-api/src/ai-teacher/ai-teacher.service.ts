@@ -14,6 +14,7 @@ import { AiService } from "@/ai/ai.service";
 import {
   buildCoursePrompt,
   buildLessonPrompt,
+  buildDiagramPrompt,
   buildTutorPrompt,
   type TranscriptTurn,
   type TutorContext,
@@ -135,6 +136,7 @@ export class AiTeacherService {
       // Null: a question is not part of the course, which is what stops it
       // being mistaken for a taught lesson when the transcript is read back.
       lessonIndex: null,
+      context,
     });
 
     return { question, answer, position: session.position };
@@ -176,6 +178,7 @@ export class AiTeacherService {
       studentContent: null,
       prompt,
       lessonIndex: session.position,
+      context,
     });
 
     const client = await this.tenantPrisma.getClient();
@@ -228,10 +231,37 @@ export class AiTeacherService {
       orderBy: { updatedAt: "desc" },
     });
 
-    return sessions.map((session) => ({
-      ...session,
-      percent: percentComplete(parseCourse(session.outline), session.position),
-    }));
+    return sessions.map((session) => {
+      const course = parseCourse(session.outline);
+
+      /*
+       * What to call this lesson in a list.
+       *
+       * The topic is what the student typed on the way in. When the class is
+       * anchored to a scheme of work, that word is not what is being taught
+       * — so a list of a child's lessons read "adverb", "vowels", "noun",
+       * every one of them actually teaching parts of speech from the
+       * school's own scheme. To a parent looking at their child's tutoring
+       * record, that is indistinguishable from a broken product.
+       *
+       * The lesson currently being taught is the honest label; the typed
+       * word is kept alongside it, because it is still the reason the child
+       * opened the lesson.
+       */
+      const current = lessonAt(course, session.position) ?? lessonAt(course, 0);
+      const followsScheme = Boolean(
+        session.schemeOfWorkId &&
+          current &&
+          current.title.trim().toLowerCase() !== session.topic.trim().toLowerCase(),
+      );
+
+      return {
+        ...session,
+        percent: percentComplete(course, session.position),
+        followsScheme,
+        displayTitle: followsScheme && current ? current.title : session.topic,
+      };
+    });
   }
 
   async findOne(id: string, viewer: AuthenticatedUser) {
@@ -243,6 +273,11 @@ export class AiTeacherService {
         subject: true,
         startedByUser: { select: { id: true, firstName: true, lastName: true } },
         turns: { orderBy: { sequence: "asc" } },
+        // Needed only so the lesson can explain itself — see followsScheme
+        // below. A class anchored to a scheme teaches the school's course,
+        // not the words the student typed, and saying nothing about that
+        // makes a correct lesson look like a broken one.
+        schemeOfWork: { select: { id: true, term: true, academicYear: true } },
       },
     });
     if (!session) throw new NotFoundException("No lesson found with that id");
@@ -257,7 +292,38 @@ export class AiTeacherService {
     // video they cannot follow is worse than offering nothing: it presents a
     // choice that is not actually theirs to make.
     const needs = await this.accessibility.needsFor(session.startedByUserId);
-    const resources = upcoming
+
+    /*
+     * What the demonstrations should match.
+     *
+     * A taught class matches the step about to be taught. A student asking
+     * their own questions had nothing to match against at all — `upcoming`
+     * is null in ASK mode, so the list was always empty and a school's
+     * videos were invisible to exactly the student who had just said what
+     * they were struggling with.
+     *
+     * Their own words are the better signal anyway: somebody who typed "I
+     * do not understand equivalent fractions" has described what they need
+     * more precisely than any lesson title. The last question is used, with
+     * the session topic behind it, because a question like "why?" carries
+     * no subject of its own.
+     */
+    const lastQuestion = [...session.turns].reverse().find((turn) => turn.role === "STUDENT")?.content ?? "";
+
+    /*
+     * A finished class still has a subject.
+     *
+     * `upcoming` is null once the last lesson has been taught, so matching on
+     * it alone meant the school's videos disappeared at 100% — from the
+     * student revising the night before an exam, who is exactly the one who
+     * wants the worked example again. The lesson most recently taught is the
+     * honest thing to match against; only a session with no course at all
+     * falls back to the student's own words.
+     */
+    const taught = upcoming ?? lessonAt(course, session.position - 1) ?? lessonAt(course, 0);
+    const matchAgainst = taught ? taught.title : `${lastQuestion} ${session.topic}`.trim();
+
+    const resources = matchAgainst
       ? matchResources(
           await client.lessonResource.findMany({
             where: {
@@ -267,9 +333,29 @@ export class AiTeacherService {
             },
             orderBy: { createdAt: "asc" },
           }),
-          upcoming.title,
+          matchAgainst,
         )
       : [];
+
+    /*
+     * Whether this class is teaching the school's scheme rather than the
+     * words the student typed.
+     *
+     * A student who asked for "adverb" and was given a course called "Parts
+     * of speech" has not been ignored — the class is anchored to a published
+     * scheme of work, which is the whole point of anchoring it. But nothing
+     * said so, so it read as the AI having misunderstood, and a list of
+     * lessons whose titles do not match their contents looks broken.
+     *
+     * Only true when the two actually differ: repeating "this follows the
+     * scheme" on a lesson that already matches is noise.
+     */
+    const firstLesson = lessonAt(course, 0)?.title ?? null;
+    const followsScheme = Boolean(
+      session.schemeOfWorkId &&
+        firstLesson &&
+        firstLesson.trim().toLowerCase() !== session.topic.trim().toLowerCase(),
+    );
 
     return {
       ...session,
@@ -277,6 +363,7 @@ export class AiTeacherService {
       currentLesson: upcoming,
       percent: percentComplete(course, session.position),
       finished: isComplete(course, session.position),
+      followsScheme,
       resources,
     };
   }
@@ -342,7 +429,13 @@ export class AiTeacherService {
    */
   private async exchange(
     session: { id: string; turns: Array<{ sequence: number }> },
-    input: { studentContent: string | null; prompt: string; lessonIndex: number | null },
+    input: {
+      studentContent: string | null;
+      prompt: string;
+      lessonIndex: number | null;
+      /** Passed through so the picture can be drawn once the words have gone. */
+      context: TutorContext;
+    },
   ) {
     const client = await this.tenantPrisma.getClient();
     const nextSequence = session.turns.reduce((max, turn) => Math.max(max, turn.sequence), 0) + 1;
@@ -368,31 +461,83 @@ export class AiTeacherService {
       throw error;
     }
 
-    // The diagram is model-written markup bound for a child's browser, so it
-    // is sanitised before it is stored, not on the way out. Anything that
-    // fails is dropped and the lesson text kept.
+    // The reply no longer contains a diagram — it is asked for separately —
+    // but a model occasionally draws anyway, and markup bound for a child's
+    // browser is sanitised before it is stored either way.
     const { text, diagram, diagramAlt, rejected } = splitReplyAndDiagram(reply);
-
-    // Logged, never shown: a student does not need to hear that their picture
-    // was refused. But a prompt that reliably produces diagrams we drop is
-    // invisible otherwise — every lesson simply arrives without one, which
-    // looks identical to a model that chose not to draw.
     if (rejected) this.logger.warn(`Diagram rejected (${rejected}) in session ${session.id}`);
+
+    const lessonText = text || reply.trim();
 
     const answer = await client.tutorTurn.create({
       data: {
         sessionId: session.id,
         sequence: question ? nextSequence + 1 : nextSequence,
         role: "TUTOR" as TutorTurnRole,
-        content: text || reply.trim(),
+        content: lessonText,
         diagram,
         diagramAlt,
+        // Tells the student's screen a picture is on its way, so it can wait
+        // for one instead of settling into a layout without it. Cleared
+        // whether the drawing succeeds, fails or is declined.
+        diagramPending: !diagram,
         lessonIndex: input.lessonIndex,
       },
     });
 
     await client.tutorSession.update({ where: { id: session.id }, data: { updatedAt: new Date() } });
+
+    /*
+     * Draw the picture after the words have gone.
+     *
+     * Deliberately not awaited: the student is reading by now, and holding
+     * the response for the SVG is the twenty-second wait this split exists
+     * to remove. Failures are swallowed on purpose — a lesson without its
+     * picture is a lesson; an error because the picture failed is not.
+     */
+    if (!diagram) {
+      void this.drawFor(answer.id, session.id, lessonText, input.context).catch(() => undefined);
+    }
+
     return { question, answer };
+  }
+
+  /**
+   * Draws the picture for a reply already sent, and files it against that turn.
+   *
+   * Runs after the response has gone, so nothing here may throw into a
+   * request: every failure ends with `diagramPending` cleared and the turn
+   * left exactly as the student already saw it.
+   */
+  private async drawFor(
+    turnId: string,
+    sessionId: string,
+    lessonText: string,
+    context: TutorContext,
+  ): Promise<void> {
+    const client = await this.tenantPrisma.getClient();
+    const settle = (data: { diagram?: string | null; diagramAlt?: string | null }) =>
+      client.tutorTurn
+        .update({ where: { id: turnId }, data: { ...data, diagramPending: false } })
+        .catch(() => undefined);
+
+    try {
+      const drawn = await this.ai.generateText(buildDiagramPrompt(context, lessonText));
+
+      // "NONE" is the model saying there is nothing worth showing, which is a
+      // real answer and not a failure.
+      if (drawn.trim().toUpperCase().startsWith("NONE")) {
+        await settle({});
+        return;
+      }
+
+      const { diagram, diagramAlt, rejected } = splitReplyAndDiagram(drawn);
+      if (rejected) this.logger.warn(`Diagram rejected (${rejected}) in session ${sessionId}`);
+      await settle({ diagram, diagramAlt });
+    } catch (error) {
+      this.logger.warn(`Could not draw for session ${sessionId}: ${String(error)}`);
+      await settle({});
+    }
   }
 
   private async contextFor(session: {

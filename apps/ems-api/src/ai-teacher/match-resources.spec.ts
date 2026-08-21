@@ -143,3 +143,42 @@ describe("matchResources", () => {
     expect(matchResources([], "Anything")).toEqual([]);
   });
 });
+
+/*
+ * Matching on what a student typed, not only on a course step.
+ *
+ * A student asking their own questions has no "upcoming lesson", so the
+ * lesson used to match against nothing and the school's videos stayed
+ * invisible to exactly the child who had just said they were stuck.
+ */
+describe("matching a student's own question", () => {
+  const video = (over: Partial<StoredResource> = {}): StoredResource => ({
+    id: "r1",
+    kind: "VIDEO",
+    title: "Adding fractions — worked example",
+    url: "https://www.youtube.com/watch?v=abc123",
+    keywords: "fractions denominators halves",
+    ...over,
+  });
+
+  it("finds a demonstration from the words a student used", () => {
+    const found = matchResources([video()], "I do not understand denominators");
+    expect(found.map((r) => r.id)).toEqual(["r1"]);
+  });
+
+  it("does not offer an unrelated demonstration", () => {
+    const found = matchResources([video()], "What is a pronoun?");
+    expect(found).toEqual([]);
+  });
+
+  // "How do I do it?" is all stop words; matching on those would offer every
+  // video the school owns to a question that said nothing.
+  it("offers nothing when a question carries no subject of its own", () => {
+    expect(matchResources([video()], "how is it")).toEqual([]);
+  });
+
+  it("still matches when the topic supplies the meaning the question lacks", () => {
+    const found = matchResources([video()], "why is it   Fractions");
+    expect(found.map((r) => r.id)).toEqual(["r1"]);
+  });
+});

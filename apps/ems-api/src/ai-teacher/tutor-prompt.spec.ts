@@ -1,5 +1,6 @@
 import {
   buildCoursePrompt,
+  buildDiagramPrompt,
   buildLessonPrompt,
   buildTutorPrompt,
   MAX_TRANSCRIPT_TURNS,
@@ -175,36 +176,60 @@ describe("buildTutorPrompt", () => {
     expect(prompt).toContain("The student now asks: spaced out");
   });
 
-  it("asks for a diagram, restricted to what the sanitiser will actually accept", () => {
-    const prompt = buildTutorPrompt(CONTEXT, [], "Hi");
+  /*
+   * The lesson prompts no longer ask for a picture.
+   *
+   * They used to, and a reply took twenty seconds against the provider's own
+   * two: measured on a real school, a turn's text averaged about 900
+   * characters and its SVG about 2,200, so roughly seven tenths of what the
+   * model wrote was markup — and output is what costs time. The words are
+   * now asked for alone and the picture separately, once the student is
+   * already reading.
+   */
+  it("does not ask for a picture, which is what made a reply slow", () => {
+    const asking = buildTutorPrompt(CONTEXT, [], "Hi");
+    const teaching = buildLessonPrompt(
+      CONTEXT,
+      { title: "Adding fractions", objectives: ["Add halves and quarters"] },
+      { index: 0, total: 3 },
+      [],
+    );
+    for (const prompt of [asking, teaching]) {
+      expect(prompt).not.toMatch(/inline SVG/);
+      expect(prompt).not.toMatch(/viewBox/);
+    }
+  });
+});
+
+describe("buildDiagramPrompt", () => {
+  const LESSON_TEXT = "A noun is a naming word for a person, place or thing.";
+
+  it("asks for a picture of the lesson already written, and nothing else", () => {
+    const prompt = buildDiagramPrompt(CONTEXT, LESSON_TEXT);
+    expect(prompt).toContain(LESSON_TEXT);
+    expect(prompt).toMatch(/reply with nothing but the SVG/);
+  });
+
+  // Sending the transcript again would put back the cost the split exists to
+  // remove: the picture illustrates this one reply.
+  it("does not carry the conversation with it", () => {
+    const prompt = buildDiagramPrompt(CONTEXT, LESSON_TEXT);
+    expect(prompt.length).toBeLessThan(3000);
+  });
+
+  it("restricts the drawing to what the sanitiser will actually accept", () => {
+    const prompt = buildDiagramPrompt(CONTEXT, LESSON_TEXT);
     expect(prompt).toMatch(/inline SVG/);
     expect(prompt).toMatch(/viewBox/);
     // Asking for anything the sanitiser drops on arrival would only waste it.
     expect(prompt).toMatch(/script, style, image, use, href/);
   });
 
-  it("makes a diagram the default rather than something to consider", () => {
-    // A student following a lesson on a screen learns more from seeing a
-    // thing than from reading about it. Asked "if it would help", models
-    // mostly decided it would not.
-    const prompt = buildTutorPrompt(CONTEXT, [], "Hi");
-    expect(prompt).toMatch(/default, not the exception/);
-    expect(prompt).toMatch(/Draw a picture/);
-  });
-
-  it("still names the cases where drawing would be noise", () => {
-    // "Always draw" produces a picture of a definition, and the same picture
-    // twice running.
-    const prompt = buildTutorPrompt(CONTEXT, [], "Hi");
-    expect(prompt).toMatch(/nothing to show/);
-    expect(prompt).toMatch(/never repeat the same diagram/i);
-  });
-
   it("names the constructs that silently cost a whole diagram", () => {
     // The sanitiser drops the entire document on any one of these, so a
     // single stray comment or arrowhead marker loses the picture. Each line
     // here is something that actually happened before anyone could see it.
-    const prompt = buildTutorPrompt(CONTEXT, [], "Hi");
+    const prompt = buildDiagramPrompt(CONTEXT, LESSON_TEXT);
     expect(prompt).toMatch(/comments/i);
     expect(prompt).toMatch(/<defs>/);
     expect(prompt).toMatch(/polygon/);
@@ -212,7 +237,12 @@ describe("buildTutorPrompt", () => {
   });
 
   it("asks for a title and description, which is what the alt text is built from", () => {
-    expect(buildTutorPrompt(CONTEXT, [], "Hi")).toMatch(/<title>.*<desc>|<desc>/);
+    expect(buildDiagramPrompt(CONTEXT, LESSON_TEXT)).toMatch(/<title>.*<desc>|<desc>/);
+  });
+
+  // Without a way to decline, a model draws a picture of "yes, that is right".
+  it("gives the model a way to say there is nothing worth drawing", () => {
+    expect(buildDiagramPrompt(CONTEXT, LESSON_TEXT)).toMatch(/\bNONE\b/);
   });
 });
 
@@ -291,8 +321,11 @@ describe("buildLessonPrompt", () => {
     expect(prompt).toMatch(/Never claim to be a human being/);
   });
 
-  it("offers a diagram here too", () => {
-    expect(buildLessonPrompt(CONTEXT, lesson, { index: 0, total: 3 }, [])).toMatch(/inline SVG/);
+  // A taught lesson gets a picture too, but asked for separately — see
+  // buildDiagramPrompt. Waiting for the SVG is what made a lesson take twenty
+  // seconds instead of eight.
+  it("does not ask for the picture inline", () => {
+    expect(buildLessonPrompt(CONTEXT, lesson, { index: 0, total: 3 }, [])).not.toMatch(/inline SVG/);
   });
 
   it("trims a long class transcript but keeps its opening", () => {

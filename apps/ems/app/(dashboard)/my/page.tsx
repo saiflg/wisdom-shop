@@ -317,6 +317,9 @@ export default function MyPage() {
                 <Link href={`/ai-teacher/${lesson.id}`} className="min-w-0 truncate hover:underline">
                   {lesson.topic}
                   {lesson.subject ? <span className="ml-2 text-xs text-slate-500">{lesson.subject}</span> : null}
+                  {lesson.askedAbout ? (
+                    <span className="ml-2 text-xs text-slate-500">· asked about {lesson.askedAbout}</span>
+                  ) : null}
                 </Link>
                 <span className="shrink-0 text-xs text-slate-500">
                   {lesson.status === "ENDED" ? "finished" : `${lesson.percent}%`}
