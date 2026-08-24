@@ -122,6 +122,18 @@ services:
     restart: always
     environment:
       NODE_ENV: production
+      # Also at RUNTIME, not only as a build arg.
+      #
+      # The build arg bakes the rewrite destinations into the routes
+      # manifest, which is what makes the browser's calls work. It does
+      # nothing for server components: `ENV` does not cross a Docker stage
+      # boundary, so the runtime image had no API_URL at all and every
+      # server-side fetch fell back to localhost inside its own container.
+      #
+      # The storefront failed loudly with a 500. The other two fail
+      # silently - a branding lookup that cannot reach the API returns
+      # "no school" and the console renders unbranded, with a 200.
+      API_URL: http://api:4000
     depends_on:
       - api
 
@@ -212,6 +224,18 @@ services:
     restart: always
     environment:
       NODE_ENV: production
+      # Also at RUNTIME, not only as a build arg.
+      #
+      # The build arg bakes the rewrite destinations into the routes
+      # manifest, which is what makes the browser's calls work. It does
+      # nothing for server components: `ENV` does not cross a Docker stage
+      # boundary, so the runtime image had no EMS_API_URL at all and every
+      # server-side fetch fell back to localhost inside its own container.
+      #
+      # The storefront failed loudly with a 500. The other two fail
+      # silently - a branding lookup that cannot reach the API returns
+      # "no school" and the console renders unbranded, with a 200.
+      EMS_API_URL: http://ems-api:4001
     depends_on:
       - ems-api
 
@@ -224,6 +248,18 @@ services:
     restart: always
     environment:
       NODE_ENV: production
+      # Also at RUNTIME, not only as a build arg.
+      #
+      # The build arg bakes the rewrite destinations into the routes
+      # manifest, which is what makes the browser's calls work. It does
+      # nothing for server components: `ENV` does not cross a Docker stage
+      # boundary, so the runtime image had no EMS_API_URL at all and every
+      # server-side fetch fell back to localhost inside its own container.
+      #
+      # The storefront failed loudly with a 500. The other two fail
+      # silently - a branding lookup that cannot reach the API returns
+      # "no school" and the console renders unbranded, with a 200.
+      EMS_API_URL: http://ems-api:4001
     depends_on:
       - ems-api
 
