@@ -278,6 +278,11 @@ services:
       CAMPUS_DOMAIN: ${CAMPUS_DOMAIN:?CAMPUS_DOMAIN is required}
       ADMIN_DOMAIN: ${ADMIN_DOMAIN:?ADMIN_DOMAIN is required}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+      # Optional. Set it to a school slug and the campus hostname's root
+      # sends people straight to that school's sign-in page instead of the
+      # product landing page - which is what you want on a server that
+      # exists to show one school. Unset, nothing changes.
+      CAMPUS_LANDING_SLUG: ${CAMPUS_LANDING_SLUG:-}
     volumes:
       - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

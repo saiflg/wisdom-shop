@@ -80,6 +80,26 @@
 {$CAMPUS_DOMAIN} {
 	import common
 
+	# Send the bare hostname to the sign-in page for the school named in
+	# CAMPUS_LANDING_SLUG, when one is set.
+	#
+	# The app's own root is a product page describing Wisdom Campus, which is
+	# the right thing on a marketing hostname and the wrong thing on a server
+	# whose only job is to show one school. The slug is carried because the
+	# login page uses it to resolve branding, and to set the cookie that
+	# remembers the school on later visits.
+	#
+	# Deliberately a redirect here rather than a change in apps/ems: this is a
+	# property of one deployment, not of the product. Leave the variable unset
+	# and the landing page behaves exactly as before.
+	# {env....} is read at request time and quoted inside the expression, so an
+	# unset variable is an empty string rather than a parse error.
+	@root {
+		path /
+		expression "{env.CAMPUS_LANDING_SLUG}" != ""
+	}
+	redir @root /login?schoolSlug={env.CAMPUS_LANDING_SLUG} 302
+
 	# School fee payments come back from Paystack/Flutterwave to this origin.
 	# Same raw-body reasoning as the shop's webhooks above.
 	handle /v1/fees/webhooks/* {
