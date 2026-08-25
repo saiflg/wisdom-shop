@@ -37,3 +37,12 @@ coverage/
 # would be a private key published to every clone.
 deploy/nginx/certs/
 .storage/
+
+# Backup archives, which deploy/backup.sh writes here on the server.
+#
+# Each one contains every database, every uploaded file - including
+# children's photographs - and .env, which holds every password and the
+# settings encryption key. This repository is public. One `git add -A` run
+# on the server without this line publishes all of it.
+backups/
+*.tar.gz
