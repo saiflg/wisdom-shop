@@ -92,11 +92,16 @@
 	# Deliberately a redirect here rather than a change in apps/ems: this is a
 	# property of one deployment, not of the product. Leave the variable unset
 	# and the landing page behaves exactly as before.
-	# {env....} is read at request time and quoted inside the expression, so an
-	# unset variable is an empty string rather than a parse error.
+	# NOT quoted. Caddy rewrites {env....} into ph(req, "env....") before CEL
+	# sees it, so wrapping it in quotes produces "ph(req, "env....")" - nested
+	# quotes, a syntax error, and a proxy that will not start.
+	#
+	# `caddy validate` does not catch this: it adapts the Caddyfile to JSON
+	# without provisioning matcher modules, and the failure is at provision
+	# time. The only real check is starting the container.
 	@root {
 		path /
-		expression "{env.CAMPUS_LANDING_SLUG}" != ""
+		expression {env.CAMPUS_LANDING_SLUG} != ""
 	}
 	redir @root /login?schoolSlug={env.CAMPUS_LANDING_SLUG} 302
 
