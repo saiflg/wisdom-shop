@@ -5,7 +5,7 @@ import { apiFetch } from "./api";
 import { authHeaders, useAuthQueryState } from "./api-auth";
 
 export type SmtpEncryption = "NONE" | "TLS" | "SSL";
-export type PaymentProvider = "PAYSTACK" | "FLUTTERWAVE" | "STRIPE";
+export type PaymentProvider = "PAYSTACK" | "OPAY" | "FLUTTERWAVE" | "STRIPE";
 
 export const PAYMENT_PROVIDERS: PaymentProvider[] = ["PAYSTACK", "FLUTTERWAVE", "STRIPE"];
 
@@ -64,6 +64,10 @@ export interface PaymentGatewayView {
   secretKey: string | null;
   webhookSecret: string | null;
   configured: boolean;
+  /** OPay only: it identifies the merchant in a header as well as by key. */
+  merchantId: string | null;
+  /** OPay only: sandbox and live are different hosts. */
+  sandbox: boolean;
 }
 
 const COMMUNICATION_KEY = ["settings", "communication"];

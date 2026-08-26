@@ -42,6 +42,7 @@ export default function PaymentSettingsPage() {
 
 const PROVIDER_LABELS: Record<PaymentGatewayView["provider"], string> = {
   PAYSTACK: "Paystack",
+  OPAY: "OPay",
   FLUTTERWAVE: "Flutterwave",
   STRIPE: "Stripe",
 };
@@ -51,6 +52,10 @@ function ProviderCard({ gateway }: { gateway: PaymentGatewayView }) {
   const update = useUpdatePaymentGateway(gateway.provider);
   const test = useTestPaymentGateway(gateway.provider);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+
+  // OPay needs one credential more than the others and has no read-only
+  // endpoint to check them against, so its card differs in two places.
+  const isOpay = gateway.provider === "OPAY";
 
   const report = (tone: "ok" | "error", text: string) => setMessage({ tone, text });
   const fromError = (err: unknown, fallback: string) =>
@@ -67,6 +72,12 @@ function ProviderCard({ gateway }: { gateway: PaymentGatewayView }) {
         publicKey: String(form.get("publicKey") ?? "") || undefined,
         currency: String(form.get("currency") ?? "") || undefined,
         enabled: form.get("enabled") === "on",
+        // OPay only. Sent unconditionally for OPay so clearing the box
+        // clears the stored value, rather than leaving a stale merchant id
+        // behind an empty field.
+        ...(isOpay
+          ? { merchantId: String(form.get("merchantId") ?? ""), sandbox: form.get("sandbox") === "on" }
+          : {}),
         ...(secretKey ? { secretKey } : {}),
         ...(webhookSecret ? { webhookSecret } : {}),
       });
@@ -126,6 +137,26 @@ function ProviderCard({ gateway }: { gateway: PaymentGatewayView }) {
           />
         </div>
 
+        {isOpay && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              label="Merchant ID"
+              name="merchantId"
+              defaultValue={gateway.merchantId ?? ""}
+              placeholder="e.g. 281822xxxxxxxxx"
+            />
+            <label className="flex items-start gap-2 self-end pb-2 text-sm">
+              <input type="checkbox" name="sandbox" defaultChecked={gateway.sandbox} className="mt-0.5 h-4 w-4" />
+              <span>
+                Test mode
+                <span className="block text-xs text-slate-500">
+                  Sandbox keys take real-looking payments that are not real. Parents are shown a “test mode” label.
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="enabled" defaultChecked={gateway.enabled} className="h-4 w-4" />
           {t("settings.paymentEnabled")}
@@ -154,7 +185,7 @@ function ProviderCard({ gateway }: { gateway: PaymentGatewayView }) {
           </button>
           <button
             type="button"
-            disabled={test.isPending || !gateway.configured}
+            disabled={test.isPending || !gateway.configured || isOpay}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:hover:bg-slate-900"
             onClick={async () => {
               setMessage(null);
@@ -168,7 +199,11 @@ function ProviderCard({ gateway }: { gateway: PaymentGatewayView }) {
           >
             {t("settings.runTest")}
           </button>
-          <span className="text-xs text-slate-500">{t("settings.paymentTestNote")}</span>
+          <span className="text-xs text-slate-500">
+            {isOpay
+              ? "OPay has no read-only credential check. Save the details and take one sandbox payment to confirm them."
+              : t("settings.paymentTestNote")}
+          </span>
         </div>
       </form>
     </section>

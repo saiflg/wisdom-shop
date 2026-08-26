@@ -599,7 +599,88 @@ files that no longer exist.
 
 ---
 
-## Part 13 — Deliberately not doing this yet
+## Part 13 — Two things that went wrong the first time
+
+Both were found on a real deployment, both looked like something else, and
+neither is obvious from reading the code. They are written down because the
+next person to deploy will otherwise spend an evening on each.
+
+### The storefront 500s, and the two consoles quietly lose their branding
+
+`API_URL` and `EMS_API_URL` are supplied as **build args**, which is correct
+and deliberate: Next resolves `rewrites()` into `routes-manifest.json` at
+build time, so the browser's own calls need the value baked in.
+
+But `ENV` does not cross a Docker stage boundary, and these Dockerfiles build
+in one stage and run in another. The runtime image therefore has no such
+variable at all, and every **server component** falls back to localhost inside
+its own container:
+
+```ts
+// apps/web/lib/catalog.ts:3
+const API_URL = process.env.API_URL ?? "http://localhost:4000";
+```
+
+Nothing listens on 4000 inside the web container, so the homepage fetch dies
+with ECONNREFUSED and Next serves a 500. The campus and admin consoles do the
+same thing, but their failure path returns "this host matches no school" —
+which is indistinguishable from a correctly unbranded deployment. You would
+find that weeks later wondering why the logo never appeared.
+
+The fix is in `docker-compose.prod.yml`: the same values are now set as
+runtime environment variables as well as build args. If you ever add a fourth
+Next app, it needs both.
+
+Worth knowing while debugging this: **the container cannot reach its own
+public hostname.** Oracle's network does not hairpin, so "just point it at
+https://<public-name>" fails differently rather than fixing anything.
+
+### Restoring a database from another machine breaks every uploaded file
+
+A storage key embeds the school's id:
+
+```
+schools/<schoolId>/branding/<uuid>.png
+```
+
+Restore a tenant database from a laptop into a school that was provisioned
+here, and the ids differ — so `branding_settings.logoKey`,
+`class_message_attachments.storageKey` and `users.photoKey` all name paths
+that do not exist. The rows are intact, the pages render, the `<img>` tags
+are present, and every file 404s.
+
+Two halves to moving a school between machines:
+
+1. The database (`pg_dump -Fc`, restore with `--no-owner`).
+2. **The files.** In development they are bind-mounted at
+   `apps/ems-api/.storage`; in production they live in the `ems-storage`
+   volume at `/var/lib/wisdom-campus/storage`. Different places, so a copy
+   between the two is not a straight volume copy.
+
+Then re-file the keys to the destination school id:
+
+```sql
+UPDATE branding_settings
+SET "logoKey" = replace("logoKey", 'schools/<old>/', 'schools/<new>/')
+WHERE "logoKey" LIKE 'schools/<old>/%';
+-- and the same for class_message_attachments."storageKey" and users."photoKey"
+```
+
+The tell that this has happened is a backup whose "Uploaded files" line is a
+few kilobytes when it should be megabytes. Check that number; it is the
+cheapest signal you will get.
+
+### And one that is not a bug
+
+Passwords in `scripts/provision-demo-school.ts` and the seed data are
+published in this repository. That is harmless on a laptop and is working
+credentials for anybody who finds the address once a server is on the public
+internet. After restoring demo data anywhere reachable, reset them — the
+school admin account can see every child's record.
+
+---
+
+## Part 14 — Deliberately not doing this yet
 
 Named so you know they are decisions, not oversights:
 

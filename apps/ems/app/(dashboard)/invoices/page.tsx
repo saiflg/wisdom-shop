@@ -14,6 +14,8 @@ import {
   useInvoices,
   useRecordPayment,
   useStartCheckout,
+  usePaymentOptions,
+  type FeeProvider,
   type FeeInvoice,
   type FeeInvoiceStatus,
   type FeePaymentMethod,
@@ -145,18 +147,35 @@ function InvoiceCard({ invoice, open, onToggle }: { invoice: FeeInvoice; open: b
  * child's fees is the point, and a bursar taking a card payment at the desk
  * is the same button.
  *
+ * The gateway is the payer's choice when there is one to make. A school may
+ * run several, and which one a family uses is not an implementation detail
+ * to them: one may add a card fee, another may be the one they already have
+ * an account with. Before this, whichever row the database returned first
+ * won, silently.
+ *
+ * One gateway means no chooser at all. A choice between one thing is not a
+ * choice, and making somebody click it is a step for nothing.
+ *
  * When the school has not configured a gateway the API says so in words a
  * parent can act on, and that sentence is shown as-is: "online payment is not
  * set up, pay the office" is useful, "payment failed" is not.
  */
 function PayOnline({ invoice }: { invoice: FeeInvoice }) {
   const startCheckout = useStartCheckout(invoice.id);
+  const { data, isLoading } = usePaymentOptions(invoice.id);
+  const [chosen, setChosen] = useState<FeeProvider | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+
+  const options = data?.options ?? [];
+  const soleOption = options.length === 1 ? options[0] : null;
+  const onlyOne = soleOption !== null;
+  // With one gateway there is nothing to pick, so it is picked already.
+  const provider = chosen ?? soleOption?.provider ?? null;
 
   const pay = async () => {
     setProblem(null);
     try {
-      const { url } = await startCheckout.mutateAsync();
+      const { url } = await startCheckout.mutateAsync(provider ?? undefined);
       // A full navigation, not a new tab: the family is leaving to pay and
       // comes back through the callback URL. A popup here is what gets
       // blocked on the phone most of them will use.
@@ -166,21 +185,77 @@ function PayOnline({ invoice }: { invoice: FeeInvoice }) {
     }
   };
 
+  if (isLoading) {
+    return <p className="px-4 py-3 text-sm text-slate-500">Checking how this can be paid…</p>;
+  }
+
+  // Said plainly and without a dead button. A school that takes only cash is
+  // not broken, and a parent needs to know to go to the office.
+  if (options.length === 0) {
+    return (
+      <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-900 dark:text-slate-400">
+        This school does not take online payments yet. Please pay the school office directly.
+      </p>
+    );
+  }
+
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
-      <button
-        type="button"
-        onClick={() => void pay()}
-        disabled={startCheckout.isPending}
-        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
-      >
-        {startCheckout.isPending
-          ? "Opening the payment page…"
-          : `Pay ${formatMoney(invoice.balanceCents, invoice.currency)} online`}
-      </button>
-      <span className="text-xs text-slate-500">You will be taken to the school&apos;s payment provider.</span>
+    <div className="space-y-3 rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
+      {!onlyOne && (
+        <fieldset>
+          <legend className="text-sm font-semibold">How would you like to pay?</legend>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {options.map((option) => (
+              <label
+                key={option.provider}
+                className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition ${
+                  provider === option.provider
+                    ? "border-brand-600 bg-white ring-1 ring-brand-600 dark:bg-slate-950"
+                    : "border-slate-300 hover:border-slate-400 dark:border-slate-700"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`gateway-${invoice.id}`}
+                  value={option.provider}
+                  checked={provider === option.provider}
+                  onChange={() => setChosen(option.provider)}
+                  className="h-4 w-4 accent-brand-600"
+                />
+                <span className="font-medium">{option.label}</span>
+                {/* A sandbox gateway takes a real-looking payment that is not
+                    real. Nobody should discover that afterwards. */}
+                {option.sandbox && (
+                  <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                    test mode
+                  </span>
+                )}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void pay()}
+          disabled={startCheckout.isPending || !provider}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
+        >
+          {startCheckout.isPending
+            ? "Opening the payment page…"
+            : `Pay ${formatMoney(invoice.balanceCents, invoice.currency)} online`}
+        </button>
+        <span className="text-xs text-slate-500">
+          {provider
+            ? `You will be taken to ${options.find((o) => o.provider === provider)?.label ?? "the payment provider"}.`
+            : "Choose a payment method to continue."}
+        </span>
+      </div>
+
       {problem && (
-        <p role="alert" className="w-full text-sm text-amber-700 dark:text-amber-300">
+        <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">
           {problem}
         </p>
       )}

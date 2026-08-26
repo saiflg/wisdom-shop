@@ -232,7 +232,14 @@ export default function AiTeacherPage() {
               className="flex items-center justify-between rounded-xl border border-slate-200 p-4 transition hover:border-brand-400 dark:border-slate-800"
             >
               <div className="min-w-0">
-                <p className="truncate font-semibold">{session.topic}</p>
+                {/* The scheme's lesson, not the word typed on the way in —
+                    otherwise a child's tutoring record reads "adverb",
+                    "vowels", "noun" for three lessons all teaching parts of
+                    speech, which looks like a broken product to a parent. */}
+                <p className="truncate font-semibold">{session.displayTitle ?? session.topic}</p>
+                {session.followsScheme && (
+                  <p className="truncate text-xs text-slate-500">you asked about {session.topic}</p>
+                )}
                 <p className="mt-0.5 truncate text-xs text-slate-500">
                   {session.subject?.name}
                   {session.startedByUser
@@ -251,7 +258,7 @@ export default function AiTeacherPage() {
                     aria-valuenow={session.percent}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-label={`${session.topic} progress`}
+                    aria-label={`${session.displayTitle ?? session.topic} progress`}
                   >
                     <div className="h-full bg-brand-600" style={{ width: `${session.percent}%` }} />
                   </div>

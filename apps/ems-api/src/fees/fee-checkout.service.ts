@@ -14,6 +14,7 @@ import {
   buildReference,
   checkoutUrlFrom,
   invoiceIdFromReference,
+  PROVIDER_LABELS,
   parsePaymentEvent,
   verifyWebhook,
   type FeeProvider,
@@ -39,6 +40,56 @@ export class FeeCheckoutService {
   ) {}
 
   /**
+   * The ways this school can actually be paid online, right now.
+   *
+   * Asked before the payer is shown anything, so a family is never offered a
+   * button that cannot work. "Configured" is not enough on its own: a row
+   * whose secret will not decrypt is enabled in the database and useless in
+   * practice, so each candidate is checked as far as it can be checked
+   * without calling the provider.
+   *
+   * Returns an empty list rather than throwing. Having no gateway is a
+   * normal state for a school that takes cash, and the screen says so.
+   */
+  async paymentOptions(invoiceId: string, viewer: AuthenticatedUser) {
+    const client = await this.tenantPrisma.getClient();
+
+    // Through the fees service, so a guardian asking about another family's
+    // invoice is refused by the code that already owns that rule.
+    const invoice = await this.fees.getInvoice(invoiceId, viewer);
+    const outstanding = invoice.totalCents - invoice.paidCents;
+
+    const rows = await client.paymentGatewaySettings.findMany({
+      where: { enabled: true, secretKeyEncrypted: { not: null } },
+    });
+
+    const options = rows
+      .filter((row) => {
+        // A key that will not decrypt means a rotated encryption key. The
+        // row looks healthy and the checkout would fail at the gateway, so
+        // it is not offered.
+        if (!this.secrets.tryDecrypt(row.secretKeyEncrypted)) return false;
+        // OPay cannot be called at all without a merchant id.
+        if (row.provider === "OPAY" && !row.merchantId?.trim()) return false;
+        return true;
+      })
+      .map((row) => ({
+        provider: row.provider as FeeProvider,
+        label: PROVIDER_LABELS[row.provider as FeeProvider] ?? row.provider,
+        currency: row.currency ?? "NGN",
+        /** Sandbox keys take real-looking payments that are not real. */
+        sandbox: row.sandbox,
+      }));
+
+    return {
+      invoiceNumber: invoice.invoiceNumber,
+      outstandingCents: outstanding,
+      settled: outstanding <= 0,
+      options,
+    };
+  }
+
+  /**
    * Starts a checkout for one invoice and hands back where to send the payer.
    *
    * Refuses clearly rather than half-working when the school has not
@@ -46,7 +97,7 @@ export class FeeCheckoutService {
    * system. A parent seeing "online payment is not set up for this school
    * yet" can ring the bursar; a parent seeing a broken redirect cannot.
    */
-  async startCheckout(invoiceId: string, viewer: AuthenticatedUser) {
+  async startCheckout(invoiceId: string, viewer: AuthenticatedUser, chosenProvider?: FeeProvider) {
     const client = await this.tenantPrisma.getClient();
 
     // Through the fees service, so a guardian asking about another family's
@@ -55,12 +106,41 @@ export class FeeCheckoutService {
     const outstanding = invoice.totalCents - invoice.paidCents;
     if (outstanding <= 0) throw new ConflictException("That invoice is already settled");
 
+    // A school may have several gateways switched on, and which one a family
+    // pays through is theirs to choose — one may charge the payer a fee, or
+    // simply be the one they have an account with. Without a choice this
+    // took whichever row came back first, which is arbitrary and invisible.
     const settings = await client.paymentGatewaySettings.findFirst({
-      where: { enabled: true, secretKeyEncrypted: { not: null } },
+      where: {
+        enabled: true,
+        secretKeyEncrypted: { not: null },
+        ...(chosenProvider ? { provider: chosenProvider } : {}),
+      },
     });
+
     if (!settings) {
+      // Two different situations, and telling them apart matters: a family
+      // that picked a gateway which has since been switched off should try
+      // another, not give up and drive to the school.
+      const anyConfigured = await client.paymentGatewaySettings.count({
+        where: { enabled: true, secretKeyEncrypted: { not: null } },
+      });
+      if (chosenProvider && anyConfigured > 0) {
+        throw new ConflictException(
+          `${PROVIDER_LABELS[chosenProvider] ?? chosenProvider} is not available for this school. Please choose another way to pay.`,
+        );
+      }
       throw new ConflictException(
         "Online payment is not set up for this school yet. Please pay the school office directly.",
+      );
+    }
+
+    if (settings.provider === "OPAY" && !settings.merchantId?.trim()) {
+      // OPay authenticates the merchant in a header. Without it the cashier
+      // call fails with an error that reads like a bad key, sending whoever
+      // debugs it after the wrong thing.
+      throw new ConflictException(
+        "This school's OPay settings are missing a merchant ID. Please tell the school office.",
       );
     }
 
@@ -85,6 +165,8 @@ export class FeeCheckoutService {
       reference,
       payerEmail: await this.payerEmailFor(invoice.studentProfileId),
       invoiceNumber: invoice.invoiceNumber,
+      merchantId: settings.merchantId,
+      sandbox: settings.sandbox,
     });
 
     const response = await fetch(request.url, {
@@ -106,7 +188,22 @@ export class FeeCheckoutService {
 
     const url = checkoutUrlFrom(provider, payload);
     if (!url) {
-      throw new BadRequestException("The payment provider did not return a checkout link");
+      // OPay answers HTTP 200 even when it refuses, putting the reason in the
+      // body — so the `!response.ok` branch above never fires for it, and
+      // without this a wrong key produced "did not return a checkout link",
+      // which tells whoever has to fix it nothing at all.
+      const reported = payload as { message?: unknown; code?: unknown } | undefined;
+      const detail =
+        typeof reported?.message === "string" && reported.message.trim()
+          ? `${reported.message}${typeof reported.code === "string" ? ` (${reported.code})` : ""}`
+          : null;
+
+      this.logger.error(`${provider} returned no checkout link${detail ? `: ${detail}` : ""}`);
+      throw new BadRequestException(
+        detail
+          ? `The payment provider refused this: ${detail}`
+          : "The payment provider did not return a checkout link",
+      );
     }
 
     return { url, reference, provider, amountCents: outstanding };

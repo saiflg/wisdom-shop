@@ -1,7 +1,14 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { DEFAULT_LOCALE, isLocale, translate, type Locale, type TranslationKey } from "./index";
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  translate,
+  translatePlural,
+  type Locale,
+  type TranslationKey,
+} from "./index";
 
 const STORAGE_KEY = "wisdom-campus-locale";
 
@@ -16,6 +23,8 @@ interface I18nValue {
   /** True when the current language came from this person, not the school. */
   chosenByUser: boolean;
   t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
+  /** For text that reads differently for one thing and for several. */
+  tPlural: (base: string, count: number, vars?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nValue | null>(null);
@@ -71,9 +80,15 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     [locale],
   );
 
+  const tPlural = useCallback(
+    (base: string, count: number, vars?: Record<string, string | number>) =>
+      translatePlural(locale, base, count, vars),
+    [locale],
+  );
+
   const value = useMemo(
-    () => ({ locale, setLocale, applySchoolDefault, chosenByUser, t }),
-    [locale, setLocale, applySchoolDefault, chosenByUser, t],
+    () => ({ locale, setLocale, applySchoolDefault, chosenByUser, t, tPlural }),
+    [locale, setLocale, applySchoolDefault, chosenByUser, t, tPlural],
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

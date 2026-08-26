@@ -11,6 +11,7 @@ import { useLessonPlans } from "@/lib/use-lesson-plans";
 import { useQuizzes } from "@/lib/use-quizzes";
 import { useCurriculumSettings } from "@/lib/use-curriculum-settings";
 import { useAuthStore } from "@/store/auth-store";
+import { useBranding } from "@/lib/branding-context";
 import { GatewayHealthBanner } from "@/components/gateway-health-banner";
 import type { TranslationKey } from "@/lib/i18n";
 
@@ -20,7 +21,19 @@ import type { TranslationKey } from "@/lib/i18n";
  */
 export default function DashboardPage() {
   const { t } = useTranslation();
+  /*
+   * The school's name, not its slug.
+   *
+   * This greeted every administrator with "Welcome back · demo-academy" —
+   * the URL identifier, which is not what any school calls itself, on the
+   * very first screen of the product. Branding already resolves the display
+   * name an admin chose (falling back to the registered name); the slug is
+   * kept only for the case where branding has not loaded, since a greeting
+   * with nothing after it looks broken in a different way.
+   */
+  const branding = useBranding();
   const schoolSlug = useAuthStore((s) => s.user?.schoolSlug);
+  const schoolName = branding?.schoolName?.trim() || schoolSlug;
 
   const students = useStudents();
   const teachers = useTeachers();
@@ -47,7 +60,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           {t("dashboard.welcome")}
-          {schoolSlug ? ` · ${schoolSlug}` : ""}
+          {schoolName ? ` · ${schoolName}` : ""}
         </p>
       </div>
 

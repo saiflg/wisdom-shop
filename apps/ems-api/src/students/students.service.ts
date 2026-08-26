@@ -1,6 +1,9 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import * as argon2 from "argon2";
+import type { PrismaClient as TenantPrismaClient } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
+import { TenancyService } from "@/tenancy/tenancy.service";
+import { buildAdmissionNumber, schoolAbbreviation } from "./admission-number";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import type { CreateStudentDto } from "./dto/create-student.dto";
 import type { UpdateStudentDto } from "./dto/update-student.dto";
@@ -18,7 +21,62 @@ const STUDENT_INCLUDE = {
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly tenantPrisma: TenantPrismaService) {}
+  constructor(
+    private readonly tenantPrisma: TenantPrismaService,
+    private readonly tenancy: TenancyService,
+  ) {}
+
+
+  /**
+   * Claims the next admission number for this school.
+   *
+   * The serial is incremented in the same statement that reads it, so two
+   * children admitted in the same second cannot be handed the same number —
+   * the identical reason fee receipts claim theirs this way.
+   *
+   * Returns null when the school has switched automatic numbering off, which
+   * leaves the old behaviour exactly as it was: the office types the code.
+   */
+  private async claimAdmissionNumber(client: TenantPrismaClient): Promise<string | null> {
+    const settings =
+      (await client.admissionSettings.findFirst()) ??
+      // Created lazily rather than at provisioning, so schools that existed
+      // before this feature get one the first time they admit a child.
+      (await client.admissionSettings.create({ data: {} }));
+
+    if (!settings.enabled) return null;
+
+    const year = new Date().getFullYear();
+
+    // A new year restarts the serial. Written as one update per branch
+    // rather than a read-then-write, so a January morning with two
+    // simultaneous admissions cannot reset the counter twice.
+    const claimed =
+      settings.counterYear === year
+        ? await client.admissionSettings.update({
+            where: { id: settings.id },
+            data: { counter: { increment: 1 } },
+          })
+        : await client.admissionSettings.update({
+            where: { id: settings.id },
+            data: { counterYear: year, counter: 1 },
+          });
+
+    const abbreviation =
+      settings.abbreviation?.trim() || schoolAbbreviation(await this.schoolName());
+
+    return buildAdmissionNumber({ abbreviation, year, sequence: claimed.counter });
+  }
+
+  /** The school's own name, for deriving its letters. */
+  private async schoolName(): Promise<string> {
+    const client = await this.tenantPrisma.getClient();
+    const branding = await client.brandingSettings.findFirst({ select: { displayName: true } });
+    if (branding?.displayName?.trim()) return branding.displayName.trim();
+
+    const school = await this.tenancy.resolveSchoolById(this.tenantPrisma.currentSchoolId);
+    return school?.name ?? "";
+  }
 
   async create(dto: CreateStudentDto) {
     if (dto.email && !dto.password) {
@@ -38,6 +96,30 @@ export class StudentsService {
 
     const passwordHash = dto.password ? await argon2.hash(dto.password) : null;
 
+    /*
+     * A typed code always wins.
+     *
+     * A school arriving from paper has six years of children already
+     * carrying a number, and the office typing one is saying "this is that
+     * child". Generating over the top of it would not be a tidy-up.
+     */
+    let studentCode = dto.studentCode ?? (await this.claimAdmissionNumber(client));
+
+    /*
+     * The unique index is the guarantee, not this loop.
+     *
+     * A generated number can still collide: somebody may have typed
+     * "DA/2026/0003" by hand last term, and the counter knows nothing about
+     * it. Rather than failing an admission over a number, the next one is
+     * claimed. Bounded, because a loop that cannot end is worse than an
+     * error a person can read.
+     */
+    for (let attempt = 0; attempt < 5 && !dto.studentCode && studentCode; attempt++) {
+      const taken = await client.studentProfile.findUnique({ where: { studentCode } });
+      if (!taken) break;
+      studentCode = await this.claimAdmissionNumber(client);
+    }
+
     const user = await client.user.create({
       data: {
         email: dto.email,
@@ -47,7 +129,7 @@ export class StudentsService {
         roles: ["STUDENT"],
         studentProfile: {
           create: {
-            studentCode: dto.studentCode,
+            studentCode,
             dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
           },
         },

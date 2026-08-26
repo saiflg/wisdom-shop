@@ -2,12 +2,14 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import * as nodemailer from "nodemailer";
 import type { MessageChannel, MessageEvent, MessageStatus } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
+import { TenancyService } from "@/tenancy/tenancy.service";
 import { getTenantContext } from "@/tenancy/tenant-context";
 import { CommunicationSettingsService } from "@/settings/communication-settings.service";
 import { buildDedupeKey, renderTemplate, validateTemplate, type RenderContext } from "./render-template";
 import { resolveRecipients, type GuardianLinkInput } from "./resolve-recipients";
 import { gatewayHealth, type GatewayHealth } from "./gateway-health";
 import { DEFAULT_TEMPLATES, type DefaultTemplate } from "./default-templates";
+import { schoolNameFor } from "./school-name";
 
 const UNIQUE_VIOLATION = "P2002";
 const SEND_TIMEOUT_MS = 15_000;
@@ -36,7 +38,31 @@ export class MessagingService {
   constructor(
     private readonly tenantPrisma: TenantPrismaService,
     private readonly communication: CommunicationSettingsService,
+    private readonly tenancy: TenancyService,
   ) {}
+
+  /**
+   * What to sign messages with. Two cheap lookups per notification run, not
+   * per recipient — a class of forty gets one of each.
+   *
+   * Never throws: a branding row that cannot be read is not a reason to
+   * withhold a fee receipt, so anything unexpected falls through to the
+   * slug the tenant context already carries.
+   */
+  private async resolveSchoolName(): Promise<string> {
+    const slug = getTenantContext()?.schoolSlug ?? null;
+    try {
+      const client = await this.tenantPrisma.getClient();
+      const [branding, school] = await Promise.all([
+        client.brandingSettings.findFirst({ select: { displayName: true } }),
+        this.tenancy.resolveSchoolById(this.tenantPrisma.currentSchoolId),
+      ]);
+      return schoolNameFor({ displayName: branding?.displayName, registeredName: school?.name, slug });
+    } catch (error) {
+      this.logger.warn(`Could not resolve the school's name for a message: ${String(error)}`);
+      return schoolNameFor({ slug });
+    }
+  }
 
   /**
    * Queues and sends the notifications for one event about one student.
@@ -134,9 +160,42 @@ export class MessagingService {
       notifyBySms: link.notifyBySms,
     }));
 
-    const schoolName = getTenantContext()?.schoolSlug ?? "Your school";
+    const schoolName = await this.resolveSchoolName();
     const dedupeKey = buildDedupeKey(input.event, input.dedupeParts);
     const channels = input.channels ?? DEFAULT_CHANNELS;
+
+    // A student nobody is linked to used to leave no trace at all. Not one
+    // outbox row, nothing failed, and the gateway kept reporting healthy —
+    // so a bursar could take cash, issue receipt RCT-000013, and the fact
+    // that no parent was ever told existed nowhere in the system.
+    //
+    // resolveRecipients cannot report this: with no links it has nobody to
+    // return, not even as skipped. So it is recorded here, once per channel,
+    // against the student rather than a guardian — the student is the only
+    // party there is, and the dedupe index needs something stable.
+    if (linkInputs.length === 0) {
+      for (const channel of channels) {
+        const template = await this.templateFor(input.event, channel);
+        if (!template || !template.enabled) continue;
+
+        const created = await this.record({
+          input,
+          channel,
+          templateId: template.id,
+          recipientUserId: null,
+          recipientName: `${student.user.firstName} ${student.user.lastName}`,
+          recipientAddress: `unlinked:${input.studentProfileId}`,
+          subject: null,
+          body: "",
+          status: "SKIPPED",
+          statusReason: "No parent or guardian is linked to this student",
+          dedupeKey,
+        });
+        if (created === "duplicate") outcome.duplicates += 1;
+        else outcome.skipped += 1;
+      }
+      return outcome;
+    }
 
     for (const channel of channels) {
       const template = await this.templateFor(input.event, channel);
@@ -235,7 +294,8 @@ export class MessagingService {
     input: NotifyInput;
     channel: MessageChannel;
     templateId: string;
-    recipientUserId: string;
+    /** Null when there is no guardian to name — see the unlinked-student case. */
+    recipientUserId: string | null;
     recipientName: string;
     recipientAddress: string;
     subject: string | null;

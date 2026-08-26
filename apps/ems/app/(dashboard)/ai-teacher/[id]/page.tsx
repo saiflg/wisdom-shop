@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ApiError } from "@/lib/api";
@@ -38,6 +38,15 @@ export default function TutorLessonPage() {
   const endSession = useEndTutorSession(sessionId);
 
   const [question, setQuestion] = useState("");
+  /*
+   * Which demonstration is playing on the board.
+   *
+   * Held here rather than inside the panel so the player can be rendered in
+   * the board column at board size. Inside the panel it was a thumbnail
+   * beneath a list — fine on a laptop, useless on a projector, and in full
+   * screen it sat below the fold entirely.
+   */
+  const [watching, setWatching] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -65,12 +74,62 @@ export default function TutorLessonPage() {
     if (!voice.enabled) voice.stop();
   }, [voice.enabled, voice]);
 
-  // Escape leaves full screen; the browser does the same for its own, and a
-  // child who cannot find the way out of a full-screen page is stuck.
+  /**
+   * Real full screen, not a div that covers the viewport.
+   *
+   * This used to set `fixed inset-0 z-50` and nothing else, which fills the
+   * browser's *content area* and leaves the address bar, the tabs and the
+   * taskbar exactly where they were. On a laptop that looks like a bug; on
+   * the projector a class is actually watching, it wastes the top third of
+   * the screen. `document.fullscreenElement` was null the whole time.
+   *
+   * The overlay classes are kept — they are what makes the lesson fill
+   * whatever space it is given, and they are also the fallback when the
+   * browser refuses the request (an iframe without `allowfullscreen`, or a
+   * policy that forbids it). Refusal then degrades to the old behaviour
+   * rather than to a button that does nothing.
+   */
+  const toggleFullScreen = useCallback(() => {
+    /*
+     * Our own state decides, not `document.fullscreenElement`.
+     *
+     * Keying the toggle off the browser's flag looked right and stranded
+     * anybody whose browser had refused the request: the overlay was up, the
+     * flag was null, so every further press re-entered instead of leaving.
+     * Escape still worked, which made it look like a broken button rather
+     * than the wrong condition.
+     */
+    if (fullScreen) {
+      // Only if the browser actually granted it; harmless when it did not.
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+      setFullScreen(false);
+      return;
+    }
+
+    setFullScreen(true);
+    // Must happen inside the click for the browser to allow it.
+    void board.current?.requestFullscreen?.().catch(() => {
+      // Kept full screen: the overlay alone is still better than nothing.
+    });
+  }, [fullScreen]);
+
+  // The browser's own exits — Escape, F11, the floating "leave full screen"
+  // chip — never touch React state, so without this the button would still
+  // read "Exit full screen" after the page had already left it.
+  useEffect(() => {
+    const onChange = () => {
+      if (!document.fullscreenElement) setFullScreen(false);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  // Escape also leaves the fallback overlay, which the browser knows nothing
+  // about. A child who cannot find the way out of a full-screen page is stuck.
   useEffect(() => {
     if (!fullScreen) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setFullScreen(false);
+      if (event.key === "Escape" && !document.fullscreenElement) setFullScreen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -119,12 +178,15 @@ export default function TutorLessonPage() {
     );
   }
 
+  const resources = session.resources ?? [];
+  const watchingResource = resources.find((resource) => resource.id === watching) ?? null;
+
   return (
     <div
       ref={board}
       className={
         fullScreen
-          ? "fixed inset-0 z-50 flex flex-col space-y-4 overflow-y-auto bg-white p-6 dark:bg-slate-950"
+          ? "lesson-fullscreen fixed inset-0 z-50 flex flex-col space-y-4 overflow-y-auto bg-white p-6 dark:bg-slate-950"
           : "flex h-[calc(100vh-9rem)] flex-col space-y-4"
       }
     >
@@ -133,7 +195,9 @@ export default function TutorLessonPage() {
           <Link href="/ai-teacher" className="text-xs font-semibold text-brand-600 hover:underline">
             ← All lessons
           </Link>
-          <h1 className="mt-1 truncate text-xl font-bold tracking-tight">{session.topic}</h1>
+          <h1 className="mt-1 truncate text-xl font-bold tracking-tight">
+            {session.followsScheme && session.currentLesson ? session.currentLesson.title : session.topic}
+          </h1>
           <p className="text-xs text-slate-500">
             {session.subject?.name}
             {session.subject?.gradeLevel ? ` · ${session.subject.gradeLevel}` : ""}
@@ -141,6 +205,19 @@ export default function TutorLessonPage() {
               ? ` · ${session.startedByUser.firstName} ${session.startedByUser.lastName}`
               : ""}
           </p>
+
+          {/* A student who typed "adverb" and was given "Parts of speech" has
+              not been ignored — the class is following the school's published
+              scheme, which is the point of anchoring it to one. Saying so is
+              the difference between a lesson that looks wrong and one that
+              looks deliberate. */}
+          {session.followsScheme && (
+            <p className="mt-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-900 dark:bg-brand-950/40 dark:text-brand-200">
+              You asked about <span className="font-semibold">{session.topic}</span>. This class follows your
+              school&apos;s scheme of work, so it starts where your class is up to — your question is covered as
+              the course reaches it, and you can ask about it any time in the box below.
+            </p>
+          )}
 
           {isClass && session.course && (
             <div className="mt-3 max-w-md">
@@ -187,7 +264,7 @@ export default function TutorLessonPage() {
 
           <button
             type="button"
-            onClick={() => setFullScreen((on) => !on)}
+            onClick={toggleFullScreen}
             aria-pressed={fullScreen}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
           >
@@ -237,6 +314,48 @@ export default function TutorLessonPage() {
           aria-live="polite"
           aria-label="Lesson transcript"
         >
+          {watchingResource && (
+            <div className="chalk-in mb-3">
+              <div className="mx-auto w-full max-w-4xl">
+                <div className="flex items-center justify-between gap-3 pb-2">
+                  <p className="min-w-0 truncate text-sm font-semibold">{watchingResource.title}</p>
+                  <button
+                    type="button"
+                    onClick={() => setWatching(null)}
+                    className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
+                  >
+                    Close
+                  </button>
+                </div>
+                {watchingResource.embedUrl ? (
+                  <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
+                    <iframe
+                      src={watchingResource.embedUrl}
+                      title={watchingResource.title}
+                      // Full screen on the video itself, so a class can watch
+                      // the demonstration edge to edge without leaving the
+                      // lesson underneath it.
+                      allowFullScreen
+                      allow="accelerometer; encrypted-media; picture-in-picture; fullscreen"
+                      sandbox="allow-scripts allow-same-origin allow-presentation"
+                      referrerPolicy="no-referrer"
+                      className="h-full w-full border-0"
+                    />
+                  </div>
+                ) : (
+                  <a
+                    href={watchingResource.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="block rounded-xl border border-slate-300 p-4 text-sm font-semibold text-brand-600 hover:underline dark:border-slate-700"
+                  >
+                    Open this in a new tab
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           {session.turns?.length === 0 && (
             <p className="py-8 text-center text-sm text-slate-500">
               {!canAct
@@ -263,9 +382,25 @@ export default function TutorLessonPage() {
       </div>
 
       {/* Demonstrations a teacher added. Offered, never forced: the student
-          decides whether to watch before carrying on. */}
-      {canAct && isClass && !session.finished && (session.resources?.length ?? 0) > 0 && (
-        <Demonstrations resources={session.resources ?? []} />
+          decides whether to watch.
+
+          Not restricted to a taught class any more. A student typing their
+          own questions is the one who most needs a worked example — they
+          asked because they were stuck — and gating this on AUTO mode meant
+          the school's videos were invisible to exactly that student, even
+          once the server had matched one for them. */}
+      {/* Available for as long as the lesson is open, including after the
+          course has been taught. A child revising the night before an exam is
+          exactly who wants the worked example again, and hiding it once the
+          class finished meant the school's videos disappeared at the moment
+          they became most useful. */}
+      {canAct && resources.length > 0 && (
+        <Demonstrations
+          resources={resources}
+          isClass={isClass}
+          watching={watching}
+          onWatch={setWatching}
+        />
       )}
 
       {actionError && <p className="text-sm text-red-600 dark:text-red-400">{actionError}</p>}
@@ -500,56 +635,75 @@ function Turn({ turn }: { turn: TutorTurn }) {
         <span className="sr-only">Teacher: </span>
         <BoardText text={turn.content} alt={turn.diagramAlt} />
         {turn.diagram && <BoardDiagram svg={turn.diagram} alt={turn.diagramAlt} />}
+
+        {/* Said out loud rather than left to happen. The words arrive first
+            and the picture a few seconds later, so without this the board
+            simply reflows under a student who has started reading — which
+            reads as a glitch rather than as a teacher turning to draw. */}
+        {turn.diagramPending && !turn.diagram && (
+          <p className="mt-3 flex items-center gap-2 text-xs italic text-white/70" role="status">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-white/70" />
+            Drawing a picture for this…
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-function Demonstrations({ resources }: { resources: LessonResource[] }) {
-  const [watching, setWatching] = useState<string | null>(null);
-
+/**
+ * The demonstrations this lesson can show, as a chooser.
+ *
+ * The player itself is not here — it renders on the board, where a class can
+ * actually see it. This used to hold both, which meant a video played as a
+ * thumbnail beneath a list at the bottom of the page: fine at arm's length,
+ * useless on a projector, and in full screen it sat below the fold entirely.
+ */
+function Demonstrations({
+  resources,
+  isClass,
+  watching,
+  onWatch,
+}: {
+  resources: LessonResource[];
+  isClass?: boolean;
+  watching: string | null;
+  onWatch: (id: string | null) => void;
+}) {
   return (
     <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+      {/* A taught class is about to move on, so "before you carry on" is the
+          right words. A student who just asked a question is not carrying on
+          anywhere — they asked because they were stuck. */}
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Before you carry on — optional
+        {isClass ? "Watch on the board — optional" : "Your school added these — optional"}
       </p>
       <ul className="mt-2 space-y-2">
         {resources.map((resource) => (
-          <li key={resource.id}>
-            <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0 truncate text-sm">{resource.title}</span>
-              {resource.embedUrl ? (
-                <button
-                  type="button"
-                  onClick={() => setWatching(watching === resource.id ? null : resource.id)}
-                  className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
-                >
-                  {watching === resource.id ? "Hide" : "Watch"}
-                </button>
-              ) : (
-                <a
-                  href={resource.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
-                >
-                  Open
-                </a>
-              )}
-            </div>
-            {watching === resource.id && resource.embedUrl && (
-              <div className="mt-2 aspect-video w-full overflow-hidden rounded-lg bg-black">
-                <iframe
-                  src={resource.embedUrl}
-                  title={resource.title}
-                  allowFullScreen
-                  // Only hosts the server vetted reach this point, and even
-                  // they get no more than they need.
-                  sandbox="allow-scripts allow-same-origin allow-presentation"
-                  referrerPolicy="no-referrer"
-                  className="h-full w-full border-0"
-                />
-              </div>
+          <li key={resource.id} className="flex items-center justify-between gap-3">
+            <span className="min-w-0 truncate text-sm">{resource.title}</span>
+            {resource.embedUrl ? (
+              <button
+                type="button"
+                onClick={() => onWatch(watching === resource.id ? null : resource.id)}
+                aria-pressed={watching === resource.id}
+                className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
+              >
+                {watching === resource.id ? "Hide" : "Watch"}
+              </button>
+            ) : (
+              /* Not every link can be embedded — an arbitrary origin in an
+                 iframe inside a school portal is a frame in a child's
+                 session, so only vetted hosts get one. The rest are followed
+                 knowingly. */
+              <a
+                href={resource.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
+              >
+                Open
+              </a>
             )}
           </li>
         ))}

@@ -123,7 +123,7 @@ export function buildTutorPrompt(
   lines.push(`The student now asks: ${question.trim()}`);
   lines.push("");
   lines.push("Reply as the teacher, in prose. Do not prefix your reply with a name or label.");
-  lines.push(DIAGRAM_INSTRUCTION);
+  // The diagram is asked for separately — see buildDiagramPrompt.
 
   return lines.join("\n");
 }
@@ -262,7 +262,40 @@ export function buildLessonPrompt(
 
   lines.push("");
   lines.push("Teach the lesson now, in prose. Do not prefix your reply with a name or label.");
-  lines.push(DIAGRAM_INSTRUCTION);
+  // The diagram is asked for separately — see buildDiagramPrompt.
 
   return lines.join("\n");
+}
+
+/**
+ * Asks for a picture of a lesson that has already been written.
+ *
+ * Split out from the lesson itself because of what it costs: a reply's text
+ * averages about 900 characters and its SVG about 2,200, so roughly seven
+ * tenths of everything the model writes for a turn is markup — and output is
+ * what takes the time. Measured on this school: the provider answers a bare
+ * request in two seconds and a lesson took twenty.
+ *
+ * Asking twice costs one more request and gets the words to the student in
+ * about three seconds instead of twenty. The picture arrives a few seconds
+ * later, into a lesson they are already reading, which is the order a real
+ * teacher works in anyway — talk first, then turn to the board.
+ *
+ * The lesson text is passed back in rather than the whole transcript: the
+ * picture illustrates *this* reply, and sending the conversation again would
+ * reintroduce the cost this split exists to remove.
+ */
+export function buildDiagramPrompt(context: TutorContext, lessonText: string): string {
+  return [
+    `You are illustrating a ${context.subjectName} lesson for a student in ${context.gradeLevel ?? "school"}.`,
+    "",
+    "Here is what the teacher just said:",
+    lessonText,
+    "",
+    "Draw one picture for that, and reply with nothing but the SVG.",
+    "If there is genuinely nothing worth showing — the reply is a one-line",
+    "'yes, that is right', or purely a question back to the student — reply with",
+    "the single word NONE.",
+    DIAGRAM_INSTRUCTION,
+  ].join("\n");
 }

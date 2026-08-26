@@ -297,3 +297,39 @@ html[data-high-contrast] .chalk-word-active {
   @apply bg-black text-white dark:bg-white dark:text-black;
   box-shadow: none;
 }
+
+/* ── The lesson in full screen ───────────────────────────────────────────
+ *
+ * Full screen is not "the same page, edge to edge". It is nearly always a
+ * projector with a class in front of it, and the body text that reads
+ * comfortably at arm's length on a laptop is unreadable from the back of a
+ * room. Nothing about the layout changes — only the scale — so a teacher who
+ * knows where things are does not have to re-learn the screen.
+ *
+ * Set with clamp() against the viewport rather than a fixed size: the same
+ * lesson goes onto a 13" laptop and a 75" panel, and a size chosen for one
+ * is wrong on the other.
+ */
+.lesson-fullscreen .chalk-board {
+  @apply px-8 py-6;
+  font-size: clamp(1.15rem, 1.55vw + 0.65rem, 2.1rem);
+  line-height: 1.65;
+}
+
+/* The student's own questions grow with it, or the conversation reads as
+ * one loud voice answering a whisper. */
+.lesson-fullscreen .chalk-in .rounded-2xl {
+  font-size: clamp(1rem, 1.1vw + 0.55rem, 1.6rem);
+}
+
+/* A board that spans a 75" panel edge to edge is a worse read, not a better
+ * one — the eye loses the line on the way back. Capped and centred. */
+.lesson-fullscreen .chalk-board {
+  max-width: 68ch;
+}
+
+/* Headings inside a lesson keep their step above body text. */
+.lesson-fullscreen .chalk-board strong,
+.lesson-fullscreen .chalk-board b {
+  font-size: 1.06em;
+}

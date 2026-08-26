@@ -46,6 +46,32 @@ export function LoginForm({
         body: values,
       });
       setSession(result.accessToken, result.user);
+
+      /*
+       * Remember which school to paint the console in.
+       *
+       * Branding is resolved from the hostname, with the middleware's
+       * `wisdom-school` cookie as the fallback for deployments where schools
+       * have no subdomain of their own. That cookie is only ever set by
+       * arriving through a link that names the school — so anybody who
+       * simply opened /login and typed their school in the form signed into
+       * a console with no name, no logo and the default blue, which is the
+       * unbranded face of somebody else's product.
+       *
+       * Written from the *authenticated* response rather than from the form,
+       * so it is the school the server agreed this account belongs to. That
+       * is strictly safer than the query-parameter path this cookie already
+       * accepts, which any link can set: the slug picks a public face and
+       * never an identity, and here it cannot even pick a face the signed-in
+       * user has no business seeing.
+       */
+      if (result.user.schoolSlug) {
+        const oneYear = 60 * 60 * 24 * 365;
+        document.cookie =
+          `wisdom-school=${encodeURIComponent(result.user.schoolSlug)}` +
+          `; path=/; max-age=${oneYear}; samesite=lax`;
+      }
+
       // A student or parent lands on their own page; the dashboard is an
       // administrator's overview and means very little to a family.
       const isStaff = result.user.roles.some(

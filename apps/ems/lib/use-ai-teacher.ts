@@ -17,6 +17,8 @@ export interface TutorTurn {
   diagram: string | null;
   /** What the diagram shows, in words. Null when it carried none. */
   diagramAlt: string | null;
+  /** True while the picture is still being drawn, after the words have arrived. */
+  diagramPending?: boolean;
   lessonIndex: number | null;
   createdAt: string;
 }
@@ -58,6 +60,10 @@ export interface TutorSession {
   currentLesson?: CourseLesson | null;
   finished?: boolean;
   resources?: LessonResource[];
+  /** True when the class teaches the school's scheme rather than the typed topic. */
+  followsScheme?: boolean;
+  /** What to call this lesson: the scheme's lesson when it differs from the typed topic. */
+  displayTitle?: string;
 }
 
 export interface StartSessionInput {
@@ -99,6 +105,22 @@ export function useTutorSession(id: string | null) {
     queryKey: [...SESSIONS_KEY, id],
     enabled: enabled && Boolean(id),
     queryFn: () => apiFetch<TutorSession>(`/v1/ai-teacher/sessions/${id}`, { headers: authHeaders(accessToken) }),
+
+    /*
+     * Watch for a picture that is still being drawn, and stop the moment it
+     * lands.
+     *
+     * The lesson text is sent as soon as it exists — the drawing follows a
+     * few seconds later, because the SVG is most of what the model writes
+     * and waiting for it cost twenty seconds a turn. Without this the
+     * student would read the lesson and never see the picture until they
+     * navigated away and back.
+     *
+     * Polling only while something is actually pending, so an open lesson
+     * nobody is using makes no requests at all.
+     */
+    refetchInterval: (query) =>
+      query.state.data?.turns?.some((turn) => turn.diagramPending) ? 2500 : false,
   });
 }
 
