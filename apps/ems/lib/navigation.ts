@@ -88,7 +88,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // The academic record a school actually keeps is the released results
       // list; this pointed at nothing while that screen already existed.
       { key: "nav.students.academicRecords", href: "/results", roles: STAFF, module: "GRADING" },
-      { key: "nav.students.behaviour" },
+      { key: "nav.students.behaviour", href: "/behaviour" },
       { key: "nav.students.medical" },
       { key: "nav.students.hostel" },
       { key: "nav.students.transport" },
@@ -195,7 +195,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.academics.subjects", href: "/subjects" },
       { key: "nav.academics.curriculum", href: "/schemes-of-work", module: "ACADEMICS" },
       { key: "nav.academics.lessonPlans", href: "/lesson-plans" },
-      { key: "nav.academics.lessonNotes" },
+      { key: "nav.academics.lessonNotes", href: "/lesson-notes" },
       { key: "nav.academics.aiTeaching", href: "/ai-teacher", module: "AI_TEACHER" },
       // The videos the AI Teacher is allowed to offer. Its own item because
       // it is staff work, not something a student ever opens, and because
