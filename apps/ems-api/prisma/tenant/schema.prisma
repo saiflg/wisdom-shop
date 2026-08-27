@@ -100,6 +100,7 @@ model User {
   assignmentsSet       Assignment[]           @relation("AssignmentSetBy")
   questionBankItems    QuestionBankItem[]     @relation("QuestionBankItemCreatedBy")
   examsCreated         Exam[]                 @relation("ExamCreatedBy")
+  sectionsHeaded       Section[]              @relation("SectionHead")
 
   @@map("users")
 }
@@ -359,6 +360,11 @@ model Class {
   id                String  @id @default(cuid())
   name              String
   gradeLevel        String?
+  /// Which part of the school this class belongs to. Optional because a
+  /// school that has never divided itself into sections still has classes,
+  /// and forcing one on them at migration time would invent a fact.
+  sectionId         String?
+  section           Section? @relation(fields: [sectionId], references: [id])
   /// Plain string for this phase (e.g. "2026-2027") — a full AcademicYear/
   /// Term entity is a later-phase concern once curriculum scheduling needs it.
   academicYear      String
@@ -382,7 +388,43 @@ model Class {
   announcements       Announcement[]
 
   @@index([academicYear])
+  @@index([sectionId])
   @@map("classes")
+}
+
+/// A division of the school — "Primary", "Secondary", "Islamiyyah".
+///
+/// Distinct from a class: "Grade 5A" is a class, and Primary is the part of
+/// the school that class sits in. Staff already carry the same idea as free
+/// text on StaffProfile.section, which is why turnover can be read "by
+/// section"; this is that same list, finally kept in one place so it can be
+/// spelled one way.
+///
+/// Uniqueness of the name is a partial unique index on lower(name) among
+/// rows that are not soft-deleted, declared in the migration rather than
+/// here — Prisma cannot express either half. Deleting a section and adding
+/// it back under the same name has to keep working.
+model Section {
+  id          String  @id @default(cuid())
+  name        String
+  /// What this part of the school covers, in the school's own words.
+  description String?
+  /// The order a school reads its own sections in: Nursery, Primary,
+  /// Secondary. Alphabetical would put Secondary before Primary, which is
+  /// nobody's idea of how a school is laid out.
+  position    Int     @default(0)
+
+  headId String?
+  head   User?   @relation("SectionHead", fields: [headId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  classes Class[]
+
+  @@index([position])
+  @@map("sections")
 }
 
 model StudentProfile {

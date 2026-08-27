@@ -25,6 +25,7 @@ import { EnrollmentsModule } from "./enrollments/enrollments.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
 import { CurriculumSettingsModule } from "./curriculum-settings/curriculum-settings.module";
 import { SubjectsModule } from "./subjects/subjects.module";
+import { SectionsModule } from "./sections/sections.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
@@ -87,6 +88,7 @@ import { AuditModule } from "@/audit/audit.module";
     OnboardingModule,
     CurriculumSettingsModule,
     SubjectsModule,
+    SectionsModule,
     SchemesOfWorkModule,
     LessonPlansModule,
     QuizzesModule,

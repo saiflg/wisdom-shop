@@ -191,7 +191,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: "academics",
     items: [
       { key: "nav.academics.classes", href: "/classes" },
-      { key: "nav.academics.sections" },
+      { key: "nav.academics.sections", href: "/sections" },
       { key: "nav.academics.subjects", href: "/subjects" },
       { key: "nav.academics.curriculum", href: "/schemes-of-work", module: "ACADEMICS" },
       { key: "nav.academics.lessonPlans", href: "/lesson-plans" },
