@@ -452,6 +452,7 @@ model StudentProfile {
   feeInvoices       FeeInvoice[]
   wallet            StudentWallet?
   behaviourRecords  BehaviourRecord[]
+  libraryLoans      LibraryLoan[]
   marks             Mark[]
   termResults       TermResult[]
   messages          Message[]
@@ -2458,6 +2459,74 @@ model BudgetLine {
   /// the migration, which Prisma cannot express here.
   @@index([budgetId])
   @@map("budget_lines")
+}
+
+/// A title the school owns, and how many copies of it.
+///
+/// Copies is a count rather than a row per physical book. A school library
+/// here does not barcode individual copies, and inventing a copy entity would
+/// mean a librarian choosing WHICH of four identical copies a child has —
+/// a question nobody can answer and nobody needs to.
+model LibraryBook {
+  id     String  @id @default(cuid())
+  title  String
+  author String?
+  isbn   String?
+  /// The school's own shelving word: "Fiction", "Reference", "Islamiyyah".
+  category String?
+
+  /// How many the school owns. Withdrawing a copy reduces this; it does not
+  /// delete loans, which are the record of who had what.
+  copies Int @default(1)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  loans LibraryLoan[]
+
+  @@index([title])
+  @@map("library_books")
+}
+
+/// One copy of one book, with one child, for a while.
+///
+/// The due date is stored rather than computed from the loan period, because
+/// the period can be changed by a school and a book already out must keep the
+/// date the child was actually given. Overdue is decided in library-rules.ts,
+/// where a book due today is deliberately NOT overdue: the child has until
+/// the end of the day they were given, and a library that says otherwise
+/// fines a child for being punctual.
+model LibraryLoan {
+  id     String      @id @default(cuid())
+  bookId String
+  book   LibraryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Date only, UTC midnight — the convention leave and attendance use, so a
+  /// book scanned at four in the afternoon is due on a day rather than at a
+  /// moment.
+  borrowedOn DateTime
+  dueOn      DateTime
+  returnedOn DateTime?
+
+  /// By value, like every other actor here.
+  issuedByUserId String
+  issuedByName   String
+
+  returnedToUserId String?
+  returnedToName   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookId])
+  @@index([studentProfileId])
+  /// The common question is "what is still out", and it is asked constantly.
+  @@index([returnedOn])
+  @@map("library_loans")
 }
 
 enum ExpenseStatus {

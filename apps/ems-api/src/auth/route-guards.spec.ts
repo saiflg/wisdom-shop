@@ -59,6 +59,13 @@ const ALLOWED_WITHOUT_ROLES: Record<string, string> = {
   // The PATCH beside these is @Roles("SCHOOL_ADMIN").
   "school-profile/school-profile.controller.ts:GET /": "the school's own particulars, as printed on what it hands out",
   "school-profile/school-profile.controller.ts:GET document-header": "the same particulars, formatted for a page header",
+
+  // A catalogue is what a library is for: a child who cannot see what the
+  // school owns cannot ask for it. Titles, authors and counts only — no loan
+  // and no borrower is exposed by either of these. Issuing and returning are
+  // @Roles("SCHOOL_ADMIN", "TEACHER"), and GET loans is scoped by viewer.
+  "library/library.controller.ts:GET books": "the catalogue; titles and counts, no borrowers",
+  "library/library.controller.ts:GET limits": "how many books a borrower may have, and for how long",
   "grading/grading.controller.ts:GET results": "released results, scoped by viewer",
   "grading/grading.controller.ts:GET report-cards/:studentProfileId": "404s for another family's child",
   "grading/grading.controller.ts:GET transcripts/:studentProfileId": "404s for another family's child; published terms only, for everybody",

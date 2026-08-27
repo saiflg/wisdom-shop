@@ -34,6 +34,7 @@ import { SchoolProfileModule } from "./school-profile/school-profile.module";
 import { StaffAttendanceModule } from "./staff-attendance/staff-attendance.module";
 import { ExpensesModule } from "./expenses/expenses.module";
 import { BudgetsModule } from "./budgets/budgets.module";
+import { LibraryModule } from "./library/library.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
@@ -105,6 +106,7 @@ import { AuditModule } from "@/audit/audit.module";
     StaffAttendanceModule,
     ExpensesModule,
     BudgetsModule,
+    LibraryModule,
     SchemesOfWorkModule,
     LessonPlansModule,
     QuizzesModule,
