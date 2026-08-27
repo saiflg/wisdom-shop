@@ -96,7 +96,7 @@ export default function LessonPlanDetailPage() {
           )}
           <h1 className="mt-1 text-2xl font-bold tracking-tight">Week {plan.weekNumber} lesson plan</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {plan.source === "AI_GENERATED" ? "AI generated" : "Manual"}
+            {plan.source === "AI_GENERATED" ? "Wisdom generated" : "Manual"}
           </p>
         </div>
         <div className="flex items-center gap-3">

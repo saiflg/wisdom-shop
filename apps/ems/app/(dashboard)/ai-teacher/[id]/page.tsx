@@ -47,6 +47,13 @@ export default function TutorLessonPage() {
    * screen it sat below the fold entirely.
    */
   const [watching, setWatching] = useState<string | null>(null);
+  /**
+   * Which set of videos the student has closed, if any.
+   *
+   * Keyed on the set rather than a boolean: closing the video for one lesson
+   * should not silence every lesson after it.
+   */
+  const [dismissed, setDismissed] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -179,7 +186,31 @@ export default function TutorLessonPage() {
   }
 
   const resources = session.resources ?? [];
-  const watchingResource = resources.find((resource) => resource.id === watching) ?? null;
+
+  /*
+   * The video for THIS lesson is on the board already, not behind a click.
+   *
+   * It used to be a list with a Watch button, which meant a student had to
+   * know to look. A teacher writing on a board does not hide the diagram
+   * until somebody asks for it. As a class advances the matched set changes,
+   * so `watching` follows the lesson rather than staying on whatever was
+   * chosen three lessons ago.
+   *
+   * It does NOT play by itself. Thirty phones starting a soundtrack at once
+   * is not a lesson, a metered connection should not be spent without
+   * asking, and a child using a screen reader gets talked over. The player
+   * is present and ready; pressing play stays the student's decision.
+   */
+  const offered = resources.map((resource) => resource.id).join(",");
+  const chosen = watching && resources.some((r) => r.id === watching) ? watching : null;
+  const watchingResource =
+    resources.find((resource) => resource.id === chosen) ??
+    // Nothing chosen for this lesson yet: show the best match, unless the
+    // student has closed it for this same set of videos. Only a resource we
+    // can actually embed is worth putting up by itself — auto-selecting a
+    // link we cannot frame would put a bare "Open" button on the board and
+    // hide the video that could have been there instead.
+    (dismissed === offered ? null : (resources.find((resource) => resource.embedUrl) ?? null));
 
   return (
     <div
@@ -321,7 +352,10 @@ export default function TutorLessonPage() {
                   <p className="min-w-0 truncate text-sm font-semibold">{watchingResource.title}</p>
                   <button
                     type="button"
-                    onClick={() => setWatching(null)}
+                    onClick={() => {
+                      setWatching(null);
+                      setDismissed(offered);
+                    }}
                     className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
                   >
                     Close
@@ -398,8 +432,12 @@ export default function TutorLessonPage() {
         <Demonstrations
           resources={resources}
           isClass={isClass}
-          watching={watching}
-          onWatch={setWatching}
+          watching={watchingResource?.id ?? null}
+          onWatch={(id) => {
+            setWatching(id);
+            // Choosing one after closing another must bring the board back.
+            setDismissed(id === null ? offered : null);
+          }}
         />
       )}
 
@@ -672,12 +710,15 @@ function Demonstrations({
 }) {
   return (
     <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-      {/* A taught class is about to move on, so "before you carry on" is the
-          right words. A student who just asked a question is not carrying on
-          anywhere — they asked because they were stuck. */}
+      {/* The first of these is already up on the board, so this list is what
+          to switch to rather than an invitation to start. It still says who
+          chose them: "your school added these" is the honest description of
+          a library a teacher curated, and it matters to a student deciding
+          whether to trust what they are about to watch. */}
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {isClass ? "Watch on the board — optional" : "Your school added these — optional"}
+        {isClass ? "On the board for this lesson" : "Your school added these"}
       </p>
+      <p className="mt-0.5 text-xs text-slate-500">Press play when you are ready.</p>
       <ul className="mt-2 space-y-2">
         {resources.map((resource) => (
           <li key={resource.id} className="flex items-center justify-between gap-3">

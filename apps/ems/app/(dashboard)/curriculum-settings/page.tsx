@@ -7,8 +7,8 @@ import { useAuthStore } from "@/store/auth-store";
 
 const MODE_OPTIONS: { value: CurriculumMode; label: string; hint: string }[] = [
   { value: "MANUAL", label: "Manual", hint: "Staff write every scheme of work by hand." },
-  { value: "AI_AUTOMATIC", label: "AI automatic", hint: "Generate schemes of work with AI." },
-  { value: "HYBRID", label: "Hybrid", hint: "Both manual and AI-generated are available." },
+  { value: "AI_AUTOMATIC", label: "Wisdom automatic", hint: "Generate schemes of work with Wisdom." },
+  { value: "HYBRID", label: "Hybrid", hint: "Both manual and Wisdom-generated are available." },
 ];
 
 export default function CurriculumSettingsPage() {

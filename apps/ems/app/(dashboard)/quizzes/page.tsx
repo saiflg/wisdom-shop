@@ -151,7 +151,7 @@ export default function QuizzesPage() {
               }}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
-              {mode === "generate" ? "Cancel" : "Generate with AI"}
+              {mode === "generate" ? "Cancel" : "Generate with Wisdom"}
             </button>
           )}
         </div>
@@ -270,7 +270,7 @@ export default function QuizzesPage() {
                     {quiz.status}
                   </span>
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                    {quiz.source === "AI_GENERATED" ? "AI generated" : "Manual"}
+                    {quiz.source === "AI_GENERATED" ? "Wisdom generated" : "Manual"}
                   </span>
                 </div>
               </div>
