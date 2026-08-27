@@ -17,6 +17,12 @@ const A4_HEIGHT = 841.89;
 
 export interface DocumentMeta {
   schoolName: string;
+  /**
+   * The school's address, contact line and motto, in that order — whatever
+   * of them it has filled in. Absent for a school that has filled in none,
+   * which prints exactly what it printed before: one line with its name.
+   */
+  schoolLines?: string[];
   title: string;
   subtitle?: string;
 }
@@ -51,10 +57,15 @@ export class PdfBuilder {
   }
 
   private drawTitle() {
+    this.doc.fontSize(10).fillColor("#64748b").text(this.meta.schoolName, MARGIN, MARGIN);
+
+    // Set smaller than the name: these are the school's particulars, not a
+    // second heading competing with the title underneath.
+    for (const line of this.meta.schoolLines ?? []) {
+      this.doc.fontSize(8).fillColor("#94a3b8").text(line, MARGIN);
+    }
+
     this.doc
-      .fontSize(10)
-      .fillColor("#64748b")
-      .text(this.meta.schoolName, MARGIN, MARGIN)
       .moveDown(0.4)
       .fontSize(20)
       .fillColor("#0f172a")

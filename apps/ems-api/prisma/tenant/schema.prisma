@@ -525,6 +525,49 @@ model GuardianLink {
 /// login-page endpoint reaches it by resolving the host to a school first
 /// and then reading that school's database — the ordinary tenant path, one
 /// step earlier than usual.
+/// The school's own particulars, as they appear on what it hands out.
+///
+/// Distinct from BrandingSettings, which is how the console looks — colours,
+/// logo, display name. This is the factual identity: where the school is,
+/// how to reach it, what it is registered as. The two are separate because
+/// they are edited by different people for different reasons, and because a
+/// school changing its accent colour should not be touching the address that
+/// prints on its transcripts.
+///
+/// One row per school, like BrandingSettings.
+model SchoolProfile {
+  id String @id @default(cuid())
+
+  /// Printed under the school's name on documents.
+  motto String?
+
+  addressLine1 String?
+  addressLine2 String?
+  town         String?
+  state        String?
+  country      String?
+
+  phone   String?
+  email   String?
+  website String?
+
+  /// Government approval or registration number. Printed on transcripts,
+  /// where it is often the thing that makes the document count for anything.
+  registrationNumber String?
+  establishedYear    Int?
+
+  /// Who signs a report card. Stored as a name rather than a link to a user:
+  /// the name that was printed on a document issued in 2026 should not change
+  /// because a different head teacher was appointed in 2028.
+  headTeacherName String?
+
+  updatedByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("school_profile")
+}
+
 model BrandingSettings {
   id String @id @default(cuid())
 
