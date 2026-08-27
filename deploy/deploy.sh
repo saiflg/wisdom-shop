@@ -65,14 +65,36 @@ $COMPOSE run --rm ems-migrate
 
 if [[ $MIGRATE_TENANTS -eq 1 ]]; then
 	step "Migrating every school database"
+
 	# The list of schools lives in the control database, so ask it rather than
 	# keeping a second copy of that list here that can drift.
 	#
+	# Read into a variable first, and let a failed query be fatal. Until
+	# 27 Aug 2026 this query named "database_name", which does not exist —
+	# Postgres folds unquoted identifiers to lower case and the column is
+	# "databaseName". psql wrote its error to stderr, the loop read an empty
+	# stream, no failures were collected, and the deploy printed "Deployed".
+	# So --migrate-tenants reported success while migrating nothing at all,
+	# and a release that changed the tenant schema went out with every school
+	# database untouched. Hence both guards below.
+	if ! schools=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" \
+		-d "${EMS_CONTROL_DB:-wisdom_ems_control}" -v ON_ERROR_STOP=1 \
+		-tAc 'SELECT "databaseName" FROM schools ORDER BY "databaseName"'); then
+		fail "Could not read the school list from the control database. Nothing was migrated."
+	fi
+
+	# Zero schools is legitimate on a fresh install and a red flag anywhere
+	# else, so it is said out loud rather than passed over in silence.
+	if [[ -z "${schools//[[:space:]]/}" ]]; then
+		printf '  the control database lists no schools; nothing to migrate\n'
+	fi
+
 	# Failures are collected rather than fatal: one school whose database is in
 	# an odd state should not stop the other schools being migrated, and a
 	# half-finished loop that exited on the first error is worse than a full
 	# pass with a report at the end.
 	failed=()
+	migrated=0
 	while read -r db; do
 		[[ -z "$db" ]] && continue
 		printf '  %s ... ' "$db"
@@ -81,12 +103,16 @@ if [[ $MIGRATE_TENANTS -eq 1 ]]; then
 			ems-migrate \
 			sh -c 'pnpm prisma migrate deploy --schema=prisma/tenant/schema.prisma' >/dev/null 2>&1; then
 			printf 'ok\n'
+			migrated=$((migrated + 1))
 		else
 			printf 'FAILED\n'
 			failed+=("$db")
 		fi
-	done < <($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${EMS_CONTROL_DB:-wisdom_ems_control}" \
-		-tAc 'SELECT database_name FROM schools ORDER BY database_name')
+	done <<< "$schools"
+
+	# Counted out loud. A step that can do nothing and still look like it
+	# worked should always say how much it did.
+	printf '  %d school database(s) migrated\n' "$migrated"
 
 	if [[ ${#failed[@]} -gt 0 ]]; then
 		printf '\n\033[1;31mThese school databases did NOT migrate:\033[0m\n' >&2
