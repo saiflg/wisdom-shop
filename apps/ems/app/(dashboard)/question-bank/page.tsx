@@ -265,7 +265,7 @@ export default function QuestionBankPage() {
       )}
 
       <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Draft with AI</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Draft with Wisdom</h2>
         <div className="mt-2 flex flex-wrap items-end gap-3">
           <label className="text-sm font-medium">
             Subject
@@ -331,7 +331,7 @@ export default function QuestionBankPage() {
       )}
 
       {questions && questions.length === 0 && (
-        <p className="text-sm text-slate-500">No questions yet. Add one, or draft some with AI.</p>
+        <p className="text-sm text-slate-500">No questions yet. Add one, or draft some with Wisdom.</p>
       )}
 
       <ul className="space-y-3">
@@ -344,7 +344,7 @@ export default function QuestionBankPage() {
                   {QUESTION_TYPE_LABELS[question.type]} · {marksLabel(question.marksHundredths)}
                   {question.subject ? ` · ${question.subject.name}` : ""}
                   {question.topic ? ` · ${question.topic}` : ""}
-                  {question.source === "AI_GENERATED" ? " · drafted by AI" : ""}
+                  {question.source === "AI_GENERATED" ? " · drafted by Wisdom" : ""}
                 </p>
                 {question.options?.length > 0 && (
                   <ul className="mt-2 space-y-0.5 text-sm">

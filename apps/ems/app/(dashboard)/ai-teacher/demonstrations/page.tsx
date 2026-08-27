@@ -77,7 +77,7 @@ export default function DemonstrationsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Demonstrations</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Videos and documents the AI Teacher may offer a student mid-lesson. It never invents one — it only
+          Videos and documents Wisdom Teacher may offer a student mid-lesson. It never invents one — it only
           chooses from what you add here, and students watch inside the lesson rather than being sent off to
           another site.
         </p>
@@ -198,7 +198,7 @@ export default function DemonstrationsPage() {
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            What the AI Teacher can offer
+            What Wisdom Teacher can offer
           </h2>
           <select
             value={subjectFilter}
@@ -218,7 +218,7 @@ export default function DemonstrationsPage() {
           <p className="mt-2 text-sm text-slate-500">Loading…</p>
         ) : (resources.data?.length ?? 0) === 0 ? (
           <p className="mt-2 text-sm text-slate-500">
-            Nothing added yet. Until something is here, the AI Teacher has nothing to offer and the panel in a
+            Nothing added yet. Until something is here, Wisdom Teacher has nothing to offer and the panel in a
             lesson stays empty.
           </p>
         ) : (

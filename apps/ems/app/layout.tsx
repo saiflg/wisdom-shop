@@ -7,9 +7,9 @@ import { BrandingProvider } from "@/lib/branding-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Wisdom Campus — AI-Powered School Management",
+  title: "Wisdom Campus — Intelligent School Management",
   description:
-    "An AI-powered multi-tenant school management and learning platform, currently in development.",
+    "A multi-tenant school management and learning platform powered by Wisdom AI, currently in development.",
 };
 
 /**

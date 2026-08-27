@@ -86,10 +86,10 @@ export default function AiTeacherPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI Teacher</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Wisdom Teacher</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             {isGuardian
-              ? "Every lesson your child holds with the AI teacher is kept here in full, so you can read exactly what was said."
+              ? "Every lesson your child holds with Wisdom Teacher is kept here in full, so you can read exactly what was said."
               : "Ask about anything you are studying. Lessons are kept so your teachers and parents can see what was taught."}
           </p>
         </div>

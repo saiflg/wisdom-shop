@@ -57,7 +57,7 @@ export default function AccessibilityPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Accessibility</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          These are your own settings. They change every page here, and they change how the AI Teacher
+          These are your own settings. They change every page here, and they change how Wisdom Teacher
           explains things to you. Nobody has to approve them and you can change them whenever you like.
         </p>
       </div>
@@ -95,7 +95,7 @@ export default function AccessibilityPage() {
 
       <section aria-labelledby="teaching-heading" className="space-y-3">
         <h2 id="teaching-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          How the AI Teacher explains things
+          How Wisdom Teacher explains things
         </h2>
 
         <fieldset className="space-y-2">
@@ -144,7 +144,7 @@ export default function AccessibilityPage() {
 
       <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-900">
         Your teachers can also set these for you, and may keep a private note about the support you need. That
-        note is never shown to you here and is never sent to the AI.
+        note is never shown to you here and is never sent to the AI provider.
       </p>
     </div>
   );

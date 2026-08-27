@@ -15,7 +15,7 @@ describe("ComingSoonPage", () => {
   it("lists the roadmap items rather than clickable features that go nowhere", () => {
     render(<ComingSoonPage />);
 
-    expect(screen.getByText("AI Teacher")).toBeInTheDocument();
+    expect(screen.getByText("Wisdom Teacher")).toBeInTheDocument();
     expect(screen.queryAllByRole("link").length).toBe(1);
   });
 });

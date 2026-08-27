@@ -5,11 +5,11 @@ const ROADMAP = [
   },
   {
     title: "Curriculum engine",
-    description: "Manual, AI-generated, or hybrid curricula — schemes of work, lesson plans, and assessments.",
+    description: "Manual, Wisdom-generated, or hybrid curricula — schemes of work, lesson plans, and assessments.",
   },
   {
-    title: "AI Teacher",
-    description: "An interactive classroom where an AI explains lessons, answers questions, and adapts to each student.",
+    title: "Wisdom Teacher",
+    description: "An interactive classroom where Wisdom explains lessons, answers questions, and adapts to each student.",
   },
   {
     title: "Multi-tenant workspaces",
@@ -33,7 +33,7 @@ export default function ComingSoonPage() {
         </h1>
 
         <p className="mx-auto mt-5 max-w-xl text-lg text-slate-600 dark:text-slate-400">
-          An AI-powered school management and learning platform — built for schools that need
+          A school management and learning platform powered by Wisdom AI — built for schools that need
           more than a gradebook, and students who deserve more than a static lesson.
         </p>
 

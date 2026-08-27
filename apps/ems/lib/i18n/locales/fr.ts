@@ -13,7 +13,7 @@ export const fr: Partial<Dictionary> = {
   "header.searchPlaceholder": "Rechercher élèves, personnel, classes…",
   "header.notifications": "Notifications",
   "header.noNotifications": "Aucune notification",
-  "header.aiAssistant": "Assistant IA",
+  "header.aiAssistant": "Assistant Wisdom",
   "header.language": "Langue",
   "header.theme": "Thème",
   "header.themeLight": "Clair",
@@ -77,7 +77,7 @@ export const fr: Partial<Dictionary> = {
 
   "nav.settings.schoolProfile": "Profil de l'école",
   "nav.settings.languages": "Langues",
-  "nav.settings.ai": "Paramètres IA",
+  "nav.settings.ai": "Paramètres Wisdom",
 
   "dashboard.title": "Vue d'ensemble",
   "dashboard.welcome": "Bon retour",

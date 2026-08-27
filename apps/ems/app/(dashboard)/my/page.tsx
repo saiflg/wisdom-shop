@@ -309,7 +309,7 @@ export default function MyPage() {
       {data.lessons.length > 0 && (
         <section className={CARD} aria-labelledby="lessons-heading">
           <h2 id="lessons-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            My AI lessons
+            My Wisdom lessons
           </h2>
           <ul className="mt-2 space-y-1.5">
             {data.lessons.map((lesson) => (
