@@ -47,6 +47,12 @@ const ALLOWED_WITHOUT_ROLES: Record<string, string> = {
   "classes/classes.controller.ts:GET /": "names only; a class list is not a contact list",
   "classes/classes.controller.ts:GET mine": "the viewer's own classes, by definition",
   "classes/classes.controller.ts:GET :id": "names only",
+  // A section is the school describing its own shape — Primary, Secondary,
+  // Islamiyyah — and the class names inside it. Same exposure as the class
+  // list above, which is why it sits with it. Everything that writes here is
+  // @Roles("SCHOOL_ADMIN").
+  "sections/sections.controller.ts:GET /": "the school's own structure; names and counts only",
+  "sections/sections.controller.ts:GET :id": "the school's own structure; class names only",
   "grading/grading.controller.ts:GET results": "released results, scoped by viewer",
   "grading/grading.controller.ts:GET report-cards/:studentProfileId": "404s for another family's child",
   "grading/grading.controller.ts:GET transcripts/:studentProfileId": "404s for another family's child; published terms only, for everybody",

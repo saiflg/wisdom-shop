@@ -100,6 +100,7 @@ model User {
   assignmentsSet       Assignment[]           @relation("AssignmentSetBy")
   questionBankItems    QuestionBankItem[]     @relation("QuestionBankItemCreatedBy")
   examsCreated         Exam[]                 @relation("ExamCreatedBy")
+  sectionsHeaded       Section[]              @relation("SectionHead")
 
   @@map("users")
 }
@@ -359,6 +360,11 @@ model Class {
   id                String  @id @default(cuid())
   name              String
   gradeLevel        String?
+  /// Which part of the school this class belongs to. Optional because a
+  /// school that has never divided itself into sections still has classes,
+  /// and forcing one on them at migration time would invent a fact.
+  sectionId         String?
+  section           Section? @relation(fields: [sectionId], references: [id])
   /// Plain string for this phase (e.g. "2026-2027") — a full AcademicYear/
   /// Term entity is a later-phase concern once curriculum scheduling needs it.
   academicYear      String
@@ -382,7 +388,43 @@ model Class {
   announcements       Announcement[]
 
   @@index([academicYear])
+  @@index([sectionId])
   @@map("classes")
+}
+
+/// A division of the school — "Primary", "Secondary", "Islamiyyah".
+///
+/// Distinct from a class: "Grade 5A" is a class, and Primary is the part of
+/// the school that class sits in. Staff already carry the same idea as free
+/// text on StaffProfile.section, which is why turnover can be read "by
+/// section"; this is that same list, finally kept in one place so it can be
+/// spelled one way.
+///
+/// Uniqueness of the name is a partial unique index on lower(name) among
+/// rows that are not soft-deleted, declared in the migration rather than
+/// here — Prisma cannot express either half. Deleting a section and adding
+/// it back under the same name has to keep working.
+model Section {
+  id          String  @id @default(cuid())
+  name        String
+  /// What this part of the school covers, in the school's own words.
+  description String?
+  /// The order a school reads its own sections in: Nursery, Primary,
+  /// Secondary. Alphabetical would put Secondary before Primary, which is
+  /// nobody's idea of how a school is laid out.
+  position    Int     @default(0)
+
+  headId String?
+  head   User?   @relation("SectionHead", fields: [headId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  classes Class[]
+
+  @@index([position])
+  @@map("sections")
 }
 
 model StudentProfile {
@@ -405,6 +447,7 @@ model StudentProfile {
   absenceNotes      AbsenceNote[]
   scholarships      Scholarship[]
   feeInvoices       FeeInvoice[]
+  wallet            StudentWallet?
   marks             Mark[]
   termResults       TermResult[]
   messages          Message[]
@@ -1844,6 +1887,61 @@ model Assessment {
   @@map("assessments")
 }
 
+/// A reusable shape for a term's assessments — "CA1 10, CA2 10, CA3 10,
+/// Exam 70".
+///
+/// Assessments are per subject, per class, per term, and their weights have
+/// to sum to exactly 100 before results can be published. A school with 12
+/// subjects across 6 classes types that same four-row shape 72 times a term,
+/// and any one of those 72 that is typed 10/10/10/60 deflates a whole class
+/// invisibly. A template is that shape stored once and applied.
+///
+/// It does NOT replace Assessment. Applying a template writes ordinary
+/// assessments and then steps out of the way: a subject that needs a
+/// different split still edits its own, and nothing later reads back through
+/// the template. A stored layout that kept overwriting what a teacher fixed
+/// by hand would be worse than typing it.
+model ResultTemplate {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  /// Offered first when applying. Not enforced as a singleton: a school
+  /// mid-way through changing its default should not be blocked from having
+  /// two for an afternoon.
+  isDefault Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  components ResultTemplateComponent[]
+
+  @@map("result_templates")
+}
+
+/// One row of a template: a name, what it is out of, and what it is worth.
+model ResultTemplateComponent {
+  id         String         @id @default(cuid())
+  templateId String
+  template   ResultTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  name String
+  /// Highest achievable raw score, in hundredths, matching Assessment.
+  maxScoreHundredths Int @default(10000)
+  /// Whole percentage points. The set must sum to 100 — the same rule as
+  /// assessments, checked by the same function in grading-math.
+  weightPercent Int
+  /// The order a school reads its own components in: CA1 before Exam.
+  position Int @default(0)
+
+  /// Two rows called "CA1" in one template would create one assessment and
+  /// silently drop the other, because assessments are unique by name within
+  /// a subject/class/term.
+  @@unique([templateId, name])
+  @@index([templateId])
+  @@map("result_template_components")
+}
+
 enum MarkStatus {
   RECORDED
   /// Sat the assessment and did not score — counts as zero.
@@ -2229,6 +2327,88 @@ model FeePayment {
   @@unique([invoiceId, reference])
   @@index([invoiceId])
   @@map("fee_payments")
+}
+
+/// Money a family has placed with the school for a child to draw on —
+/// lunch, books, transport, the tuck shop.
+///
+/// The balance is a stored column, not a sum of the entries, and that is
+/// deliberate. Spending has to be refused when the money is not there, and a
+/// read-then-write cannot do that safely: two tills serving the same child at
+/// the same moment both read the same balance and both allow the spend. The
+/// column carries a CHECK ("balanceCents" >= 0) and is moved with
+/// `balanceCents = balanceCents + n`, which Postgres serialises per row, so
+/// the second spend fails on the constraint rather than on our timing.
+///
+/// The entries remain the record of what happened; the column is only what
+/// makes the next decision. They must agree, which is what the reconcile
+/// endpoint checks.
+model StudentWallet {
+  id               String         @id @default(cuid())
+  studentProfileId String         @unique
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Minor units, matching FeePayment.amountCents. Never negative — see the
+  /// CHECK constraint in the migration.
+  balanceCents Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries WalletEntry[]
+
+  @@map("student_wallets")
+}
+
+enum WalletEntryKind {
+  /// Money in from a family.
+  TOPUP
+  /// Money back out to a family, or a spend reversed.
+  REFUND
+  /// Money drawn down by the school.
+  SPEND
+  /// A correction. Split into two kinds rather than one signed kind so that
+  /// nobody has to read a minus sign to know which way the money went, and
+  /// so a mistyped sign cannot turn a deduction into a credit.
+  ADJUSTMENT_CREDIT
+  ADJUSTMENT_DEBIT
+}
+
+/// One movement. Append-only: nothing here is ever updated or deleted.
+///
+/// A wallet statement is the thing a parent quotes back months later, so a
+/// row that could be edited afterwards would be worth nothing in that
+/// argument. Corrections are new entries, which is why ADJUSTMENT exists.
+model WalletEntry {
+  id       String        @id @default(cuid())
+  walletId String
+  wallet   StudentWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  kind WalletEntryKind
+  /// Signed minor units: credits positive, debits negative. The sign is
+  /// derived from the kind by the service, never sent by a caller.
+  amountCents Int
+  /// The balance immediately after this entry, frozen at the time. A
+  /// statement printed today and the same statement printed next year have
+  /// to read identically, even if an older entry is later corrected.
+  balanceAfterCents Int
+
+  description String
+  /// Gateway or bank reference. Unique per wallet where present, so a
+  /// replayed webhook cannot credit a family twice — the same rule
+  /// FeePayment uses.
+  reference String?
+
+  /// By value, like FeePayment: deleting a departed bursar's account must
+  /// not erase who moved the money.
+  recordedByUserId String
+  recordedByName   String
+
+  createdAt DateTime @default(now())
+
+  @@unique([walletId, reference])
+  @@index([walletId, createdAt])
+  @@map("wallet_entries")
 }
 
 enum PaymentProvider {

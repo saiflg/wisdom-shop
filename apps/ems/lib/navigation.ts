@@ -100,7 +100,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // menu item pointing at the same page teaches people there are two
       // procedures when there is one.
       { key: "nav.students.promotion", href: "/promotion", roles: ADMIN_ONLY },
-      { key: "nav.students.wallet" },
+      { key: "nav.students.wallet", href: "/wallet" },
       { key: "nav.students.idCards" },
     ],
   },
@@ -191,7 +191,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: "academics",
     items: [
       { key: "nav.academics.classes", href: "/classes" },
-      { key: "nav.academics.sections" },
+      { key: "nav.academics.sections", href: "/sections" },
       { key: "nav.academics.subjects", href: "/subjects" },
       { key: "nav.academics.curriculum", href: "/schemes-of-work", module: "ACADEMICS" },
       { key: "nav.academics.lessonPlans", href: "/lesson-plans" },
@@ -224,7 +224,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // page would be the same list with one extra button.
       { key: "nav.examination.aiExamination", href: "/question-bank", roles: STAFF, module: "AI_CURRICULUM" },
       { key: "nav.examination.results", href: "/results", roles: STAFF, module: "GRADING" },
-      { key: "nav.examination.resultTemplates", roles: ADMIN_ONLY },
+      { key: "nav.examination.resultTemplates", href: "/result-templates", roles: ADMIN_ONLY, module: "GRADING" },
       { key: "nav.examination.reportCards", href: "/report-cards", module: "DOCUMENTS" },
       // Staff only: it spans every year a child has been at the school, and
       // a family reads the individual report cards instead.

@@ -9,6 +9,8 @@ export interface SchoolClass {
   name: string;
   gradeLevel: string | null;
   academicYear: string;
+  /** Which part of the school this class sits in, or null if none yet. */
+  sectionId: string | null;
   homeroomTeacherId: string | null;
   homeroomTeacher: { id: string; firstName: string; lastName: string } | null;
   enrollments?: {
