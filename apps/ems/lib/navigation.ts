@@ -91,7 +91,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.students.behaviour", href: "/behaviour" },
       { key: "nav.students.medical" },
       { key: "nav.students.hostel" },
-      { key: "nav.students.transport" },
+      { key: "nav.students.transport", href: "/transport" },
       { key: "nav.students.library", href: "/library" },
       { key: "nav.students.documents" },
       // Graduation used to sit below this as its own item. It is the same

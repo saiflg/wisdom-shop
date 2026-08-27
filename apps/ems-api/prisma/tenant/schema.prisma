@@ -453,6 +453,7 @@ model StudentProfile {
   wallet            StudentWallet?
   behaviourRecords  BehaviourRecord[]
   libraryLoans      LibraryLoan[]
+  transportRides    TransportAssignment[]
   marks             Mark[]
   termResults       TermResult[]
   messages          Message[]
@@ -2527,6 +2528,100 @@ model LibraryLoan {
   /// The common question is "what is still out", and it is asked constantly.
   @@index([returnedOn])
   @@map("library_loans")
+}
+
+enum TransportDirection {
+  MORNING
+  AFTERNOON
+  /// Both runs. Occupies a seat on each, never two on one — see
+  /// transport-rules.ts, which is where the seat arithmetic lives.
+  BOTH
+}
+
+/// A bus, and how many children fit in it.
+model TransportVehicle {
+  id          String  @id @default(cuid())
+  label       String
+  plateNumber String?
+  seats       Int     @default(0)
+
+  driverName  String?
+  driverPhone String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  routes TransportRoute[]
+
+  @@map("transport_vehicles")
+}
+
+/// A run the school does, with the stops along it.
+model TransportRoute {
+  id   String @id @default(cuid())
+  name String
+
+  vehicleId String?
+  vehicle   TransportVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  stops       TransportStop[]
+  assignments TransportAssignment[]
+
+  @@map("transport_routes")
+}
+
+/// Where the bus stops, in the order it stops there.
+model TransportStop {
+  id      String         @id @default(cuid())
+  routeId String
+  route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  name String
+  /// Where in the run this stop comes.
+  position Int @default(0)
+  /// Minutes from midnight, the same unit the timetable uses. Null when a
+  /// school has not set one, which is different from midnight.
+  pickupMinute Int?
+
+  assignments TransportAssignment[]
+
+  @@index([routeId])
+  @@map("transport_stops")
+}
+
+/// One child on one route, for one or both runs.
+///
+/// A child on two routes for the same run is not a full bus, it is a child
+/// nobody is waiting for at one of two gates — which is why that check comes
+/// before the capacity one in transport-rules.ts.
+model TransportAssignment {
+  id      String         @id @default(cuid())
+  routeId String
+  route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Where they get on. Optional: a school may run a route before it has
+  /// written down every stop.
+  stopId String?
+  stop   TransportStop? @relation(fields: [stopId], references: [id], onDelete: SetNull)
+
+  direction TransportDirection @default(BOTH)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One place per child per route. Riding both ways is a direction, not two
+  /// rows, so this is the whole of it.
+  @@unique([routeId, studentProfileId])
+  @@index([studentProfileId])
+  @@map("transport_assignments")
 }
 
 enum ExpenseStatus {

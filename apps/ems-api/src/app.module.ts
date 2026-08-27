@@ -35,6 +35,7 @@ import { StaffAttendanceModule } from "./staff-attendance/staff-attendance.modul
 import { ExpensesModule } from "./expenses/expenses.module";
 import { BudgetsModule } from "./budgets/budgets.module";
 import { LibraryModule } from "./library/library.module";
+import { TransportModule } from "./transport/transport.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
@@ -107,6 +108,7 @@ import { AuditModule } from "@/audit/audit.module";
     ExpensesModule,
     BudgetsModule,
     LibraryModule,
+    TransportModule,
     SchemesOfWorkModule,
     LessonPlansModule,
     QuizzesModule,
