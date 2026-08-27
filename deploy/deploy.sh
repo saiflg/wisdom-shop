@@ -44,6 +44,24 @@ for required in SHOP_DOMAIN CAMPUS_DOMAIN ADMIN_DOMAIN ACME_EMAIL; do
 	grep -q "^${required}=." .env || fail "$required is not set in .env"
 done
 
+# Sourced here, at the top, and not once near the end where it used to be.
+#
+# The containers get these through `env_file`, but the tenant migration
+# builds a psql invocation and a connection string in THIS shell, and until
+# 27 Aug 2026 it did so before .env had been read. Under `set -u` that is a
+# hard error — which happened inside a process substitution, so it killed the
+# subshell, fed the loop an empty stream, and the deploy carried on to print
+# "Deployed". Two separate bugs pointed the same way: the step could not work
+# and could not tell you it had not worked.
+set -a
+# shellcheck disable=SC1091
+source .env
+set +a
+
+for required in POSTGRES_USER POSTGRES_PASSWORD; do
+	[[ -n "${!required:-}" ]] || fail "$required is not set in .env; tenant migrations would silently do nothing"
+done
+
 # --- build ------------------------------------------------------------------
 
 step "Building images"
@@ -143,7 +161,6 @@ for service in api ems-api; do
 done
 
 step "Deployed"
-source .env
 printf '  Shop:    https://%s\n' "$SHOP_DOMAIN"
 printf '  Campus:  https://%s\n' "$CAMPUS_DOMAIN"
 printf '  Admin:   https://%s\n' "$ADMIN_DOMAIN"
