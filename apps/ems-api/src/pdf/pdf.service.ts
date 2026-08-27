@@ -7,6 +7,7 @@ import { formatPercent } from "@/grading/grading-math";
 import { formatMoney } from "@/billing/billing-math";
 import { formatMinute } from "@/timetable/timetable-rules";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
+import { SchoolProfileService } from "@/school-profile/school-profile.service";
 import { PdfBuilder } from "./pdf-builder";
 
 const WEEKDAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"] as const;
@@ -31,10 +32,21 @@ export class PdfService {
     private readonly tenantPrisma: TenantPrismaService,
     private readonly grading: GradingService,
     private readonly timetable: TimetableService,
+    private readonly profile: SchoolProfileService,
   ) {}
 
-  private schoolName(): string {
-    return getTenantContext()?.schoolSlug ?? "Wisdom Campus";
+  /**
+   * The lines that head every document this school hands out.
+   *
+   * This used to be `getTenantContext()?.schoolSlug` — the internal
+   * identifier — so every report card and transcript was headed
+   * "demo-academy". The same bug was fixed for message receipts months ago
+   * and never followed through to paper, which is the argument for there
+   * being one function that answers this rather than two.
+   */
+  private async header(): Promise<{ schoolName: string; schoolLines: string[] }> {
+    const [name, ...rest] = await this.profile.documentHeader();
+    return { schoolName: name ?? "Wisdom Campus", schoolLines: rest };
   }
 
   async reportCard(
@@ -50,7 +62,7 @@ export class PdfService {
     const name = student ? `${student.firstName} ${student.lastName}` : "Student";
 
     const pdf = new PdfBuilder({
-      schoolName: this.schoolName(),
+      ...(await this.header()),
       title: "Report card",
       subtitle: `${name} · ${result.class?.name ?? ""} · ${term}, ${academicYear}`,
     });
@@ -110,7 +122,7 @@ export class PdfService {
     });
 
     const pdf = new PdfBuilder({
-      schoolName: this.schoolName(),
+      ...(await this.header()),
       title: "Class list",
       subtitle: `${klass.name} · ${klass.academicYear} · ${enrollments.length} student(s)`,
     });
@@ -169,7 +181,7 @@ export class PdfService {
     const student = invoice.studentProfile.user;
 
     const pdf = new PdfBuilder({
-      schoolName: this.schoolName(),
+      ...(await this.header()),
       title: `Invoice ${invoice.invoiceNumber}`,
       subtitle: `${student.firstName} ${student.lastName} · ${invoice.academicYear} · ${invoice.term}`,
     });
@@ -216,7 +228,7 @@ export class PdfService {
     });
 
     const pdf = new PdfBuilder({
-      schoolName: this.schoolName(),
+      ...(await this.header()),
       title: "Teaching timetable",
       subtitle: `${teacher.firstName} ${teacher.lastName} · ${entries.length} lesson(s) a week`,
     });
@@ -266,7 +278,7 @@ export class PdfService {
     });
 
     const pdf = new PdfBuilder({
-      schoolName: this.schoolName(),
+      ...(await this.header()),
       title: "Timetable",
       subtitle: `${klass.name} · ${klass.academicYear}`,
     });

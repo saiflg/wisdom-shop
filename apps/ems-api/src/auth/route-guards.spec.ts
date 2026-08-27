@@ -53,6 +53,12 @@ const ALLOWED_WITHOUT_ROLES: Record<string, string> = {
   // @Roles("SCHOOL_ADMIN").
   "sections/sections.controller.ts:GET /": "the school's own structure; names and counts only",
   "sections/sections.controller.ts:GET :id": "the school's own structure; class names only",
+
+  // The address on the school's own letterhead, not a secret — a parent
+  // looking up the school's phone number in the portal is the ordinary case.
+  // The PATCH beside these is @Roles("SCHOOL_ADMIN").
+  "school-profile/school-profile.controller.ts:GET /": "the school's own particulars, as printed on what it hands out",
+  "school-profile/school-profile.controller.ts:GET document-header": "the same particulars, formatted for a page header",
   "grading/grading.controller.ts:GET results": "released results, scoped by viewer",
   "grading/grading.controller.ts:GET report-cards/:studentProfileId": "404s for another family's child",
   "grading/grading.controller.ts:GET transcripts/:studentProfileId": "404s for another family's child; published terms only, for everybody",

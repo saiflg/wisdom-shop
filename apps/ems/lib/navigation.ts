@@ -284,7 +284,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: "settings",
     roles: ADMIN_ONLY,
     items: [
-      { key: "nav.settings.schoolProfile" },
+      { key: "nav.settings.schoolProfile", href: "/school-profile" },
       { key: "nav.settings.branding", href: "/settings/branding" },
       // Every login in a school belongs to a member of staff, a student or a
       // guardian, and each is managed where that person is. The staff
