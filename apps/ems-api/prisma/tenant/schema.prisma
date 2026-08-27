@@ -387,6 +387,7 @@ model Class {
   exams               Exam[]
   announcements       Announcement[]
   behaviourRecords    BehaviourRecord[]
+  lessonNotes         LessonNote[]
 
   @@index([academicYear])
   @@index([sectionId])
@@ -610,6 +611,7 @@ model Subject {
   assignments      Assignment[]
   questionBankItems QuestionBankItem[]
   exams             Exam[]
+  lessonNotes       LessonNote[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -2360,6 +2362,73 @@ model StudentWallet {
   entries WalletEntry[]
 
   @@map("student_wallets")
+}
+
+enum LessonNoteStatus {
+  /// The teacher is still writing it.
+  DRAFT
+  /// Sent to the head teacher to be vetted.
+  SUBMITTED
+  /// Vetted and signed off. This is the only state a child can read.
+  APPROVED
+  /// Sent back with a comment saying what needs changing.
+  RETURNED
+}
+
+/// The written subject content for one week, vetted before children see it.
+///
+/// Distinct from LessonPlan, which is what the teacher prepares to *do* —
+/// objectives, materials, the steps of the lesson. A note is the subject
+/// matter itself, the thing a class copies down and revises from, and in
+/// most schools here it does not reach a child until a head teacher has read
+/// and signed it. That vetting is the reason this model exists separately
+/// rather than as another field on a lesson plan.
+///
+/// The rule that makes vetting mean anything — that nobody can approve their
+/// own note — lives in note-workflow.ts, not in a route guard. A head teacher
+/// who also teaches is the ordinary case in a small school, and
+/// `@Roles("SCHOOL_ADMIN")` would wave exactly that person through.
+model LessonNote {
+  id String @id @default(cuid())
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classId   String
+  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  academicYear String
+  term         String
+  weekNumber   Int
+
+  title String
+  /// The note as the teacher wrote it.
+  body String
+
+  status LessonNoteStatus @default(DRAFT)
+
+  /// By value alongside the id, like AttendanceAmendment: a teacher leaving
+  /// must not erase who wrote the notes a class is still using.
+  authorUserId String
+  authorName   String
+
+  submittedAt      DateTime?
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  reviewedByName   String?
+  /// Why it was sent back. Kept after a later approval too, so a note
+  /// approved on the second attempt still shows what was asked for the
+  /// first time.
+  reviewComment String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  /// One note per subject per class per week. A second one is not a second
+  /// note, it is somebody working from a stale copy.
+  @@unique([classId, subjectId, academicYear, term, weekNumber])
+  @@index([classId, status])
+  @@map("lesson_notes")
 }
 
 enum BehaviourKind {
