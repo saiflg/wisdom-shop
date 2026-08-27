@@ -2408,6 +2408,58 @@ model StudentWallet {
   @@map("student_wallets")
 }
 
+/// What a school intends to spend over a period, category by category.
+///
+/// Compared against the expenses that actually landed — see budget-rules.ts.
+/// The two are joined on the category NAME, because expense categories are
+/// free text typed by whoever raised the request; matching is on a trimmed,
+/// lower-cased key so a budget line "Diesel" and a receipt "diesel " are the
+/// same thing. Without that the budget cheerfully reports the whole
+/// allowance unspent while the money is out of the door.
+model Budget {
+  id   String @id @default(cuid())
+  name String
+
+  academicYear String
+  /// Null for a whole-year budget.
+  term String?
+
+  fromDate DateTime
+  toDate   DateTime
+
+  createdByUserId String?
+  createdByName   String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  lines BudgetLine[]
+
+  @@index([fromDate, toDate])
+  @@map("budgets")
+}
+
+/// One category's allowance within a budget.
+model BudgetLine {
+  id       String @id @default(cuid())
+  budgetId String
+  budget   Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  /// Matched against Expense.category by lower-cased name.
+  category String
+  /// Minor units. Zero is allowed and means something: "we are budgeting
+  /// nothing for this" is a decision, and different from having no line.
+  amountCents Int
+
+  /// Two lines differing only by capitals would each get a row, spending
+  /// would land on whichever matched first, and the other would sit at zero
+  /// looking deliberately unspent. Refused by a lower-cased unique index in
+  /// the migration, which Prisma cannot express here.
+  @@index([budgetId])
+  @@map("budget_lines")
+}
+
 enum ExpenseStatus {
   /// Somebody has asked. This is not spending yet.
   REQUESTED
