@@ -386,6 +386,7 @@ model Class {
   assignments         Assignment[]
   exams               Exam[]
   announcements       Announcement[]
+  behaviourRecords    BehaviourRecord[]
 
   @@index([academicYear])
   @@index([sectionId])
@@ -448,6 +449,7 @@ model StudentProfile {
   scholarships      Scholarship[]
   feeInvoices       FeeInvoice[]
   wallet            StudentWallet?
+  behaviourRecords  BehaviourRecord[]
   marks             Mark[]
   termResults       TermResult[]
   messages          Message[]
@@ -2358,6 +2360,68 @@ model StudentWallet {
   entries WalletEntry[]
 
   @@map("student_wallets")
+}
+
+enum BehaviourKind {
+  /// Something worth recording because it was good.
+  MERIT
+  /// Something worth recording because it needs attention. Deliberately not
+  /// "demerit" or "misconduct": most of what a school writes down here is a
+  /// child who needs help, not a child who is in trouble, and the word a
+  /// screen uses shapes what gets written under it.
+  CONCERN
+}
+
+/// One thing a member of staff wrote down about a child.
+///
+/// This is sensitive: it is a record about a named child, readable by their
+/// family, and it follows them. Two consequences run through the design.
+///
+/// First, points never make a ranking. They total per child for their own
+/// family and their own teachers, and there is no endpoint that orders
+/// children by them — a leaderboard of best- and worst-behaved children is a
+/// thing this data would make easy and nobody should build.
+///
+/// Second, a record is soft-deleted and never hard-deleted, and who wrote it
+/// is stored by value. A family disputing something written about their child
+/// is entitled to know who wrote it, even after that teacher has left.
+model BehaviourRecord {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Where it happened, when that is known. Optional: a corridor is not a
+  /// class, and forcing one would make the record say something untrue.
+  classId String?
+  class   Class?  @relation(fields: [classId], references: [id], onDelete: SetNull)
+
+  kind BehaviourKind
+  /// The school's own word for it — "Helpfulness", "Lateness", "Uniform".
+  /// Free text rather than an enum for the same reason as StaffProfile
+  /// .section: an enum needs a migration every time a school changes its
+  /// mind about what it cares about.
+  category String
+  /// What actually happened, in the words of whoever saw it.
+  description String
+  /// Always positive; the kind says which way it counts. A negative here
+  /// would make a concern improve a child's total.
+  points Int @default(0)
+
+  /// When it happened, which is not when it was typed up.
+  occurredAt DateTime
+
+  /// By value, like AttendanceAmendment: a departed teacher's account being
+  /// deleted must not erase who wrote this about a child.
+  recordedByUserId String
+  recordedByName   String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([studentProfileId, occurredAt])
+  @@index([classId, occurredAt])
+  @@map("behaviour_records")
 }
 
 enum WalletEntryKind {

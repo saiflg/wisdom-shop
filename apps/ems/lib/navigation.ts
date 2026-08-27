@@ -88,7 +88,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // The academic record a school actually keeps is the released results
       // list; this pointed at nothing while that screen already existed.
       { key: "nav.students.academicRecords", href: "/results", roles: STAFF, module: "GRADING" },
-      { key: "nav.students.behaviour" },
+      { key: "nav.students.behaviour", href: "/behaviour" },
       { key: "nav.students.medical" },
       { key: "nav.students.hostel" },
       { key: "nav.students.transport" },

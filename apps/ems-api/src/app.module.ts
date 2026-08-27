@@ -28,6 +28,7 @@ import { SubjectsModule } from "./subjects/subjects.module";
 import { SectionsModule } from "./sections/sections.module";
 import { ResultTemplatesModule } from "./result-templates/result-templates.module";
 import { WalletsModule } from "./wallets/wallets.module";
+import { BehaviourModule } from "./behaviour/behaviour.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
@@ -93,6 +94,7 @@ import { AuditModule } from "@/audit/audit.module";
     SectionsModule,
     ResultTemplatesModule,
     WalletsModule,
+    BehaviourModule,
     SchemesOfWorkModule,
     LessonPlansModule,
     QuizzesModule,
