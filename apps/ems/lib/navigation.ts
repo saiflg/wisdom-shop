@@ -179,7 +179,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // commonest thing anybody does here, and an approvals list nobody can
       // submit to is half a feature.
       { key: "nav.staff.leave", href: "/staff/leave" },
-      { key: "nav.staff.attendance" },
+      { key: "nav.staff.attendance", href: "/staff-attendance" },
       { key: "nav.staff.performance", roles: ADMIN_ONLY },
       // Staff have the same portal families and students do — their own
       // timetable, their own messages. It existed and was unreachable here.

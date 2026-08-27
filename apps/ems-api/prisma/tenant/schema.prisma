@@ -101,6 +101,7 @@ model User {
   questionBankItems    QuestionBankItem[]     @relation("QuestionBankItemCreatedBy")
   examsCreated         Exam[]                 @relation("ExamCreatedBy")
   sectionsHeaded       Section[]              @relation("SectionHead")
+  staffAttendance      StaffAttendanceDay[]   @relation("StaffAttendanceOf")
 
   @@map("users")
 }
@@ -2405,6 +2406,59 @@ model StudentWallet {
   entries WalletEntry[]
 
   @@map("student_wallets")
+}
+
+enum StaffAttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  /// Away with the school's own approval. Distinct from ABSENT because the
+  /// difference is the whole point: one is a person who did not come in, the
+  /// other is a person the school told not to.
+  ON_LEAVE
+}
+
+/// One member of staff, one day.
+///
+/// Kept as a row per person per day rather than a register per day, because
+/// staff are not a class: they are marked by whoever notices, at different
+/// times, and a shared register would have to be locked by somebody.
+///
+/// The rule that matters is in staff-attendance-rules.ts: a person on
+/// approved leave is never recorded as absent. A head teacher running down a
+/// list on Monday morning does not have everybody's leave in their head, and
+/// an absence recorded against leave the school itself signed off surfaces
+/// months later in a payroll dispute, when nobody remembers.
+model StaffAttendanceDay {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("StaffAttendanceOf", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Date only, UTC midnight — the same convention LeaveRequest uses, so the
+  /// two can be compared without a timezone deciding whether the first day of
+  /// somebody's leave counted.
+  date DateTime
+
+  status StaffAttendanceStatus
+
+  /// Only meaningful on a LATE mark, and refused on any other — a number left
+  /// behind by a changed status makes "how late was everybody" quietly wrong.
+  minutesLate Int?
+
+  note String?
+
+  /// By value, like every other actor in this schema.
+  recordedByUserId String
+  recordedByName   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One mark per person per day. Marking twice is a correction, not a second
+  /// day, so it updates rather than accumulating.
+  @@unique([userId, date])
+  @@index([date])
+  @@map("staff_attendance_days")
 }
 
 enum LessonNoteStatus {
