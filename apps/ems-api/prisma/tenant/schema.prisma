@@ -447,6 +447,7 @@ model StudentProfile {
   absenceNotes      AbsenceNote[]
   scholarships      Scholarship[]
   feeInvoices       FeeInvoice[]
+  wallet            StudentWallet?
   marks             Mark[]
   termResults       TermResult[]
   messages          Message[]
@@ -2326,6 +2327,88 @@ model FeePayment {
   @@unique([invoiceId, reference])
   @@index([invoiceId])
   @@map("fee_payments")
+}
+
+/// Money a family has placed with the school for a child to draw on —
+/// lunch, books, transport, the tuck shop.
+///
+/// The balance is a stored column, not a sum of the entries, and that is
+/// deliberate. Spending has to be refused when the money is not there, and a
+/// read-then-write cannot do that safely: two tills serving the same child at
+/// the same moment both read the same balance and both allow the spend. The
+/// column carries a CHECK ("balanceCents" >= 0) and is moved with
+/// `balanceCents = balanceCents + n`, which Postgres serialises per row, so
+/// the second spend fails on the constraint rather than on our timing.
+///
+/// The entries remain the record of what happened; the column is only what
+/// makes the next decision. They must agree, which is what the reconcile
+/// endpoint checks.
+model StudentWallet {
+  id               String         @id @default(cuid())
+  studentProfileId String         @unique
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Minor units, matching FeePayment.amountCents. Never negative — see the
+  /// CHECK constraint in the migration.
+  balanceCents Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries WalletEntry[]
+
+  @@map("student_wallets")
+}
+
+enum WalletEntryKind {
+  /// Money in from a family.
+  TOPUP
+  /// Money back out to a family, or a spend reversed.
+  REFUND
+  /// Money drawn down by the school.
+  SPEND
+  /// A correction. Split into two kinds rather than one signed kind so that
+  /// nobody has to read a minus sign to know which way the money went, and
+  /// so a mistyped sign cannot turn a deduction into a credit.
+  ADJUSTMENT_CREDIT
+  ADJUSTMENT_DEBIT
+}
+
+/// One movement. Append-only: nothing here is ever updated or deleted.
+///
+/// A wallet statement is the thing a parent quotes back months later, so a
+/// row that could be edited afterwards would be worth nothing in that
+/// argument. Corrections are new entries, which is why ADJUSTMENT exists.
+model WalletEntry {
+  id       String        @id @default(cuid())
+  walletId String
+  wallet   StudentWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  kind WalletEntryKind
+  /// Signed minor units: credits positive, debits negative. The sign is
+  /// derived from the kind by the service, never sent by a caller.
+  amountCents Int
+  /// The balance immediately after this entry, frozen at the time. A
+  /// statement printed today and the same statement printed next year have
+  /// to read identically, even if an older entry is later corrected.
+  balanceAfterCents Int
+
+  description String
+  /// Gateway or bank reference. Unique per wallet where present, so a
+  /// replayed webhook cannot credit a family twice — the same rule
+  /// FeePayment uses.
+  reference String?
+
+  /// By value, like FeePayment: deleting a departed bursar's account must
+  /// not erase who moved the money.
+  recordedByUserId String
+  recordedByName   String
+
+  createdAt DateTime @default(now())
+
+  @@unique([walletId, reference])
+  @@index([walletId, createdAt])
+  @@map("wallet_entries")
 }
 
 enum PaymentProvider {

@@ -100,7 +100,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // menu item pointing at the same page teaches people there are two
       // procedures when there is one.
       { key: "nav.students.promotion", href: "/promotion", roles: ADMIN_ONLY },
-      { key: "nav.students.wallet" },
+      { key: "nav.students.wallet", href: "/wallet" },
       { key: "nav.students.idCards" },
     ],
   },
