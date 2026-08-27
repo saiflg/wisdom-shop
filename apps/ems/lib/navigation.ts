@@ -253,7 +253,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // a child that outlives any single invoice.
       { key: "nav.finance.scholarships", href: "/scholarships", roles: ADMIN_ONLY },
       { key: "nav.finance.accounting", roles: ADMIN_ONLY },
-      { key: "nav.finance.budget", roles: ADMIN_ONLY },
+      { key: "nav.finance.budget", href: "/budget", roles: ADMIN_ONLY },
       { key: "nav.finance.expenses", href: "/expenses", roles: STAFF },
     ],
   },
