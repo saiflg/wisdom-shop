@@ -224,7 +224,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // page would be the same list with one extra button.
       { key: "nav.examination.aiExamination", href: "/question-bank", roles: STAFF, module: "AI_CURRICULUM" },
       { key: "nav.examination.results", href: "/results", roles: STAFF, module: "GRADING" },
-      { key: "nav.examination.resultTemplates", roles: ADMIN_ONLY },
+      { key: "nav.examination.resultTemplates", href: "/result-templates", roles: ADMIN_ONLY, module: "GRADING" },
       { key: "nav.examination.reportCards", href: "/report-cards", module: "DOCUMENTS" },
       // Staff only: it spans every year a child has been at the school, and
       // a family reads the individual report cards instead.
