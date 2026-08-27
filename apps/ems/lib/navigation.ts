@@ -254,7 +254,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.finance.scholarships", href: "/scholarships", roles: ADMIN_ONLY },
       { key: "nav.finance.accounting", roles: ADMIN_ONLY },
       { key: "nav.finance.budget", roles: ADMIN_ONLY },
-      { key: "nav.finance.expenses", roles: ADMIN_ONLY },
+      { key: "nav.finance.expenses", href: "/expenses", roles: STAFF },
     ],
   },
   {

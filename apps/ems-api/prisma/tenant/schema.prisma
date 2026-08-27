@@ -2408,6 +2408,68 @@ model StudentWallet {
   @@map("student_wallets")
 }
 
+enum ExpenseStatus {
+  /// Somebody has asked. This is not spending yet.
+  REQUESTED
+  /// Signed off by somebody other than the person who asked.
+  APPROVED
+  /// Money has actually left.
+  PAID
+  REJECTED
+}
+
+/// Money going out: diesel, repairs, stationery, the things fees pay for.
+///
+/// The control this model exists to support is segregation of duties —
+/// nobody approves their own spending — and it lives in expense-rules.ts as
+/// a pure function rather than in a route guard, because the case that
+/// matters is an administrator who is also the requester, and that is
+/// precisely the person `@Roles("SCHOOL_ADMIN")` waves through. It is the
+/// oldest control in bookkeeping and the first one a school with three
+/// administrators loses.
+model Expense {
+  id String @id @default(cuid())
+
+  /// The school's own word for it — "Diesel", "Repairs", "Stationery". Free
+  /// text rather than an enum, for the same reason as everywhere else here:
+  /// an enum needs a migration every time a school buys something new.
+  category    String
+  description String
+  /// Minor units, matching FeePayment.amountCents. Always positive: a refund
+  /// is a different thing and should be recorded as what it is, not as
+  /// spending with a minus in front of it.
+  amountCents Int
+
+  /// When the money was or will be spent, which is not when it was typed up.
+  incurredOn DateTime
+  payee      String?
+
+  status ExpenseStatus @default(REQUESTED)
+
+  /// How it was paid and the bank reference, once it has been.
+  method    String?
+  reference String?
+  paidAt    DateTime?
+
+  /// By value, like every other actor in this schema — a bursar leaving must
+  /// not erase who asked for the money or who signed it off.
+  requestedByUserId String
+  requestedByName   String
+
+  decidedAt       DateTime?
+  decidedByUserId String?
+  decidedByName   String?
+  decisionNote    String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([incurredOn])
+  @@index([status])
+  @@map("expenses")
+}
+
 enum StaffAttendanceStatus {
   PRESENT
   ABSENT
