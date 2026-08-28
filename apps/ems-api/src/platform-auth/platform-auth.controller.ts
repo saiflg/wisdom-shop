@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { LoginThrottlerGuard } from "@/auth/guards/login-throttler.guard";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
@@ -62,6 +63,9 @@ export class PlatformAuthController {
     });
   }
 
+  // The most valuable password on the server: a platform operator can read
+  // every school. Same ten-per-quarter-hour ceiling, counted per account.
+  @UseGuards(LoginThrottlerGuard)
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Platform operator login" })
