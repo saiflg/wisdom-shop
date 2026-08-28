@@ -5,6 +5,7 @@ import type { Request, Response } from "express";
 import type { EnvConfig } from "@/config/env.validation";
 import { AuthService, type RequestMeta } from "./auth.service";
 import { REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH } from "./auth.constants";
+import { LoginThrottlerGuard } from "./guards/login-throttler.guard";
 import { Public } from "./decorators/public.decorator";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import { JwtRefreshGuard } from "./guards/jwt-refresh.guard";
@@ -51,6 +52,10 @@ export class AuthController {
   }
 
   @Public()
+  // Ten tries per account per quarter hour, on top of the global per-IP
+  // limit. Counted per account so that a staffroom on one connection is not
+  // one shared allowance — see login-throttler.guard.ts.
+  @UseGuards(LoginThrottlerGuard)
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Log in to a school with schoolSlug + email + password" })
