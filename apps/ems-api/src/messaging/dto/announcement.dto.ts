@@ -33,3 +33,42 @@ export class AnnouncementDto {
   @IsIn(["EMAIL", "SMS"], { each: true })
   channels!: string[];
 }
+
+/**
+ * A draft.
+ *
+ * Everything except the title is optional, on purpose. A draft is a notice
+ * somebody started and has not finished, and refusing to save one until the
+ * audience and channels are chosen would mean losing the paragraph they had
+ * already written. The send-time DTO above is what enforces completeness.
+ */
+export class AnnouncementDraftDto {
+  @ApiProperty({ example: "Half term" })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(150)
+  title!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  body?: string;
+
+  @ApiPropertyOptional({ enum: AUDIENCES as unknown as string[] })
+  @IsOptional()
+  @IsIn(AUDIENCES as unknown as string[])
+  audience?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  classId?: string;
+
+  @ApiPropertyOptional({ example: ["EMAIL"] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(2)
+  @IsIn(["EMAIL", "SMS"], { each: true })
+  channels?: string[];
+}

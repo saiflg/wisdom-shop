@@ -74,6 +74,21 @@ export class StorageService {
     return createReadStream(path);
   }
 
+  /**
+   * The whole file in memory.
+   *
+   * For the small ones only — a photograph being embedded into a printable
+   * card. Everything a client downloads still goes out as a stream, because
+   * holding a school's uploads in memory to serve them is how one large PDF
+   * takes the API down for everybody.
+   */
+  async readBuffer(key: string): Promise<Buffer> {
+    const stream = await this.readStream(key);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(chunk as Buffer);
+    return Buffer.concat(chunks);
+  }
+
   async delete(key: string): Promise<void> {
     try {
       await unlink(this.pathFor(key));

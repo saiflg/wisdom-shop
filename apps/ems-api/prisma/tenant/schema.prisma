@@ -102,6 +102,8 @@ model User {
   examsCreated         Exam[]                 @relation("ExamCreatedBy")
   sectionsHeaded       Section[]              @relation("SectionHead")
   staffAttendance      StaffAttendanceDay[]   @relation("StaffAttendanceOf")
+  appraisalsAbout      Appraisal[]            @relation("AppraisalSubject")
+  welfareRequests      WelfareRequest[]       @relation("WelfareRequester")
 
   @@map("users")
 }
@@ -388,6 +390,7 @@ model Class {
   exams               Exam[]
   announcements       Announcement[]
   behaviourRecords    BehaviourRecord[]
+  liveLessons         LiveLesson[]
   lessonNotes         LessonNote[]
 
   @@index([academicYear])
@@ -452,6 +455,11 @@ model StudentProfile {
   feeInvoices       FeeInvoice[]
   wallet            StudentWallet?
   behaviourRecords  BehaviourRecord[]
+  libraryLoans      LibraryLoan[]
+  transportRides    TransportAssignment[]
+  hostelBeds        HostelAllocation[]
+  medicalEntries    MedicalEntry[]
+  documents         StudentDocument[]
   marks             Mark[]
   termResults       TermResult[]
   messages          Message[]
@@ -656,6 +664,7 @@ model Subject {
   questionBankItems QuestionBankItem[]
   exams             Exam[]
   lessonNotes       LessonNote[]
+  liveLessons       LiveLesson[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -1804,12 +1813,25 @@ model Announcement {
   reached Int @default(0)
   skipped Int @default(0)
 
-  sentAt    DateTime @default(now())
-  createdAt DateTime @default(now())
+  /// DRAFT or SENT.
+  ///
+  /// A draft is a notice somebody has started and not sent — the thing the
+  /// "Newsletters" menu item was really asking for. Defaults to SENT, which
+  /// is what every row written before drafts existed was: this feature was
+  /// added after announcements had been going out for months, and calling
+  /// those drafts would have unsent them.
+  status String @default("SENT")
+
+  /// Null while it is a draft. Nullable rather than defaulting to now,
+  /// because "written on Monday" and "sent on Monday" are different facts
+  /// and a draft has only the first.
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
 
   messages Message[]
 
   @@index([sentAt])
+  @@index([status])
   @@map("announcements")
 }
 
@@ -2460,6 +2482,239 @@ model BudgetLine {
   @@map("budget_lines")
 }
 
+/// A title the school owns, and how many copies of it.
+///
+/// Copies is a count rather than a row per physical book. A school library
+/// here does not barcode individual copies, and inventing a copy entity would
+/// mean a librarian choosing WHICH of four identical copies a child has —
+/// a question nobody can answer and nobody needs to.
+model LibraryBook {
+  id     String  @id @default(cuid())
+  title  String
+  author String?
+  isbn   String?
+  /// The school's own shelving word: "Fiction", "Reference", "Islamiyyah".
+  category String?
+
+  /// How many the school owns. Withdrawing a copy reduces this; it does not
+  /// delete loans, which are the record of who had what.
+  copies Int @default(1)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  loans LibraryLoan[]
+
+  @@index([title])
+  @@map("library_books")
+}
+
+/// One copy of one book, with one child, for a while.
+///
+/// The due date is stored rather than computed from the loan period, because
+/// the period can be changed by a school and a book already out must keep the
+/// date the child was actually given. Overdue is decided in library-rules.ts,
+/// where a book due today is deliberately NOT overdue: the child has until
+/// the end of the day they were given, and a library that says otherwise
+/// fines a child for being punctual.
+model LibraryLoan {
+  id     String      @id @default(cuid())
+  bookId String
+  book   LibraryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Date only, UTC midnight — the convention leave and attendance use, so a
+  /// book scanned at four in the afternoon is due on a day rather than at a
+  /// moment.
+  borrowedOn DateTime
+  dueOn      DateTime
+  returnedOn DateTime?
+
+  /// By value, like every other actor here.
+  issuedByUserId String
+  issuedByName   String
+
+  returnedToUserId String?
+  returnedToName   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookId])
+  @@index([studentProfileId])
+  /// The common question is "what is still out", and it is asked constantly.
+  @@index([returnedOn])
+  @@map("library_loans")
+}
+
+/// A boarding house.
+model HostelBlock {
+  id         String  @id @default(cuid())
+  name       String
+  wardenName String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  rooms HostelRoom[]
+
+  @@map("hostel_blocks")
+}
+
+/// A room, and how many beds are in it.
+model HostelRoom {
+  id      String      @id @default(cuid())
+  blockId String
+  block   HostelBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  name String
+  /// Beds can be edited down while children are still in the room. That is a
+  /// real situation a school gets into, so it is reported as overfull rather
+  /// than made impossible — silently clamping it would hide that somebody has
+  /// nowhere to sleep.
+  beds Int @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  allocations HostelAllocation[]
+
+  @@index([blockId])
+  @@map("hostel_rooms")
+}
+
+/// One child in one bed, for a stretch of nights.
+///
+/// Kept as history rather than a current-room pointer on the student: "who
+/// slept where in March" is a question a boarding school genuinely has to
+/// answer, and a pointer overwritten at each move cannot answer it.
+model HostelAllocation {
+  id     String     @id @default(cuid())
+  roomId String
+  room   HostelRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Date only, UTC midnight — a bed is taken for nights, not moments.
+  allocatedOn DateTime
+  releasedOn  DateTime?
+
+  /// By value, like every other actor here.
+  allocatedByUserId String
+  allocatedByName   String
+
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId])
+  @@index([studentProfileId])
+  /// "Who is in a bed tonight" is the question asked constantly.
+  @@index([releasedOn])
+  @@map("hostel_allocations")
+}
+
+enum TransportDirection {
+  MORNING
+  AFTERNOON
+  /// Both runs. Occupies a seat on each, never two on one — see
+  /// transport-rules.ts, which is where the seat arithmetic lives.
+  BOTH
+}
+
+/// A bus, and how many children fit in it.
+model TransportVehicle {
+  id          String  @id @default(cuid())
+  label       String
+  plateNumber String?
+  seats       Int     @default(0)
+
+  driverName  String?
+  driverPhone String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  routes TransportRoute[]
+
+  @@map("transport_vehicles")
+}
+
+/// A run the school does, with the stops along it.
+model TransportRoute {
+  id   String @id @default(cuid())
+  name String
+
+  vehicleId String?
+  vehicle   TransportVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  stops       TransportStop[]
+  assignments TransportAssignment[]
+
+  @@map("transport_routes")
+}
+
+/// Where the bus stops, in the order it stops there.
+model TransportStop {
+  id      String         @id @default(cuid())
+  routeId String
+  route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  name String
+  /// Where in the run this stop comes.
+  position Int @default(0)
+  /// Minutes from midnight, the same unit the timetable uses. Null when a
+  /// school has not set one, which is different from midnight.
+  pickupMinute Int?
+
+  assignments TransportAssignment[]
+
+  @@index([routeId])
+  @@map("transport_stops")
+}
+
+/// One child on one route, for one or both runs.
+///
+/// A child on two routes for the same run is not a full bus, it is a child
+/// nobody is waiting for at one of two gates — which is why that check comes
+/// before the capacity one in transport-rules.ts.
+model TransportAssignment {
+  id      String         @id @default(cuid())
+  routeId String
+  route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Where they get on. Optional: a school may run a route before it has
+  /// written down every stop.
+  stopId String?
+  stop   TransportStop? @relation(fields: [stopId], references: [id], onDelete: SetNull)
+
+  direction TransportDirection @default(BOTH)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One place per child per route. Riding both ways is a direction, not two
+  /// rows, so this is the whole of it.
+  @@unique([routeId, studentProfileId])
+  @@index([studentProfileId])
+  @@map("transport_assignments")
+}
+
 enum ExpenseStatus {
   /// Somebody has asked. This is not spending yet.
   REQUESTED
@@ -2520,6 +2775,261 @@ model Expense {
   @@index([incurredOn])
   @@index([status])
   @@map("expenses")
+}
+
+/// A live lesson: a link to a meeting the school runs somewhere else.
+///
+/// This schedules a link. It does not host video, and nothing here pretends
+/// to — a screen implying the school had its own classroom would have
+/// children turning up to something that does not exist.
+///
+/// The URL is checked against an allow-list of meeting hosts rather than a
+/// pattern, because this link is given to children and they will click it.
+/// "Looks like a URL" is not a good enough standard for something an adult
+/// types once and thirty children follow.
+model LiveLesson {
+  id      String @id @default(cuid())
+  classId String
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  title String
+  /// https, and from a host on the allow-list in meeting-rules.ts.
+  meetingUrl String
+
+  startsAt DateTime
+  endsAt   DateTime
+
+  /// Cancelled rather than deleted: children may already have the time in
+  /// their heads, and a lesson that silently disappears is one somebody sits
+  /// waiting for.
+  cancelledAt DateTime?
+
+  createdByUserId String
+  createdByName   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([classId, startsAt])
+  @@map("live_lessons")
+}
+
+enum MedicalKind {
+  ALLERGY
+  CONDITION
+  MEDICATION
+  NOTE
+}
+
+enum MedicalSeverity {
+  LIFE_THREATENING
+  SIGNIFICANT
+  MINOR
+}
+
+/// Health information about a child.
+///
+/// The most sensitive thing this system holds. Staff and the child's own
+/// family, and nobody else — there is no listing across children, because a
+/// list of every child in the school with a life-threatening allergy is a
+/// document that should not exist in a school portal.
+///
+/// None of this ever reaches the AI provider. That is enforced where the
+/// tutor prompt is built; the reason it is worth repeating here is that
+/// somebody adding a "summarise this child" feature later needs to meet this
+/// sentence first.
+///
+/// Archived, never deleted: a condition a child has grown out of is still
+/// part of their history, and deleting it leaves the next reader unable to
+/// tell "resolved" from "never happened".
+model MedicalEntry {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  kind MedicalKind
+  /// Required for an allergy or a condition, refused on a note — see
+  /// medical-rules.ts. Never defaulted: a default would be a clinical claim
+  /// this software has no basis for making.
+  severity MedicalSeverity?
+
+  title  String
+  detail String?
+  /// What to do if it happens. The field somebody reads in an emergency.
+  action String?
+
+  /// By value, like every other actor here.
+  recordedByUserId String
+  recordedByName   String
+
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentProfileId])
+  @@map("medical_entries")
+}
+
+/// A file about one child — a birth certificate, an immunisation record.
+///
+/// The bytes live in the same school-scoped store as photographs, behind the
+/// same guarded route: there is no public URL for a child's birth
+/// certificate, and the key is a random UUID under the school's own prefix so
+/// one school's key cannot address another's file.
+model StudentDocument {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  label String
+  /// Storage key, never a URL. Streamed through an authenticated route.
+  storageKey String
+  mimeType   String
+  bytes      Int
+
+  uploadedByUserId String
+  uploadedByName   String
+
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@index([studentProfileId])
+  @@map("student_documents")
+}
+
+enum WelfareKind {
+  MEDICAL
+  HARDSHIP
+  BEREAVEMENT
+  LOAN
+  OTHER
+}
+
+enum WelfareStatus {
+  REQUESTED
+  APPROVED
+  PAID
+  DECLINED
+}
+
+/// A member of staff asking the school for help.
+///
+/// Read by the person who asked and by administrators, and by nobody else —
+/// narrower than an expense on purpose. An expense is school business; this
+/// says something private about somebody, that they could not pay a hospital
+/// bill or that there was a death in the family.
+///
+/// Medical requests are a kind here rather than a separate table. Singling
+/// them out would be its own disclosure: everybody would learn what the
+/// hidden category was.
+model WelfareRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("WelfareRequester", fields: [userId], references: [id], onDelete: Cascade)
+
+  kind   WelfareKind
+  reason String
+  /// Minor units, matching FeePayment.amountCents.
+  amountCents Int
+
+  status WelfareStatus @default(REQUESTED)
+
+  decidedAt       DateTime?
+  decidedByUserId String?
+  decidedByName   String?
+  decisionNote    String?
+
+  paidAt    DateTime?
+  reference String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@map("welfare_requests")
+}
+
+enum AppraisalStatus {
+  /// The reviewer is still writing it. Not visible to the person it is about.
+  DRAFT
+  /// Shown to the person being appraised.
+  SHARED
+  /// They have said they have seen it.
+  ACKNOWLEDGED
+}
+
+/// One person's appraisal for one period.
+///
+/// Two rules shape this, both in appraisal-rules.ts.
+///
+/// Nobody appraises themselves. That is refused by the service AND by a CHECK
+/// below, because an appraisal somebody wrote about themselves is not a
+/// lenient appraisal — it is not an appraisal, and it is the kind of row that
+/// only turns up years later when somebody is looking for a reason.
+///
+/// Only the person being appraised can acknowledge it. Not their reviewer,
+/// not an administrator, not "on their behalf". An acknowledgement is a
+/// statement that somebody saw what was written about them, and one entered
+/// by anybody else is a record of a conversation that may never have
+/// happened — which is precisely what it would later be produced as evidence
+/// of.
+model Appraisal {
+  id String @id @default(cuid())
+
+  subjectUserId String
+  subject       User   @relation("AppraisalSubject", fields: [subjectUserId], references: [id], onDelete: Cascade)
+
+  /// By value alongside the id, like every other actor here: a head teacher
+  /// leaving must not erase who wrote somebody's appraisal.
+  reviewerUserId String
+  reviewerName   String
+
+  /// The school's own words for the period — "2026-2027 First term".
+  periodLabel String
+
+  status AppraisalStatus @default(DRAFT)
+
+  strengths   String?
+  development String?
+  comment     String?
+
+  sharedAt            DateTime?
+  acknowledgedAt      DateTime?
+  /// What the person said when they acknowledged it. Their right of reply,
+  /// stored beside the appraisal rather than nowhere.
+  acknowledgementNote String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  ratings AppraisalRating[]
+
+  @@index([subjectUserId])
+  @@index([status])
+  @@map("appraisals")
+}
+
+/// One rated area within an appraisal.
+model AppraisalRating {
+  id          String    @id @default(cuid())
+  appraisalId String
+  appraisal   Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  /// The school's own word for it — "Planning", "Classroom management".
+  area String
+  /// 1 to 5.
+  score   Int
+  comment String?
+
+  @@index([appraisalId])
+  @@map("appraisal_ratings")
 }
 
 enum StaffAttendanceStatus {

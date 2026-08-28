@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
 import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface";
 import { MessagingService } from "./messaging.service";
@@ -12,6 +12,14 @@ import {
   type AudienceInput,
   type Channel,
 } from "./announcement-audience";
+import {
+  type DraftInput,
+  draftProblem,
+  draftsFirst,
+  editProblem,
+  sendProblem,
+  type AnnouncementStatus,
+} from "./announcement-draft";
 
 interface AnnouncementInput {
   title: string;
@@ -19,6 +27,25 @@ interface AnnouncementInput {
   audience: string;
   classId?: string | null;
   channels: string[];
+}
+
+/**
+ * A draft as columns.
+ *
+ * The empty strings are the price of storing a half-written notice in the
+ * same table as a sent one, where body and audience cannot be null. They are
+ * never mistaken for a real value: `announcementProblem` refuses to send
+ * anything with a blank body or audience, so an unfinished draft cannot slip
+ * out as an announcement addressed to nobody.
+ */
+function draftColumns(input: DraftInput) {
+  return {
+    title: input.title.trim(),
+    body: (input.body ?? "").trim(),
+    audience: input.audience ?? "",
+    classId: input.audience === "CLASS" ? (input.classId ?? null) : null,
+    channels: input.channels ?? [],
+  };
 }
 
 @Injectable()
@@ -151,6 +178,8 @@ export class AnnouncementsService {
         sentByName: author ? `${author.firstName} ${author.lastName}` : null,
         reached: reach,
         skipped: plans.reduce((sum, plan) => sum + plan.skipped.length, 0),
+        status: "SENT",
+        sentAt: new Date(),
       },
     });
 
@@ -192,12 +221,15 @@ export class AnnouncementsService {
   async list() {
     const client = await this.tenantPrisma.getClient();
     const announcements = await client.announcement.findMany({
-      orderBy: { sentAt: "desc" },
+      // Ordering is done by draftsFirst, which is testable and knows a draft
+      // has no send date. Ordering here by sentAt alone would scatter drafts
+      // wherever Postgres puts nulls.
       take: 50,
+      orderBy: { createdAt: "desc" },
       include: { class: { select: { name: true } } },
     });
 
-    return announcements.map((announcement) => ({
+    return draftsFirst(announcements).map((announcement) => ({
       id: announcement.id,
       title: announcement.title,
       body: announcement.body,
@@ -211,7 +243,93 @@ export class AnnouncementsService {
       skipped: announcement.skipped,
       sentByName: announcement.sentByName,
       sentAt: announcement.sentAt,
+      status: announcement.status as AnnouncementStatus,
     }));
+  }
+
+  /**
+   * Save a notice without sending it.
+   *
+   * Checked against `draftProblem`, which is deliberately laxer than the
+   * send-time check: a half-written notice is the entire point of a draft.
+   */
+  async saveDraft(input: DraftInput, actor: AuthenticatedUser) {
+    const problem = draftProblem(input);
+    if (problem) throw new BadRequestException(problem);
+
+    const client = await this.tenantPrisma.getClient();
+    const author = await client.user.findUnique({
+      where: { id: actor.id },
+      select: { firstName: true, lastName: true },
+    });
+
+    return client.announcement.create({
+      data: {
+        ...draftColumns(input),
+        status: "DRAFT",
+        sentAt: null,
+        // Recorded now so a draft picked up next week says who started it.
+        sentByUserId: actor.id,
+        sentByName: author ? `${author.firstName} ${author.lastName}` : null,
+      },
+    });
+  }
+
+  async updateDraft(id: string, input: DraftInput) {
+    const client = await this.tenantPrisma.getClient();
+    const existing = await client.announcement.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException("No announcement found with that id");
+
+    const frozen = editProblem(existing.status as AnnouncementStatus);
+    if (frozen) throw new BadRequestException(frozen);
+
+    const problem = draftProblem(input);
+    if (problem) throw new BadRequestException(problem);
+
+    return client.announcement.update({ where: { id }, data: draftColumns(input) });
+  }
+
+  /**
+   * Send a draft.
+   *
+   * Reuses `send` rather than repeating the delivery loop: there is one path
+   * that reaches families, and a second one would be a second place for the
+   * audience rules to drift. The draft row is removed once its content has
+   * gone out as a sent announcement, so the log shows one notice, not two.
+   */
+  async sendDraft(id: string, actor: AuthenticatedUser) {
+    const client = await this.tenantPrisma.getClient();
+    const draft = await client.announcement.findUnique({ where: { id } });
+    if (!draft) throw new NotFoundException("No announcement found with that id");
+
+    const problem = sendProblem(draft.status as AnnouncementStatus);
+    if (problem) throw new BadRequestException(problem);
+
+    const result = await this.send(
+      {
+        title: draft.title,
+        body: draft.body,
+        audience: draft.audience,
+        classId: draft.classId,
+        channels: draft.channels,
+      },
+      actor,
+    );
+
+    await client.announcement.delete({ where: { id } });
+    return result;
+  }
+
+  async discardDraft(id: string) {
+    const client = await this.tenantPrisma.getClient();
+    const existing = await client.announcement.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException("No announcement found with that id");
+    if (existing.status === "SENT") {
+      // Deleting a sent announcement would erase the school's record of
+      // having told people something.
+      throw new BadRequestException("A sent announcement cannot be deleted.");
+    }
+    await client.announcement.delete({ where: { id } });
   }
 
   /** One announcement and how each send actually went. */

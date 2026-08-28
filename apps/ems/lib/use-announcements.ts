@@ -46,7 +46,18 @@ export interface SentAnnouncement {
   reached: number;
   skipped: number;
   sentByName: string | null;
-  sentAt: string;
+  /** Null while it is a draft — a draft has been written, not sent. */
+  sentAt: string | null;
+  status: "DRAFT" | "SENT";
+}
+
+/** A draft only needs a title; the rest can be finished another day. */
+export interface DraftInput {
+  title: string;
+  body?: string;
+  audience?: string;
+  classId?: string;
+  channels?: string[];
 }
 
 export interface AnnouncementDetail {
@@ -106,6 +117,60 @@ export function useSendAnnouncement() {
         "/v1/messaging/announcements",
         { method: "POST", headers: authHeaders(accessToken), body: input },
       ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export function useSaveDraft() {
+  const { accessToken } = useAuthQueryState();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: DraftInput) =>
+      apiFetch<SentAnnouncement>("/v1/messaging/announcements/drafts", {
+        method: "POST",
+        headers: authHeaders(accessToken),
+        body: input,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export function useUpdateDraft(id: string) {
+  const { accessToken } = useAuthQueryState();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: DraftInput) =>
+      apiFetch<SentAnnouncement>(`/v1/messaging/announcements/drafts/${id}`, {
+        method: "PATCH",
+        headers: authHeaders(accessToken),
+        body: input,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export function useSendDraft(id: string) {
+  const { accessToken } = useAuthQueryState();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ id: string; title: string; sent: number; duplicates: number; reached: number }>(
+        `/v1/messaging/announcements/drafts/${id}/send`,
+        { method: "POST", headers: authHeaders(accessToken) },
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export function useDiscardDraft() {
+  const { accessToken } = useAuthQueryState();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/v1/messaging/announcements/drafts/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(accessToken),
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 }

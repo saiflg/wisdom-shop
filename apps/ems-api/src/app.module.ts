@@ -34,6 +34,21 @@ import { SchoolProfileModule } from "./school-profile/school-profile.module";
 import { StaffAttendanceModule } from "./staff-attendance/staff-attendance.module";
 import { ExpensesModule } from "./expenses/expenses.module";
 import { BudgetsModule } from "./budgets/budgets.module";
+import { LibraryModule } from "./library/library.module";
+import { TransportModule } from "./transport/transport.module";
+import { HostelModule } from "./hostel/hostel.module";
+import { StudentOverviewModule } from "./student-overview/student-overview.module";
+import { StaffOverviewModule } from "./staff-overview/staff-overview.module";
+import { AppraisalsModule } from "./appraisals/appraisals.module";
+import { SecurityModule } from "./security/security.module";
+import { RolesModule } from "./roles/roles.module";
+import { WelfareModule } from "./welfare/welfare.module";
+import { LiveClassroomModule } from "./live-classroom/live-classroom.module";
+import { AccountingModule } from "./accounting/accounting.module";
+import { BackupModule } from "./backup/backup.module";
+import { MedicalModule } from "./medical/medical.module";
+import { DocumentsModule } from "./documents/documents.module";
+import { IdCardsModule } from "./id-cards/id-cards.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
@@ -105,6 +120,21 @@ import { AuditModule } from "@/audit/audit.module";
     StaffAttendanceModule,
     ExpensesModule,
     BudgetsModule,
+    LibraryModule,
+    TransportModule,
+    HostelModule,
+    StudentOverviewModule,
+    StaffOverviewModule,
+    AppraisalsModule,
+    SecurityModule,
+    RolesModule,
+    WelfareModule,
+    LiveClassroomModule,
+    AccountingModule,
+    BackupModule,
+    MedicalModule,
+    DocumentsModule,
+    IdCardsModule,
     SchemesOfWorkModule,
     LessonPlansModule,
     QuizzesModule,

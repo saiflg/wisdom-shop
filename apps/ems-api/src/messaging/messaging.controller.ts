@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import type { MessageEvent, MessageStatus } from "ems-tenant-client";
 import { Roles } from "@/auth/decorators/roles.decorator";
@@ -7,7 +7,7 @@ import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface"
 import { MessagingService } from "./messaging.service";
 import { AnnouncementsService } from "./announcements.service";
 import { UpdateTemplateDto } from "./dto/messaging.dto";
-import { AnnouncementDto } from "./dto/announcement.dto";
+import { AnnouncementDto, AnnouncementDraftDto } from "./dto/announcement.dto";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 
 @ApiTags("messaging")
@@ -50,6 +50,52 @@ export class MessagingController {
   })
   sendAnnouncement(@Body() dto: AnnouncementDto, @CurrentUser() user: AuthenticatedUser) {
     return this.announcements.send(dto, user);
+  }
+
+  /*
+   * Drafts.
+   *
+   * This is what the "Newsletters" menu item was asking for. A second sender
+   * beside announcements would have been the same list with one extra button;
+   * what was actually missing was writing something now and sending it later.
+   */
+
+  @Post("announcements/drafts")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Save an announcement without sending it",
+    description: "A draft only needs a title — the rest can be finished another day.",
+  })
+  saveDraft(@Body() dto: AnnouncementDraftDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.announcements.saveDraft(dto, user);
+  }
+
+  @Patch("announcements/drafts/:id")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Edit a draft",
+    description: "Refused once it has been sent: the school's record must match what families received.",
+  })
+  updateDraft(@Param("id") id: string, @Body() dto: AnnouncementDraftDto) {
+    return this.announcements.updateDraft(id, dto);
+  }
+
+  @Post("announcements/drafts/:id/send")
+  @Roles("SCHOOL_ADMIN")
+  @ApiOperation({
+    summary: "Send a draft",
+    description: "Goes through the same send path as any announcement, so the audience rules cannot drift.",
+  })
+  sendDraft(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.announcements.sendDraft(id, user);
+  }
+
+  @Delete("announcements/drafts/:id")
+  @Roles("SCHOOL_ADMIN")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Discard a draft. A sent announcement cannot be deleted." })
+  discardDraft(@Param("id") id: string) {
+    return this.announcements.discardDraft(id);
   }
 
   @Get("announcements/:id")

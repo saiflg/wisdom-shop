@@ -136,6 +136,47 @@ export async function buildSheet(
   return Buffer.from(buffer as ArrayBuffer);
 }
 
+export interface WorkbookSheet {
+  name: string;
+  columns: ExportColumn[];
+  rows: Record<string, string | null | undefined>[];
+}
+
+/**
+ * One xlsx file with a sheet per entity.
+ *
+ * For the backup screen: a school downloading its own records should get one
+ * file, not five. xlsx only — csv has no concept of a second sheet, and
+ * silently writing only the first would hand somebody a "backup" containing
+ * their students and none of their staff.
+ *
+ * Same text formatting as buildSheet, for the same reason: Excel turning
+ * "007" into 7 corrupts the identifiers an import would later match on.
+ */
+export async function buildWorkbook(sheets: WorkbookSheet[]): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+
+  for (const spec of sheets) {
+    const sheet = workbook.addWorksheet(spec.name.slice(0, 31));
+    sheet.addRow(spec.columns.map((column) => column.header));
+    sheet.getRow(1).font = { bold: true };
+
+    for (const row of spec.rows) {
+      const added = sheet.addRow(spec.columns.map((column) => row[column.field] ?? ""));
+      added.eachCell((cell) => {
+        cell.numFmt = "@";
+      });
+    }
+
+    spec.columns.forEach((column, index) => {
+      sheet.getColumn(index + 1).width = Math.max(14, Math.min(40, column.header.length + 6));
+    });
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer as ArrayBuffer);
+}
+
 export function formatFromFilename(filename: string): SheetFormat | null {
   const lower = filename.toLowerCase();
   if (lower.endsWith(".csv")) return "csv";
