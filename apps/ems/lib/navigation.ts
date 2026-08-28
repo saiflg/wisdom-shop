@@ -77,7 +77,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: "students",
     roles: [...STAFF, "GUARDIAN"],
     items: [
-      { key: "nav.students.dashboard" },
+      { key: "nav.students.dashboard", href: "/student-overview" },
       { key: "nav.students.registration", href: "/students", roles: ADMIN_ONLY },
       { key: "nav.students.bulkImport", href: "/data-exchange", roles: ADMIN_ONLY, module: "DATA_EXCHANGE" },
       { key: "nav.students.list", href: "/students" },
