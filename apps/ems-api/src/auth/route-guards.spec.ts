@@ -34,104 +34,115 @@ const SRC = join(__dirname, "..");
  */
 const ALLOWED_WITHOUT_ROLES: Record<string, string> = {
   // The signed-in person's own record, by definition.
-  "accessibility/accessibility.controller.ts:GET me": "your own accessibility profile",
-  "accessibility/accessibility.controller.ts:PUT me": "your own accessibility profile",
-  "auth/auth.controller.ts:GET me": "the current token's own user",
+  "accessibility/accessibility.controller.ts:AccessibilityController:GET me": "your own accessibility profile",
+  "accessibility/accessibility.controller.ts:AccessibilityController:PUT me": "your own accessibility profile",
+  "auth/auth.controller.ts:AuthController:GET me": "the current token's own user",
 
   // Scoped by viewer in the service: a student sees their own, staff see all.
-  "accessibility/accessibility.controller.ts:GET users/:userId": "service refuses another person's profile",
-  "accessibility/accessibility.controller.ts:PUT users/:userId": "service refuses another person's profile",
-  "attendance/attendance.controller.ts:GET registers/:id": "students and guardians see only their own rows",
-  "attendance/attendance.controller.ts:GET classes/:classId/registers": "service checks the viewer teaches it",
-  "attendance/attendance.controller.ts:GET students/:studentProfileId": "service refuses another family's child",
-  "classes/classes.controller.ts:GET /": "names only; a class list is not a contact list",
-  "classes/classes.controller.ts:GET mine": "the viewer's own classes, by definition",
-  "classes/classes.controller.ts:GET :id": "names only",
+  "accessibility/accessibility.controller.ts:AccessibilityController:GET users/:userId": "service refuses another person's profile",
+  "accessibility/accessibility.controller.ts:AccessibilityController:PUT users/:userId": "service refuses another person's profile",
+  "attendance/attendance.controller.ts:AttendanceController:GET registers/:id": "students and guardians see only their own rows",
+  "attendance/attendance.controller.ts:AttendanceController:GET classes/:classId/registers": "service checks the viewer teaches it",
+  "attendance/attendance.controller.ts:AttendanceController:GET students/:studentProfileId": "service refuses another family's child",
+  "classes/classes.controller.ts:ClassesController:GET /": "names only; a class list is not a contact list",
+  "classes/classes.controller.ts:ClassesController:GET mine": "the viewer's own classes, by definition",
+  "classes/classes.controller.ts:ClassesController:GET :id": "names only",
   // A section is the school describing its own shape — Primary, Secondary,
   // Islamiyyah — and the class names inside it. Same exposure as the class
   // list above, which is why it sits with it. Everything that writes here is
   // @Roles("SCHOOL_ADMIN").
-  "sections/sections.controller.ts:GET /": "the school's own structure; names and counts only",
-  "sections/sections.controller.ts:GET :id": "the school's own structure; class names only",
+  "sections/sections.controller.ts:SectionsController:GET /": "the school's own structure; names and counts only",
+  "sections/sections.controller.ts:SectionsController:GET :id": "the school's own structure; class names only",
 
   // The address on the school's own letterhead, not a secret — a parent
   // looking up the school's phone number in the portal is the ordinary case.
   // The PATCH beside these is @Roles("SCHOOL_ADMIN").
-  "school-profile/school-profile.controller.ts:GET /": "the school's own particulars, as printed on what it hands out",
-  "school-profile/school-profile.controller.ts:GET document-header": "the same particulars, formatted for a page header",
+  "school-profile/school-profile.controller.ts:SchoolProfileController:GET /": "the school's own particulars, as printed on what it hands out",
+  "school-profile/school-profile.controller.ts:SchoolProfileController:GET document-header": "the same particulars, formatted for a page header",
 
   // A catalogue is what a library is for: a child who cannot see what the
   // school owns cannot ask for it. Titles, authors and counts only — no loan
   // and no borrower is exposed by either of these. Issuing and returning are
   // @Roles("SCHOOL_ADMIN", "TEACHER"), and GET loans is scoped by viewer.
-  "library/library.controller.ts:GET books": "the catalogue; titles and counts, no borrowers",
-  "library/library.controller.ts:GET limits": "how many books a borrower may have, and for how long",
-  "grading/grading.controller.ts:GET results": "released results, scoped by viewer",
-  "grading/grading.controller.ts:GET report-cards/:studentProfileId": "404s for another family's child",
-  "grading/grading.controller.ts:GET transcripts/:studentProfileId": "404s for another family's child; published terms only, for everybody",
-  "homework/homework.controller.ts:GET /": "a student sees their own class's work",
-  "homework/homework.controller.ts:GET :id": "scoped by viewer",
-  "homework/homework.controller.ts:POST :id/submit": "a student submits their own work",
-  "exams/exams.controller.ts:GET /": "published papers for the viewer's class",
-  "exams/exams.controller.ts:POST :id/sit": "a student sits their own paper",
-  "exams/exams.controller.ts:POST :id/answers": "their own attempt",
-  "exams/exams.controller.ts:POST :id/submit": "their own attempt",
-  "exams/exams.controller.ts:GET :id/my-attempt": "their own attempt, by definition",
-  "quizzes/quizzes.controller.ts:GET /": "published quizzes, answers stripped for students",
-  "quizzes/quizzes.controller.ts:GET :id": "answers stripped for students",
-  "portal/portal.controller.ts:GET children": "the viewer's own children",
-  "portal/portal.controller.ts:GET home": "the viewer's own child",
-  "parent-messages/parent-messages.controller.ts:GET /": "a family sees its own threads",
-  "parent-messages/parent-messages.controller.ts:GET :studentProfileId": "404s for another family",
-  "parent-messages/parent-messages.controller.ts:POST :studentProfileId": "404s for another family",
-  "parent-messages/parent-messages.controller.ts:DELETE messages/:messageId": "only your own message",
-  "class-chat/class-chat.controller.ts:GET classes/:classId/members": "refuses a student not in the class",
-  "class-chat/class-chat.controller.ts:GET classes/:classId/chat": "refuses a student not in the class",
-  "class-chat/class-chat.controller.ts:POST classes/:classId/chat": "refuses a student not in the class",
-  "class-chat/class-chat.controller.ts:POST classes/:classId/chat/file": "refuses a student not in the class",
-  "class-chat/class-chat.controller.ts:GET class-chat/attachments/:id": "re-checks the viewer against the message",
-  "class-chat/class-chat.controller.ts:PUT classes/:classId/chat/lock": "service requires staff",
-  "class-chat/class-chat.controller.ts:DELETE class-messages/:messageId": "own message, or staff",
-  "class-chat/class-chat.controller.ts:POST class-messages/:messageId/report": "any pupil may report",
-  "class-chat/class-chat.controller.ts:GET class-messages/reports": "service requires staff",
-  "people/people.controller.ts:GET :userId/photo": "photo-visibility.ts decides per viewer",
-  "people/people.controller.ts:POST :userId/photo": "staff, or the person themselves",
-  "people/people.controller.ts:DELETE :userId/photo": "staff, or the person themselves",
-  "students/students.controller.ts:GET /": "guardians see only their own children",
-  "students/students.controller.ts:GET :id": "404s for another family's child",
-  "subjects/subjects.controller.ts:GET /": "the school's subject list is not sensitive",
-  "subjects/subjects.controller.ts:GET :id": "the school's subject list is not sensitive",
-  "timetable/timetable.controller.ts:GET periods": "the school's timetable shape",
-  "timetable/timetable.controller.ts:GET settings": "the school's timetable shape",
-  "timetable/timetable.controller.ts:GET classes/:classId": "a class's own week",
-  "timetable/timetable.controller.ts:GET teachers/:teacherUserId": "a teacher's own week",
-  "schemes-of-work/schemes-of-work.controller.ts:GET /": "published only, for students",
-  "schemes-of-work/schemes-of-work.controller.ts:GET :id": "404s on an unpublished scheme",
-  "lesson-plans/lesson-plans.controller.ts:GET /": "published only, for students",
-  "lesson-plans/lesson-plans.controller.ts:GET :id": "404s on an unpublished plan",
-  "pdf/pdf.controller.ts:GET report-cards/:studentProfileId": "same scoping as the JSON route",
-  "pdf/pdf.controller.ts:GET classes/:classId/list": "service requires staff",
-  "pdf/pdf.controller.ts:GET classes/:classId/timetable": "a class's own week",
-  "pdf/pdf.controller.ts:GET teachers/:teacherUserId/timetable": "a teacher's own week",
-  "pdf/pdf.controller.ts:GET invoices/:invoiceId": "same scoping as the JSON route",
-  "branding/branding.controller.ts:GET /": "this school's own branding, for its own console",
-  "curriculum-settings/curriculum-settings.controller.ts:GET /": "read by every screen that renders a lesson",
-  "schools/school-context.controller.ts:GET modules": "which modules this school bought, for the nav",
-  "fees/fee-checkout.controller.ts:POST fees/invoices/:id/checkout": "a family pays its own bill; service scopes it",
-  "fees/fee-checkout.controller.ts:GET fees/invoices/:id/payment-options":
+  "library/library.controller.ts:LibraryController:GET books": "the catalogue; titles and counts, no borrowers",
+  "library/library.controller.ts:LibraryController:GET limits": "how many books a borrower may have, and for how long",
+  "grading/grading.controller.ts:GradingController:GET results": "released results, scoped by viewer",
+  "grading/grading.controller.ts:GradingController:GET report-cards/:studentProfileId": "404s for another family's child",
+  "grading/grading.controller.ts:GradingController:GET transcripts/:studentProfileId": "404s for another family's child; published terms only, for everybody",
+  "homework/homework.controller.ts:HomeworkController:GET /": "a student sees their own class's work",
+  "homework/homework.controller.ts:HomeworkController:GET :id": "scoped by viewer",
+  "homework/homework.controller.ts:HomeworkController:POST :id/submit": "a student submits their own work",
+  "exams/exams.controller.ts:ExamsController:GET /": "published papers for the viewer's class",
+  "exams/exams.controller.ts:ExamsController:POST :id/sit": "a student sits their own paper",
+  "exams/exams.controller.ts:ExamsController:POST :id/answers": "their own attempt",
+  "exams/exams.controller.ts:ExamsController:POST :id/submit": "their own attempt",
+  "exams/exams.controller.ts:ExamsController:GET :id/my-attempt": "their own attempt, by definition",
+  "quizzes/quizzes.controller.ts:QuizzesController:GET /": "published quizzes, answers stripped for students",
+  "quizzes/quizzes.controller.ts:QuizzesController:GET :id": "answers stripped for students",
+  "portal/portal.controller.ts:PortalController:GET children": "the viewer's own children",
+  "portal/portal.controller.ts:PortalController:GET home": "the viewer's own child",
+  "parent-messages/parent-messages.controller.ts:ParentMessagesController:GET /": "a family sees its own threads",
+  "parent-messages/parent-messages.controller.ts:ParentMessagesController:GET :studentProfileId": "404s for another family",
+  "parent-messages/parent-messages.controller.ts:ParentMessagesController:POST :studentProfileId": "404s for another family",
+  "parent-messages/parent-messages.controller.ts:ParentMessagesController:DELETE messages/:messageId": "only your own message",
+  "class-chat/class-chat.controller.ts:ClassChatController:GET classes/:classId/members": "refuses a student not in the class",
+  "class-chat/class-chat.controller.ts:ClassChatController:GET classes/:classId/chat": "refuses a student not in the class",
+  "class-chat/class-chat.controller.ts:ClassChatController:POST classes/:classId/chat": "refuses a student not in the class",
+  "class-chat/class-chat.controller.ts:ClassChatController:POST classes/:classId/chat/file": "refuses a student not in the class",
+  "class-chat/class-chat.controller.ts:ClassChatController:GET class-chat/attachments/:id": "re-checks the viewer against the message",
+  "class-chat/class-chat.controller.ts:ClassChatController:PUT classes/:classId/chat/lock": "service requires staff",
+  "class-chat/class-chat.controller.ts:ClassChatController:DELETE class-messages/:messageId": "own message, or staff",
+  "class-chat/class-chat.controller.ts:ClassChatController:POST class-messages/:messageId/report": "any pupil may report",
+  "class-chat/class-chat.controller.ts:ClassChatController:GET class-messages/reports": "service requires staff",
+  "people/people.controller.ts:PeopleController:GET :userId/photo": "photo-visibility.ts decides per viewer",
+  "people/people.controller.ts:PeopleController:POST :userId/photo": "staff, or the person themselves",
+  "people/people.controller.ts:PeopleController:DELETE :userId/photo": "staff, or the person themselves",
+  "students/students.controller.ts:StudentsController:GET /": "guardians see only their own children",
+  "students/students.controller.ts:StudentsController:GET :id": "404s for another family's child",
+  "subjects/subjects.controller.ts:SubjectsController:GET /": "the school's subject list is not sensitive",
+  "subjects/subjects.controller.ts:SubjectsController:GET :id": "the school's subject list is not sensitive",
+  "timetable/timetable.controller.ts:TimetableController:GET periods": "the school's timetable shape",
+  "timetable/timetable.controller.ts:TimetableController:GET settings": "the school's timetable shape",
+  "timetable/timetable.controller.ts:TimetableController:GET classes/:classId": "a class's own week",
+  "timetable/timetable.controller.ts:TimetableController:GET teachers/:teacherUserId": "a teacher's own week",
+  "schemes-of-work/schemes-of-work.controller.ts:SchemesOfWorkController:GET /": "published only, for students",
+  "schemes-of-work/schemes-of-work.controller.ts:SchemesOfWorkController:GET :id": "404s on an unpublished scheme",
+  "lesson-plans/lesson-plans.controller.ts:LessonPlansController:GET /": "published only, for students",
+  "lesson-plans/lesson-plans.controller.ts:LessonPlansController:GET :id": "404s on an unpublished plan",
+  "pdf/pdf.controller.ts:PdfController:GET report-cards/:studentProfileId": "same scoping as the JSON route",
+  "pdf/pdf.controller.ts:PdfController:GET classes/:classId/list": "service requires staff",
+  "pdf/pdf.controller.ts:PdfController:GET classes/:classId/timetable": "a class's own week",
+  "pdf/pdf.controller.ts:PdfController:GET teachers/:teacherUserId/timetable": "a teacher's own week",
+  "pdf/pdf.controller.ts:PdfController:GET invoices/:invoiceId": "same scoping as the JSON route",
+  "branding/branding.controller.ts:BrandingController:GET /": "this school's own branding, for its own console",
+  "curriculum-settings/curriculum-settings.controller.ts:CurriculumSettingsController:GET /": "read by every screen that renders a lesson",
+  "schools/school-context.controller.ts:SchoolContextController:GET modules": "which modules this school bought, for the nav",
+  "fees/fee-checkout.controller.ts:FeeCheckoutController:POST fees/invoices/:id/checkout": "a family pays its own bill; service scopes it",
+  "fees/fee-checkout.controller.ts:FeeCheckoutController:GET fees/invoices/:id/payment-options":
     "same scoping as the checkout route — paymentOptions reads the invoice through FeesService.getInvoice, which " +
     "404s another family's invoice before any gateway is named",
 
   // The AI teacher: a lesson belongs to the student taking it, and the
   // service refuses anybody else — including a teacher — from speaking in it.
-  "ai-teacher/ai-teacher.controller.ts:POST /": "starts the viewer's own lesson",
-  "ai-teacher/ai-teacher.controller.ts:GET /": "the viewer's own lessons",
-  "ai-teacher/ai-teacher.controller.ts:GET :id": "service refuses another student's lesson",
-  "ai-teacher/ai-teacher.controller.ts:POST :id/ask": "only the student whose lesson it is",
-  "ai-teacher/ai-teacher.controller.ts:POST :id/continue": "only the student whose lesson it is",
-  "ai-teacher/ai-teacher.controller.ts:PATCH :id/pause": "only the student whose lesson it is",
-  "ai-teacher/ai-teacher.controller.ts:PATCH :id/resume": "only the student whose lesson it is",
-  "ai-teacher/ai-teacher.controller.ts:PATCH :id/end": "only the student whose lesson it is",
+  "ai-teacher/ai-teacher.controller.ts:AiTeacherController:POST /": "starts the viewer's own lesson",
+  "ai-teacher/ai-teacher.controller.ts:AiTeacherController:GET /": "the viewer's own lessons",
+  "ai-teacher/ai-teacher.controller.ts:AiTeacherController:GET :id": "service refuses another student's lesson",
+  "ai-teacher/ai-teacher.controller.ts:AiTeacherController:POST :id/ask": "only the student whose lesson it is",
+  "ai-teacher/ai-teacher.controller.ts:AiTeacherController:POST :id/continue": "only the student whose lesson it is",
+  "ai-teacher/ai-teacher.controller.ts:AiTeacherController:PATCH :id/pause": "only the student whose lesson it is",
+  "ai-teacher/ai-teacher.controller.ts:AiTeacherController:PATCH :id/resume": "only the student whose lesson it is",
+  "ai-teacher/ai-teacher.controller.ts:AiTeacherController:PATCH :id/end": "only the student whose lesson it is",
+
+  // The board's video shelf: titles, subjects and YouTube links the school
+  // put there itself. No child appears in it. Readable by anyone who can sit
+  // in a lesson, which is the point of it; POST and DELETE beside it are
+  // @Roles("SCHOOL_ADMIN", "TEACHER").
+  //
+  // This route went undocumented until the scanner learned to tell two
+  // controllers in one file apart. It was never unguarded by decision — it
+  // was invisible, which is worse.
+  "ai-teacher/ai-teacher.controller.ts:LessonResourcesController:GET /":
+    "the school's own demonstration videos; no student data",
 };
 
 interface Route {
@@ -154,24 +165,68 @@ function unguardedRoutes(): Route[] {
   for (const file of controllers(SRC)) {
     const text = readFileSync(file, "utf8");
     const relative = file.replace(SRC, "").replace(/\\/g, "/").replace(/^\//, "");
-
-    const classAt = text.search(/export class \w+/);
-    const head = text.slice(0, classAt);
-    // A class-level guard makes every route in it deny-by-default. Platform
-    // controllers carry their own guard stack; @Public is a deliberate,
-    // separately reviewed decision (webhooks, the login page).
-    if (/@Roles\(|@PlatformRoles\(|@Public\(\)/.test(head)) continue;
-
     const lines = text.split(/\r?\n/);
+
+    /*
+     * Walked class by class, not file by file.
+     *
+     * Keying on the file alone was wrong, and wrong in the direction that
+     * hides things. ai-teacher.controller.ts holds two controllers, both with
+     * a bare `@Get()`, so both produced the key
+     * "ai-teacher.controller.ts:GET /" — documenting one silently documented
+     * the other, and the lesson-resources listing sat undocumented behind its
+     * neighbour's entry for as long as this test has existed.
+     *
+     * The old version also read only the FIRST class's decorators and skipped
+     * the entire file when they carried a guard, which would have hidden
+     * every later controller in that file as well.
+     */
+    let className = "";
+    let classGuarded = false;
+    let pending: string[] = [];
+
     for (let i = 0; i < lines.length; i++) {
-      const match = /^\s*@(Get|Post|Patch|Put|Delete)\(/.exec(lines[i]);
-      if (!match) continue;
+      const line = lines[i] ?? "";
+
+      const classLine = /^export class (\w+)/.exec(line);
+      if (classLine) {
+        className = classLine[1]!;
+        // A class-level guard makes every route in it deny-by-default.
+        // Platform controllers carry their own guard stack; @Public is a
+        // deliberate, separately reviewed decision (webhooks, the login page).
+        classGuarded = /@Roles\(|@PlatformRoles\(|@Public\(\)/.test(pending.join("\n"));
+        pending = [];
+        continue;
+      }
+
+      /*
+       * Decorators standing immediately above whatever comes next, so the next
+       * `export class` is judged on its OWN head rather than on the file's
+       * first one.
+       *
+       * Anything that is not a decorator, a comment or blank clears the run.
+       * Without that, the last method of one controller could leak its
+       * @Roles upward into the head of the next class in the same file and
+       * silently mark all of its routes guarded — the same kind of blindness
+       * this rewrite exists to remove.
+       */
+      const trimmed = line.trim();
+      if (/^@/.test(trimmed)) pending.push(line);
+      else if (trimmed === "" || /^(\/\/|\/\*|\*)/.test(trimmed)) {
+        // neutral: comments and blank lines neither add nor clear
+      } else pending = [];
+
+      const match = /^\s*@(Get|Post|Patch|Put|Delete)\(/.exec(line);
+      if (!match || classGuarded || !className) continue;
 
       const around = lines.slice(Math.max(0, i - 4), i + 6).join("\n");
       if (/@Roles\(|@PlatformRoles\(|@Public\(\)/.test(around)) continue;
 
-      const route = /\("([^"]*)"\)/.exec(lines[i])?.[1] ?? "/";
-      routes.push({ key: `${relative}:${match[1].toUpperCase()} ${route}`, file: relative });
+      const route = /\("([^"]*)"\)/.exec(line)?.[1] ?? "/";
+      routes.push({
+        key: `${relative}:${className}:${match[1].toUpperCase()} ${route}`,
+        file: relative,
+      });
     }
   }
 
@@ -211,5 +266,26 @@ describe("every route is guarded, or listed as deliberately open", () => {
     // discount a bill. Only the two family-facing reads may be open.
     const feesOpen = found.filter((r) => r.file === "fees/fees.controller.ts").map((r) => r.key);
     expect(feesOpen).toEqual([]);
+  });
+
+  it("tells two controllers in one file apart", () => {
+    /*
+     * The bug this guards against was in the guard itself.
+     *
+     * ai-teacher.controller.ts holds AiTeacherController and
+     * LessonResourcesController, and both open with a bare `@Get()`. While
+     * routes were keyed by file, the two collapsed into one entry: writing a
+     * note for the lesson list silently vouched for the resource list too,
+     * and GET /ai-teacher/resources sat undocumented behind its neighbour.
+     *
+     * A test that cannot see a route cannot report it missing, so this checks
+     * the scanner's eyesight rather than the routes.
+     */
+    const sameFile = found.filter((r) => r.file === "ai-teacher/ai-teacher.controller.ts");
+    const classes = new Set(sameFile.map((r) => r.key.split(":")[1]));
+
+    expect(classes).toContain("AiTeacherController");
+    expect(classes).toContain("LessonResourcesController");
+    expect(new Set(sameFile.map((r) => r.key)).size).toBe(sameFile.length);
   });
 });
