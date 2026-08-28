@@ -102,6 +102,7 @@ model User {
   examsCreated         Exam[]                 @relation("ExamCreatedBy")
   sectionsHeaded       Section[]              @relation("SectionHead")
   staffAttendance      StaffAttendanceDay[]   @relation("StaffAttendanceOf")
+  appraisalsAbout      Appraisal[]            @relation("AppraisalSubject")
 
   @@map("users")
 }
@@ -2769,6 +2770,83 @@ model Expense {
   @@index([incurredOn])
   @@index([status])
   @@map("expenses")
+}
+
+enum AppraisalStatus {
+  /// The reviewer is still writing it. Not visible to the person it is about.
+  DRAFT
+  /// Shown to the person being appraised.
+  SHARED
+  /// They have said they have seen it.
+  ACKNOWLEDGED
+}
+
+/// One person's appraisal for one period.
+///
+/// Two rules shape this, both in appraisal-rules.ts.
+///
+/// Nobody appraises themselves. That is refused by the service AND by a CHECK
+/// below, because an appraisal somebody wrote about themselves is not a
+/// lenient appraisal — it is not an appraisal, and it is the kind of row that
+/// only turns up years later when somebody is looking for a reason.
+///
+/// Only the person being appraised can acknowledge it. Not their reviewer,
+/// not an administrator, not "on their behalf". An acknowledgement is a
+/// statement that somebody saw what was written about them, and one entered
+/// by anybody else is a record of a conversation that may never have
+/// happened — which is precisely what it would later be produced as evidence
+/// of.
+model Appraisal {
+  id String @id @default(cuid())
+
+  subjectUserId String
+  subject       User   @relation("AppraisalSubject", fields: [subjectUserId], references: [id], onDelete: Cascade)
+
+  /// By value alongside the id, like every other actor here: a head teacher
+  /// leaving must not erase who wrote somebody's appraisal.
+  reviewerUserId String
+  reviewerName   String
+
+  /// The school's own words for the period — "2026-2027 First term".
+  periodLabel String
+
+  status AppraisalStatus @default(DRAFT)
+
+  strengths   String?
+  development String?
+  comment     String?
+
+  sharedAt            DateTime?
+  acknowledgedAt      DateTime?
+  /// What the person said when they acknowledged it. Their right of reply,
+  /// stored beside the appraisal rather than nowhere.
+  acknowledgementNote String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  ratings AppraisalRating[]
+
+  @@index([subjectUserId])
+  @@index([status])
+  @@map("appraisals")
+}
+
+/// One rated area within an appraisal.
+model AppraisalRating {
+  id          String    @id @default(cuid())
+  appraisalId String
+  appraisal   Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  /// The school's own word for it — "Planning", "Classroom management".
+  area String
+  /// 1 to 5.
+  score   Int
+  comment String?
+
+  @@index([appraisalId])
+  @@map("appraisal_ratings")
 }
 
 enum StaffAttendanceStatus {

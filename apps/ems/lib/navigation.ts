@@ -180,7 +180,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // submit to is half a feature.
       { key: "nav.staff.leave", href: "/staff/leave" },
       { key: "nav.staff.attendance", href: "/staff-attendance" },
-      { key: "nav.staff.performance", roles: ADMIN_ONLY },
+      { key: "nav.staff.performance", href: "/appraisals", roles: STAFF },
       // Staff have the same portal families and students do — their own
       // timetable, their own messages. It existed and was unreachable here.
       { key: "nav.staff.portal", href: "/my", module: "PORTAL" },
