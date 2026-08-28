@@ -103,6 +103,7 @@ model User {
   sectionsHeaded       Section[]              @relation("SectionHead")
   staffAttendance      StaffAttendanceDay[]   @relation("StaffAttendanceOf")
   appraisalsAbout      Appraisal[]            @relation("AppraisalSubject")
+  welfareRequests      WelfareRequest[]       @relation("WelfareRequester")
 
   @@map("users")
 }
@@ -389,6 +390,7 @@ model Class {
   exams               Exam[]
   announcements       Announcement[]
   behaviourRecords    BehaviourRecord[]
+  liveLessons         LiveLesson[]
   lessonNotes         LessonNote[]
 
   @@index([academicYear])
@@ -456,6 +458,8 @@ model StudentProfile {
   libraryLoans      LibraryLoan[]
   transportRides    TransportAssignment[]
   hostelBeds        HostelAllocation[]
+  medicalEntries    MedicalEntry[]
+  documents         StudentDocument[]
   marks             Mark[]
   termResults       TermResult[]
   messages          Message[]
@@ -660,6 +664,7 @@ model Subject {
   questionBankItems QuestionBankItem[]
   exams             Exam[]
   lessonNotes       LessonNote[]
+  liveLessons       LiveLesson[]
 
   @@unique([name, gradeLevel])
   @@map("subjects")
@@ -2770,6 +2775,184 @@ model Expense {
   @@index([incurredOn])
   @@index([status])
   @@map("expenses")
+}
+
+/// A live lesson: a link to a meeting the school runs somewhere else.
+///
+/// This schedules a link. It does not host video, and nothing here pretends
+/// to — a screen implying the school had its own classroom would have
+/// children turning up to something that does not exist.
+///
+/// The URL is checked against an allow-list of meeting hosts rather than a
+/// pattern, because this link is given to children and they will click it.
+/// "Looks like a URL" is not a good enough standard for something an adult
+/// types once and thirty children follow.
+model LiveLesson {
+  id      String @id @default(cuid())
+  classId String
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  title String
+  /// https, and from a host on the allow-list in meeting-rules.ts.
+  meetingUrl String
+
+  startsAt DateTime
+  endsAt   DateTime
+
+  /// Cancelled rather than deleted: children may already have the time in
+  /// their heads, and a lesson that silently disappears is one somebody sits
+  /// waiting for.
+  cancelledAt DateTime?
+
+  createdByUserId String
+  createdByName   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([classId, startsAt])
+  @@map("live_lessons")
+}
+
+enum MedicalKind {
+  ALLERGY
+  CONDITION
+  MEDICATION
+  NOTE
+}
+
+enum MedicalSeverity {
+  LIFE_THREATENING
+  SIGNIFICANT
+  MINOR
+}
+
+/// Health information about a child.
+///
+/// The most sensitive thing this system holds. Staff and the child's own
+/// family, and nobody else — there is no listing across children, because a
+/// list of every child in the school with a life-threatening allergy is a
+/// document that should not exist in a school portal.
+///
+/// None of this ever reaches the AI provider. That is enforced where the
+/// tutor prompt is built; the reason it is worth repeating here is that
+/// somebody adding a "summarise this child" feature later needs to meet this
+/// sentence first.
+///
+/// Archived, never deleted: a condition a child has grown out of is still
+/// part of their history, and deleting it leaves the next reader unable to
+/// tell "resolved" from "never happened".
+model MedicalEntry {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  kind MedicalKind
+  /// Required for an allergy or a condition, refused on a note — see
+  /// medical-rules.ts. Never defaulted: a default would be a clinical claim
+  /// this software has no basis for making.
+  severity MedicalSeverity?
+
+  title  String
+  detail String?
+  /// What to do if it happens. The field somebody reads in an emergency.
+  action String?
+
+  /// By value, like every other actor here.
+  recordedByUserId String
+  recordedByName   String
+
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentProfileId])
+  @@map("medical_entries")
+}
+
+/// A file about one child — a birth certificate, an immunisation record.
+///
+/// The bytes live in the same school-scoped store as photographs, behind the
+/// same guarded route: there is no public URL for a child's birth
+/// certificate, and the key is a random UUID under the school's own prefix so
+/// one school's key cannot address another's file.
+model StudentDocument {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  label String
+  /// Storage key, never a URL. Streamed through an authenticated route.
+  storageKey String
+  mimeType   String
+  bytes      Int
+
+  uploadedByUserId String
+  uploadedByName   String
+
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@index([studentProfileId])
+  @@map("student_documents")
+}
+
+enum WelfareKind {
+  MEDICAL
+  HARDSHIP
+  BEREAVEMENT
+  LOAN
+  OTHER
+}
+
+enum WelfareStatus {
+  REQUESTED
+  APPROVED
+  PAID
+  DECLINED
+}
+
+/// A member of staff asking the school for help.
+///
+/// Read by the person who asked and by administrators, and by nobody else —
+/// narrower than an expense on purpose. An expense is school business; this
+/// says something private about somebody, that they could not pay a hospital
+/// bill or that there was a death in the family.
+///
+/// Medical requests are a kind here rather than a separate table. Singling
+/// them out would be its own disclosure: everybody would learn what the
+/// hidden category was.
+model WelfareRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("WelfareRequester", fields: [userId], references: [id], onDelete: Cascade)
+
+  kind   WelfareKind
+  reason String
+  /// Minor units, matching FeePayment.amountCents.
+  amountCents Int
+
+  status WelfareStatus @default(REQUESTED)
+
+  decidedAt       DateTime?
+  decidedByUserId String?
+  decidedByName   String?
+  decisionNote    String?
+
+  paidAt    DateTime?
+  reference String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@map("welfare_requests")
 }
 
 enum AppraisalStatus {

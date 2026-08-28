@@ -89,11 +89,11 @@ export const NAV_GROUPS: NavGroup[] = [
       // list; this pointed at nothing while that screen already existed.
       { key: "nav.students.academicRecords", href: "/results", roles: STAFF, module: "GRADING" },
       { key: "nav.students.behaviour", href: "/behaviour" },
-      { key: "nav.students.medical" },
+      { key: "nav.students.medical", href: "/medical" },
       { key: "nav.students.hostel", href: "/hostel" },
       { key: "nav.students.transport", href: "/transport" },
       { key: "nav.students.library", href: "/library" },
-      { key: "nav.students.documents" },
+      { key: "nav.students.documents", href: "/documents" },
       // Graduation used to sit below this as its own item. It is the same
       // screen: a final-year class is one whose destination is "Leaving the
       // school", chosen in the same dropdown as everywhere else. A second
@@ -101,7 +101,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // procedures when there is one.
       { key: "nav.students.promotion", href: "/promotion", roles: ADMIN_ONLY },
       { key: "nav.students.wallet", href: "/wallet" },
-      { key: "nav.students.idCards" },
+      { key: "nav.students.idCards", href: "/id-cards", roles: STAFF },
     ],
   },
   {
@@ -154,7 +154,15 @@ export const NAV_GROUPS: NavGroup[] = [
       // running payroll and printing the voucher are different jobs, often
       // done by different people on different days.
       { key: "nav.staff.voucher", href: "/payroll/voucher", roles: ADMIN_ONLY, module: "PAYROLL" },
-      { key: "nav.staff.welfare", roles: ADMIN_ONLY },
+      // Medical assistance used to sit below this as its own item. It is the
+      // same screen, and separating it would have been its own disclosure:
+      // anybody watching a colleague open "Medical assistance" learns why
+      // they are asking. It is a kind on this screen instead.
+      //
+      // STAFF, not ADMIN_ONLY: the people who need to ask are teachers, and
+      // hiding the screen from them would leave only the administrators able
+      // to request help.
+      { key: "nav.staff.welfare", href: "/welfare", roles: STAFF },
       // Loans and salary advances are one register, not two: the same money
       // recovered the same way, differing only in the word printed on the
       // voucher. Gated on PAYROLL because recovery happens through it.
@@ -174,8 +182,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // It was the one entry in this group whose feature existed and whose
       // menu item still said "soon".
       { key: "nav.staff.salaryAdvance", href: "/payroll/loans", roles: ADMIN_ONLY, module: "PAYROLL" },
-      { key: "nav.staff.medicalAssistance", roles: ADMIN_ONLY },
-      // Every member of staff, not admin-only: asking for leave is the
+            // Every member of staff, not admin-only: asking for leave is the
       // commonest thing anybody does here, and an approvals list nobody can
       // submit to is half a feature.
       { key: "nav.staff.leave", href: "/staff/leave" },
@@ -202,7 +209,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // the API accepted these long before anything in the app could reach
       // them.
       { key: "nav.academics.demonstrations", href: "/ai-teacher/demonstrations", module: "AI_TEACHER" },
-      { key: "nav.academics.liveClassroom" },
+      { key: "nav.academics.liveClassroom", href: "/live-classroom" },
       { key: "nav.academics.timetable", href: "/timetable", module: "TIMETABLE" },
       { key: "nav.academics.homework", href: "/homework", module: "HOMEWORK" },
       // An assignment and a piece of homework are the same record here — one
@@ -252,7 +259,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // Its own screen, unlike discounts: a scholarship is a decision about
       // a child that outlives any single invoice.
       { key: "nav.finance.scholarships", href: "/scholarships", roles: ADMIN_ONLY },
-      { key: "nav.finance.accounting", roles: ADMIN_ONLY },
+      { key: "nav.finance.accounting", href: "/accounting", roles: ADMIN_ONLY },
       { key: "nav.finance.budget", href: "/budget", roles: ADMIN_ONLY },
       { key: "nav.finance.expenses", href: "/expenses", roles: STAFF },
     ],
@@ -299,14 +306,13 @@ export const NAV_GROUPS: NavGroup[] = [
       // invitations and password resets now live.
       { key: "nav.settings.users", href: "/staff" },
       { key: "nav.settings.roles", href: "/settings/roles", roles: ADMIN_ONLY },
-      { key: "nav.settings.permissions" },
-      // The console ships English and French; this is where a school chooses
+            // The console ships English and French; this is where a school chooses
       // which one it opens in, and where anybody overrides it for themselves.
       { key: "nav.settings.languages", href: "/settings/languages" },
       { key: "nav.settings.paymentGateways", href: "/settings/payments" },
       { key: "nav.settings.communicationGateways", href: "/settings/communication" },
       { key: "nav.settings.ai", href: "/curriculum-settings" },
-      { key: "nav.settings.backup" },
+      { key: "nav.settings.backup", href: "/settings/backup", roles: ADMIN_ONLY },
       { key: "nav.settings.security", href: "/settings/security" },
       // Assembled from the trails the product already keeps — bank-detail
       // reveals, attendance amendments, payments, payroll approvals,
