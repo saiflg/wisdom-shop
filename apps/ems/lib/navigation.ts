@@ -135,7 +135,7 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: "staff",
     roles: STAFF,
     items: [
-      { key: "nav.staff.dashboard" },
+      { key: "nav.staff.dashboard", href: "/staff-overview" },
       { key: "nav.staff.registration", href: "/staff/new", roles: ADMIN_ONLY },
       { key: "nav.staff.directory", href: "/staff", roles: ADMIN_ONLY },
       { key: "nav.staff.teachers", href: "/teachers" },

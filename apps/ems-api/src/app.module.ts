@@ -38,6 +38,7 @@ import { LibraryModule } from "./library/library.module";
 import { TransportModule } from "./transport/transport.module";
 import { HostelModule } from "./hostel/hostel.module";
 import { StudentOverviewModule } from "./student-overview/student-overview.module";
+import { StaffOverviewModule } from "./staff-overview/staff-overview.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
@@ -113,6 +114,7 @@ import { AuditModule } from "@/audit/audit.module";
     TransportModule,
     HostelModule,
     StudentOverviewModule,
+    StaffOverviewModule,
     SchemesOfWorkModule,
     LessonPlansModule,
     QuizzesModule,
