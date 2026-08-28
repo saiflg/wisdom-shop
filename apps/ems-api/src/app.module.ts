@@ -41,6 +41,7 @@ import { StudentOverviewModule } from "./student-overview/student-overview.modul
 import { StaffOverviewModule } from "./staff-overview/staff-overview.module";
 import { AppraisalsModule } from "./appraisals/appraisals.module";
 import { SecurityModule } from "./security/security.module";
+import { RolesModule } from "./roles/roles.module";
 import { SchemesOfWorkModule } from "./schemes-of-work/schemes-of-work.module";
 import { LessonPlansModule } from "./lesson-plans/lesson-plans.module";
 import { QuizzesModule } from "./quizzes/quizzes.module";
@@ -119,6 +120,7 @@ import { AuditModule } from "@/audit/audit.module";
     StaffOverviewModule,
     AppraisalsModule,
     SecurityModule,
+    RolesModule,
     SchemesOfWorkModule,
     LessonPlansModule,
     QuizzesModule,

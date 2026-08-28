@@ -298,7 +298,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // directory is the closest thing to a user list — and it is where
       // invitations and password resets now live.
       { key: "nav.settings.users", href: "/staff" },
-      { key: "nav.settings.roles" },
+      { key: "nav.settings.roles", href: "/settings/roles", roles: ADMIN_ONLY },
       { key: "nav.settings.permissions" },
       // The console ships English and French; this is where a school chooses
       // which one it opens in, and where anybody overrides it for themselves.
