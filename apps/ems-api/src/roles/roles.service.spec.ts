@@ -1,6 +1,8 @@
 import { Controller, Delete, Get, Post } from "@nestjs/common";
 import { MetadataScanner, Reflector } from "@nestjs/core";
 import { Roles } from "@/auth/decorators/roles.decorator";
+import { Public } from "@/auth/decorators/public.decorator";
+import { PlatformRoles } from "@/platform-auth/decorators/platform-roles.decorator";
 import { RequiresModule } from "@/schools/decorators/requires-module.decorator";
 import { RolesService } from "./roles.service";
 
@@ -34,6 +36,20 @@ class ClassGuardedController {
 
   @Delete(":id")
   remove() {}
+}
+
+@Controller("webhooks")
+class PublicController {
+  @Post("paystack")
+  @Public()
+  paystack() {}
+}
+
+@Controller("platform-schools")
+@PlatformRoles("PLATFORM_ADMIN")
+class PlatformController {
+  @Get("/")
+  list() {}
 }
 
 function serviceFor(...controllers: object[]): RolesService {
@@ -105,5 +121,30 @@ describe("RolesService.capabilities", () => {
   it("copes with an application that has no controllers", () => {
     const result = serviceFor().capabilities();
     expect(result).toMatchObject({ totalRoutes: 0, openRoutes: 0, areas: [] });
+  });
+});
+
+describe("RolesService and the two other realms", () => {
+  it("marks a @Public route as public rather than as ordinary", () => {
+    const result = serviceFor(PublicController).capabilities();
+    expect(result.publicRoutes).toBe(1);
+    // Not counted among the routes open to signed-in people: it is open to
+    // people who have not signed in, which is a louder fact and a different
+    // one.
+    expect(result.openRoutes).toBe(0);
+  });
+
+  it("keeps Super Admin routes out of every school role's count", () => {
+    const result = serviceFor(PlatformController).capabilities();
+    expect(result.platformRoutes).toBe(1);
+    expect(result.counts.SCHOOL_ADMIN).toBe(0);
+    expect(result.counts.TEACHER).toBe(0);
+  });
+
+  it("still counts an ordinary unguarded route as open", () => {
+    const result = serviceFor(OpenController).capabilities();
+    expect(result.openRoutes).toBe(1);
+    expect(result.publicRoutes).toBe(0);
+    expect(result.platformRoutes).toBe(0);
   });
 });

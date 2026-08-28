@@ -1,4 +1,5 @@
 import {
+  ALL_ROLES,
   areaOf,
   audienceOf,
   countsByRole,
@@ -13,6 +14,8 @@ const route = (over: Partial<RouteCapability> = {}): RouteCapability => ({
   path: "fees/invoices",
   roles: ["SCHOOL_ADMIN"],
   module: null,
+  isPublic: false,
+  isPlatform: false,
   summary: null,
   ...over,
 });
@@ -138,5 +141,46 @@ describe("countsByRole", () => {
 
   it("counts nothing as zero for every role", () => {
     expect(countsByRole([])).toEqual({ SCHOOL_ADMIN: 0, TEACHER: 0, STUDENT: 0, GUARDIAN: 0 });
+  });
+});
+
+describe("the two realms this screen originally confused with 'everyone'", () => {
+  // Understated, not overstated.
+  it("says a public route is reachable without signing in", () => {
+    // Reporting it as "everyone signed in" was wrong in the reassuring
+    // direction: the people who can reach it have not signed in at all.
+    const publicRoute = route({ roles: null, isPublic: true });
+    expect(describeAudience(publicRoute.roles, publicRoute)).toBe("Anyone, without signing in");
+  });
+
+  // Overstated, and it inflated every headline figure.
+  it("does not count a Super Admin route as reachable by any school role", () => {
+    // Platform routes authenticate in their own realm. No school account can
+    // reach one whatever role it holds, and counting them made every number
+    // on the page too large.
+    const platformRoute = route({ roles: null, isPlatform: true });
+    for (const role of ALL_ROLES) {
+      expect(roleCanReach(platformRoute, role)).toBe(false);
+    }
+    expect(describeAudience(platformRoute.roles, platformRoute)).toBe("Super Admin console only");
+  });
+
+  it("keeps the three kinds apart when counting an area", () => {
+    const [area] = groupByArea([
+      route({ path: "mixed/a", roles: null }),
+      route({ path: "mixed/b", roles: null, isPublic: true }),
+      route({ path: "mixed/c", roles: null, isPlatform: true }),
+      route({ path: "mixed/d", roles: ["TEACHER"] }),
+    ]);
+
+    // Only the genuinely unguarded, signed-in-reachable one.
+    expect(area?.openRoutes).toBe(1);
+    expect(area?.publicRoutes).toBe(1);
+  });
+
+  it("leaves an ordinary unguarded route reading as before", () => {
+    const ordinary = route({ roles: null });
+    expect(describeAudience(ordinary.roles, ordinary)).toBe("Everyone signed in");
+    expect(roleCanReach(ordinary, "GUARDIAN")).toBe(true);
   });
 });
