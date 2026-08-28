@@ -3,6 +3,8 @@ import { PATH_METADATA, METHOD_METADATA } from "@nestjs/common/constants";
 import { DiscoveryService, MetadataScanner, Reflector } from "@nestjs/core";
 import { RequestMethod } from "@nestjs/common";
 import { ROLES_KEY } from "@/auth/decorators/roles.decorator";
+import { IS_PUBLIC_KEY } from "@/auth/decorators/public.decorator";
+import { PLATFORM_ROLES_KEY } from "@/platform-auth/decorators/platform-roles.decorator";
 import { REQUIRES_MODULE_KEY } from "@/schools/decorators/requires-module.decorator";
 import {
   countsByRole,
@@ -69,11 +71,29 @@ export class RolesService {
         const module =
           this.reflector.getAllAndOverride<string>(REQUIRES_MODULE_KEY, [handler, metatype]) ?? null;
 
+        /*
+         * Two realms this screen originally confused with "everyone".
+         *
+         * @Public means reachable WITHOUT signing in — a webhook, the login
+         * page. Reporting one as "everyone signed in" understated it: the
+         * people who can reach it have not signed in at all.
+         *
+         * @PlatformRoles means the super-admin console, which authenticates
+         * separately. No school account can reach one whatever role it holds,
+         * so counting them inflated every figure on the page.
+         */
+        const isPublic =
+          this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [handler, metatype]) === true;
+        const isPlatform =
+          this.reflector.getAllAndOverride<string[]>(PLATFORM_ROLES_KEY, [handler, metatype]) !== undefined;
+
         routes.push({
           method: METHOD_NAMES[verb] ?? "GET",
           path: [controllerPath, methodPath].filter(Boolean).join("/").replace(/\/+/g, "/"),
           roles,
           module,
+          isPublic,
+          isPlatform,
           summary: null,
         });
       }
@@ -85,10 +105,16 @@ export class RolesService {
       areas,
       counts: countsByRole(routes),
       totalRoutes: routes.length,
+      // Counted separately so the headline figures describe what a school
+      // account can actually reach.
+      platformRoutes: routes.filter((route) => route.isPlatform).length,
+      publicRoutes: routes.filter((route) => route.isPublic).length,
       // Surfaced at the top rather than left to be counted: routes with no
       // @Roles are reachable by every signed-in person, and an administrator
       // reading this page should not have to add them up themselves.
-      openRoutes: routes.filter((route) => route.roles === null).length,
+      openRoutes: routes.filter(
+        (route) => route.roles === null && !route.isPublic && !route.isPlatform,
+      ).length,
     };
   }
 }

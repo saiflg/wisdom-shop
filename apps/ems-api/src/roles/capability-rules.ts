@@ -9,6 +9,22 @@ export interface RouteCapability {
   roles: RoleName[] | null;
   /** The purchasable module this belongs to, if any. */
   module: string | null;
+  /**
+   * Reachable without signing in at all — a webhook, the login page.
+   *
+   * A separate fact from having no @Roles, and a louder one. This screen
+   * originally reported these as "everyone signed in", which understated
+   * them: the people who can reach them have not signed in.
+   */
+  isPublic: boolean;
+  /**
+   * Belongs to the super-admin console, which authenticates in its own realm.
+   *
+   * No school user can reach one whatever role they hold, so counting them
+   * among what a teacher can reach — which this screen originally did —
+   * inflated every figure on the page.
+   */
+  isPlatform: boolean;
   summary: string | null;
 }
 
@@ -25,8 +41,22 @@ export function audienceOf(roles: RoleName[] | null): RoleName[] {
   return roles === null ? [...ALL_ROLES] : roles;
 }
 
+/**
+ * Whether a school user can reach this route at all.
+ *
+ * Platform routes cannot be reached by any school account, whatever role it
+ * holds — they belong to the super-admin console and authenticate separately.
+ * Counting them as reachable was the bug that made every figure on this
+ * screen too large.
+ */
+export function reachableBySchoolUser(route: RouteCapability): boolean {
+  return !route.isPlatform;
+}
+
 /** How that audience reads on a screen. */
-export function describeAudience(roles: RoleName[] | null): string {
+export function describeAudience(roles: RoleName[] | null, route?: RouteCapability): string {
+  if (route?.isPlatform) return "Super Admin console only";
+  if (route?.isPublic) return "Anyone, without signing in";
   if (roles === null) return "Everyone signed in";
   if (roles.length === 0) return "Nobody";
   if (roles.length === ALL_ROLES.length) return "Everyone signed in";
@@ -42,6 +72,7 @@ export function describeAudience(roles: RoleName[] | null): string {
 
 /** Can this role reach this route? */
 export function roleCanReach(route: RouteCapability, role: RoleName): boolean {
+  if (!reachableBySchoolUser(route)) return false;
   return audienceOf(route.roles).includes(role);
 }
 
@@ -63,8 +94,10 @@ export interface AreaSummary {
   routes: RouteCapability[];
   /** Roles that can reach at least one route in this area. */
   reachedBy: RoleName[];
-  /** Routes here that carry no @Roles at all. */
+  /** Routes here that carry no @Roles at all, reachable by any signed-in person. */
   openRoutes: number;
+  /** Routes here reachable without signing in at all. */
+  publicRoutes: number;
   modules: string[];
 }
 
@@ -87,7 +120,9 @@ export function groupByArea(routes: RouteCapability[]): AreaSummary[] {
       area,
       routes: [...list].sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method)),
       reachedBy: ALL_ROLES.filter((role) => list.some((route) => roleCanReach(route, role))),
-      openRoutes: list.filter((route) => route.roles === null).length,
+      openRoutes: list.filter((route) => route.roles === null && !route.isPublic && !route.isPlatform)
+        .length,
+      publicRoutes: list.filter((route) => route.isPublic).length,
       modules: [...new Set(list.map((route) => route.module).filter((m): m is string => m !== null))].sort(),
     }))
     .sort((a, b) => a.area.localeCompare(b.area));

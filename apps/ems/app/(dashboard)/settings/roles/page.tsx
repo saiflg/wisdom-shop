@@ -22,6 +22,10 @@ interface RouteCapability {
   /** Null means no @Roles at all — reachable by everyone signed in. */
   roles: RoleName[] | null;
   module: string | null;
+  /** Reachable without signing in at all — a webhook, the login page. */
+  isPublic: boolean;
+  /** Belongs to the Super Admin console, which authenticates separately. */
+  isPlatform: boolean;
 }
 
 interface AreaSummary {
@@ -29,6 +33,7 @@ interface AreaSummary {
   routes: RouteCapability[];
   reachedBy: RoleName[];
   openRoutes: number;
+  publicRoutes: number;
   modules: string[];
 }
 
@@ -37,6 +42,8 @@ interface Capabilities {
   counts: Record<RoleName, number>;
   totalRoutes: number;
   openRoutes: number;
+  publicRoutes: number;
+  platformRoutes: number;
 }
 
 function useCapabilities() {
@@ -84,7 +91,9 @@ export default function RolesPage() {
                     {ROLE_LABEL[name]}
                   </p>
                   <p className="mt-1 text-2xl font-bold tabular-nums">{data.counts[name]}</p>
-                  <p className="text-xs text-slate-500">of {data.totalRoutes} endpoints</p>
+                  <p className="text-xs text-slate-500">
+                    of {data.totalRoutes - data.platformRoutes} school endpoints
+                  </p>
                 </div>
               ))}
             </div>
@@ -98,6 +107,24 @@ export default function RolesPage() {
                 {data.openRoutes} endpoint{data.openRoutes === 1 ? " is" : "s are"} open to everyone signed
                 in. Each one is a deliberate decision — mostly things a family needs about their own child,
                 narrowed inside the service rather than by role.
+              </p>
+            )}
+
+            {/* Louder than the line above, because these need no account at
+                all. Reporting them as "everyone signed in" — which this
+                screen did until 28 Aug 2026 — understated them. */}
+            {data.publicRoutes > 0 && (
+              <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                {data.publicRoutes} endpoint{data.publicRoutes === 1 ? " is" : "s are"} reachable{" "}
+                <strong>without signing in</strong> — payment webhooks, the login and invitation pages. These
+                are the ones worth reviewing first.
+              </p>
+            )}
+
+            {data.platformRoutes > 0 && (
+              <p className="mt-2 text-xs text-slate-500">
+                A further {data.platformRoutes} belong to the Super Admin console, which signs in separately.
+                No school account can reach them, so they are left out of the figures above.
               </p>
             )}
           </section>
@@ -150,6 +177,11 @@ function Area({ area, role }: { area: AreaSummary; role: RoleName | "ALL" }) {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {area.publicRoutes > 0 && (
+            <span className="rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white">
+              {area.publicRoutes} need no sign-in
+            </span>
+          )}
           {area.openRoutes > 0 && (
             <span className="rounded-full bg-slate-500 px-2.5 py-1 text-xs font-semibold text-white">
               {area.openRoutes} open to all
@@ -172,12 +204,27 @@ function Area({ area, role }: { area: AreaSummary; role: RoleName | "ALL" }) {
             <li key={`${route.method} ${route.path}`} className="flex flex-wrap items-baseline gap-2 text-xs">
               <span className="w-16 shrink-0 font-mono font-semibold text-slate-500">{route.method}</span>
               <span className="min-w-0 flex-1 truncate font-mono">/{route.path}</span>
-              <span className={route.roles === null ? "text-amber-600" : "text-slate-500"}>
+              <span
+                className={
+                  route.isPublic
+                    ? "font-semibold text-amber-600"
+                    : route.isPlatform
+                      ? "text-slate-400"
+                      : route.roles === null
+                        ? "text-amber-600"
+                        : "text-slate-500"
+                }
+              >
                 {/* Never rendered as "no access": a route with no @Roles is
-                    one everybody can reach. */}
-                {route.roles === null
-                  ? "everyone signed in"
-                  : route.roles.map((name) => ROLE_LABEL[name]).join(", ")}
+                    one everybody can reach. And the two other realms are
+                    named rather than folded into that. */}
+                {route.isPublic
+                  ? "anyone, without signing in"
+                  : route.isPlatform
+                    ? "Super Admin only"
+                    : route.roles === null
+                      ? "everyone signed in"
+                      : route.roles.map((name) => ROLE_LABEL[name]).join(", ")}
               </span>
             </li>
           ))}
