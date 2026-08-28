@@ -25,6 +25,13 @@ export interface RouteCapability {
    * inflated every figure on the page.
    */
   isPlatform: boolean;
+  /**
+   * The guard class names actually attached to this route or its controller.
+   *
+   * Read at runtime rather than inferred: `@Public()` says which guard is
+   * SKIPPED, and says nothing about which ones were added back.
+   */
+  guards: string[];
   summary: string | null;
 }
 
@@ -137,4 +144,76 @@ export function countsByRole(routes: RouteCapability[]): Record<RoleName, number
     }
   }
   return counts;
+}
+
+/**
+ * Guards that demand a credential before the handler runs.
+ *
+ * `@Public()` in this API does NOT mean "anybody may call this". It means
+ * "skip the tenant JwtAuthGuard", and it is routinely paired with a guard
+ * from another realm — the whole Super Admin console is `@Public()` plus
+ * `@UseGuards(PlatformJwtAuthGuard, PlatformRolesGuard)`, and the refresh and
+ * logout routes are `@Public()` plus a guard that requires a refresh token.
+ *
+ * Counting `@Public()` on its own therefore reports 47 routes as reachable by
+ * a stranger when the true figure is 9. That number appeared on this screen,
+ * under a heading a headteacher would read as "how exposed are we". It was
+ * wrong by a factor of five, and wrong in the frightening direction while
+ * individually labelling 38 of those same routes "Super Admin console only"
+ * three inches below.
+ */
+export const AUTHENTICATING_GUARDS = [
+  "PlatformJwtAuthGuard",
+  "PlatformRolesGuard",
+  "PlatformRefreshGuard",
+  "JwtRefreshGuard",
+  "TwoFactorChallengeGuard",
+] as const;
+
+/**
+ * Guards that run on a route without asking who is calling.
+ *
+ * Listed rather than assumed. A rate limiter counts requests and a CSRF check
+ * inspects a header; neither establishes an identity, so neither makes a route
+ * any harder for a stranger to reach.
+ */
+export const NON_AUTHENTICATING_GUARDS = ["LoginThrottlerGuard", "ThrottlerGuard", "CsrfHeaderGuard"] as const;
+
+/**
+ * Whether a stranger with no credential at all can reach this route.
+ *
+ * Unrecognised guards are deliberately NOT given a default. A guard nobody has
+ * classified is a guard nobody has thought about, and guessing either way
+ * writes a number onto a security screen that no one has checked: guess
+ * "authenticating" and a genuinely open route disappears from the count;
+ * guess "open" and the count inflates again exactly as it did before. The
+ * caller is told, and the test below fails until somebody decides.
+ */
+export function classifyGuards(guards: string[]): { authenticates: boolean; unknown: string[] } {
+  const unknown = guards.filter(
+    (guard) =>
+      !(AUTHENTICATING_GUARDS as readonly string[]).includes(guard) &&
+      !(NON_AUTHENTICATING_GUARDS as readonly string[]).includes(guard),
+  );
+
+  const authenticates = guards.some((guard) => (AUTHENTICATING_GUARDS as readonly string[]).includes(guard));
+
+  return { authenticates, unknown };
+}
+
+/**
+ * The honest answer to "could someone who has never signed in call this?".
+ *
+ * Platform routes are excluded even before their guards are read: they belong
+ * to a console with its own login, and a school reading this screen is not
+ * asking about it.
+ */
+export function reachableWithoutSigningIn(route: {
+  isPublic: boolean;
+  isPlatform: boolean;
+  guards: string[];
+}): boolean {
+  if (!route.isPublic) return false;
+  if (route.isPlatform) return false;
+  return !classifyGuards(route.guards).authenticates;
 }

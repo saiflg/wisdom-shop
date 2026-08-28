@@ -4,7 +4,9 @@ import {
   audienceOf,
   countsByRole,
   describeAudience,
+  classifyGuards,
   groupByArea,
+  reachableWithoutSigningIn,
   roleCanReach,
   type RouteCapability,
 } from "./capability-rules";
@@ -16,6 +18,7 @@ const route = (over: Partial<RouteCapability> = {}): RouteCapability => ({
   module: null,
   isPublic: false,
   isPlatform: false,
+  guards: [],
   summary: null,
   ...over,
 });
@@ -182,5 +185,67 @@ describe("the two realms this screen originally confused with 'everyone'", () =>
     const ordinary = route({ roles: null });
     expect(describeAudience(ordinary.roles, ordinary)).toBe("Everyone signed in");
     expect(roleCanReach(ordinary, "GUARDIAN")).toBe(true);
+  });
+});
+
+describe("reachableWithoutSigningIn", () => {
+  it("does not count the Super Admin console as open to strangers", () => {
+    // Every /platform route is @Public() plus the console's own guard stack.
+    // Counting @Public() alone reported 47 routes as reachable by anybody,
+    // where the true figure is 9 — on a screen a headteacher reads as "how
+    // exposed are we", and while labelling those same rows "Super Admin
+    // console only" a few inches below.
+    const consoleRoute = route({
+      isPublic: true,
+      isPlatform: true,
+      guards: ["PlatformJwtAuthGuard", "PlatformRolesGuard"],
+    });
+
+    expect(reachableWithoutSigningIn(consoleRoute)).toBe(false);
+  });
+
+  it("does not count a route that demands a refresh token", () => {
+    const refresh = route({ isPublic: true, guards: ["JwtRefreshGuard", "CsrfHeaderGuard"] });
+
+    expect(reachableWithoutSigningIn(refresh)).toBe(false);
+  });
+
+  it("still counts login, which a rate limiter does not close", () => {
+    // A throttler counts requests; it never asks who is calling. A route with
+    // only a limiter on it is exactly as reachable by a stranger as one with
+    // nothing, and the screen must keep saying so.
+    const login = route({ isPublic: true, guards: ["LoginThrottlerGuard"] });
+
+    expect(reachableWithoutSigningIn(login)).toBe(true);
+  });
+
+  it("counts a genuinely bare public route", () => {
+    expect(reachableWithoutSigningIn(route({ isPublic: true, guards: [] }))).toBe(true);
+  });
+
+  it("does not count anything that is not public in the first place", () => {
+    expect(reachableWithoutSigningIn(route({ isPublic: false, guards: [] }))).toBe(false);
+  });
+});
+
+describe("classifyGuards", () => {
+  it("reports a guard nobody has classified rather than guessing", () => {
+    /*
+     * Deliberately not defaulted either way. Guessing "authenticating" hides
+     * a genuinely open route from the count; guessing "open" inflates it back
+     * to the 47 this replaced. Both write a number onto a security screen
+     * that no one has checked.
+     */
+    const { authenticates, unknown } = classifyGuards(["SomeNewGuard"]);
+
+    expect(unknown).toEqual(["SomeNewGuard"]);
+    expect(authenticates).toBe(false);
+  });
+
+  it("is satisfied when every guard is accounted for", () => {
+    expect(classifyGuards(["PlatformJwtAuthGuard", "CsrfHeaderGuard"])).toEqual({
+      authenticates: true,
+      unknown: [],
+    });
   });
 });

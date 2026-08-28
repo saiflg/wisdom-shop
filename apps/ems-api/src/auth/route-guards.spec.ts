@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { classifyGuards } from "@/roles/capability-rules";
 
 /**
  * Every route with no role guard, held to an explicit list.
@@ -286,6 +287,40 @@ describe("every route is guarded, or listed as deliberately open", () => {
     // discount a bill. Only the two family-facing reads may be open.
     const feesOpen = found.filter((r) => r.file === "fees/fees.controller.ts").map((r) => r.key);
     expect(feesOpen).toEqual([]);
+  });
+
+  it("has an opinion about every guard the API actually uses", () => {
+    /*
+     * The Roles screen answers "could a stranger reach this" by reading the
+     * guards attached to a route and deciding whether any of them asks who is
+     * calling. That decision is a written list, not an inference, because
+     * @Public() records which guard is SKIPPED and says nothing about which
+     * were added back.
+     *
+     * A list like that rots the moment somebody writes a new guard. The number
+     * on the screen would go on looking authoritative while quietly meaning
+     * something else — which is the entire failure mode of this page's
+     * history. So the list is checked against what is really in the tree.
+     *
+     * If this fails, add the new guard to AUTHENTICATING_GUARDS if it demands
+     * a credential, or NON_AUTHENTICATING_GUARDS if it does not.
+     */
+    const used = new Set<string>();
+    for (const file of controllers(SRC)) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/@UseGuards\(([^)]*)\)/g)) {
+        for (const name of (match[1] ?? "").split(",")) {
+          const trimmed = name.trim();
+          if (trimmed) used.add(trimmed);
+        }
+      }
+    }
+
+    // Sanity: if the scan finds nothing, this test proves nothing.
+    expect(used.size).toBeGreaterThan(0);
+
+    const { unknown } = classifyGuards([...used]);
+    expect(unknown).toEqual([]);
   });
 
   it("tells two controllers in one file apart", () => {

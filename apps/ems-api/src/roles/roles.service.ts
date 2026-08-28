@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { PATH_METADATA, METHOD_METADATA } from "@nestjs/common/constants";
+import { PATH_METADATA, METHOD_METADATA, GUARDS_METADATA } from "@nestjs/common/constants";
 import { DiscoveryService, MetadataScanner, Reflector } from "@nestjs/core";
 import { RequestMethod } from "@nestjs/common";
 import { ROLES_KEY } from "@/auth/decorators/roles.decorator";
@@ -9,6 +9,7 @@ import { REQUIRES_MODULE_KEY } from "@/schools/decorators/requires-module.decora
 import {
   countsByRole,
   groupByArea,
+  reachableWithoutSigningIn,
   type RoleName,
   type RouteCapability,
 } from "./capability-rules";
@@ -87,6 +88,24 @@ export class RolesService {
         const isPlatform =
           this.reflector.getAllAndOverride<string[]>(PLATFORM_ROLES_KEY, [handler, metatype]) !== undefined;
 
+        /*
+         * The guards actually attached, read from Nest's own metadata.
+         *
+         * @Public() records which guard is SKIPPED and says nothing about
+         * which were added back, so it cannot answer "can a stranger reach
+         * this" on its own. Every /platform route is @Public() plus the
+         * console's guard stack; refresh and logout are @Public() plus a
+         * guard that demands a refresh token.
+         */
+        const guards = [
+          ...(this.reflector.get<unknown[]>(GUARDS_METADATA, handler) ?? []),
+          ...(this.reflector.get<unknown[]>(GUARDS_METADATA, metatype) ?? []),
+        ].map((guard) =>
+          typeof guard === "function"
+            ? guard.name
+            : ((guard as { constructor?: { name?: string } })?.constructor?.name ?? ""),
+        );
+
         routes.push({
           method: METHOD_NAMES[verb] ?? "GET",
           path: [controllerPath, methodPath].filter(Boolean).join("/").replace(/\/+/g, "/"),
@@ -94,6 +113,7 @@ export class RolesService {
           module,
           isPublic,
           isPlatform,
+          guards,
           summary: null,
         });
       }
@@ -108,7 +128,12 @@ export class RolesService {
       // Counted separately so the headline figures describe what a school
       // account can actually reach.
       platformRoutes: routes.filter((route) => route.isPlatform).length,
-      publicRoutes: routes.filter((route) => route.isPublic).length,
+      // NOT `isPublic` on its own. That counted the whole Super Admin console
+      // and every refresh route as reachable by a stranger — 47 where the
+      // true figure is 9 — on a screen a headteacher reads as "how exposed
+      // are we", while labelling those same routes "Super Admin console only"
+      // in the list underneath.
+      publicRoutes: routes.filter((route) => reachableWithoutSigningIn(route)).length,
       // Surfaced at the top rather than left to be counted: routes with no
       // @Roles are reachable by every signed-in person, and an administrator
       // reading this page should not have to add them up themselves.
