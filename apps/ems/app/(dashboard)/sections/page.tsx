@@ -149,6 +149,7 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
   const update = useUpdateSection(section.id);
   const remove = useDeleteSection();
   const [name, setName] = useState(section.name);
+  const [description, setDescription] = useState(section.description ?? "");
   const [chosen, setChosen] = useState<string[] | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -167,7 +168,18 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
   const save = async () => {
     setNote(null);
     try {
-      if (name.trim() && name.trim() !== section.name) await update.mutateAsync({ name: name.trim() });
+      // Sent together when either has changed. Editing one field at a time
+      // was the original mistake here: a description typed wrongly could not
+      // be corrected at all, so the only remedy was deleting the section and
+      // starting again — which takes its classes with it.
+      const renamed = name.trim() && name.trim() !== section.name;
+      const redescribed = description.trim() !== (section.description ?? "");
+      if (renamed || redescribed) {
+        await update.mutateAsync({
+          ...(renamed ? { name: name.trim() } : {}),
+          ...(redescribed ? { description: description.trim() } : {}),
+        });
+      }
       await assign.mutateAsync(current);
       onDone();
     } catch (err) {
@@ -199,6 +211,23 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
           onChange={(event) => setName(event.target.value)}
           maxLength={80}
           className="mt-1 w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+        />
+      </div>
+
+      <div>
+        <label
+          className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+          htmlFor={`section-description-${section.id}`}
+        >
+          What this section covers
+        </label>
+        <input
+          id={`section-description-${section.id}`}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          maxLength={300}
+          placeholder="Nursery 1 through Grade 6 (optional)"
+          className="mt-1 w-full max-w-xl rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </div>
 
