@@ -219,8 +219,28 @@ function unguardedRoutes(): Route[] {
       const match = /^\s*@(Get|Post|Patch|Put|Delete)\(/.exec(line);
       if (!match || classGuarded || !className) continue;
 
-      const around = lines.slice(Math.max(0, i - 4), i + 6).join("\n");
-      if (/@Roles\(|@PlatformRoles\(|@Public\(\)/.test(around)) continue;
+      /*
+       * The route's own decorator run: what stands above it (already in
+       * `pending`) plus what follows it, down to the method signature.
+       *
+       * This replaced a fixed window of four lines up and six down. A window
+       * is a guess about formatting, and it guessed wrong the moment a
+       * three-line comment was added above a @Post — the @Public() slid out
+       * of range and a documented route reported itself unguarded. That
+       * direction fails loudly, but the same window can as easily reach INTO
+       * the next route and find a guard that does not apply to this one,
+       * which does not.
+       */
+      const below: string[] = [];
+      for (let j = i + 1; j < lines.length; j++) {
+        const next = (lines[j] ?? "").trim();
+        if (next.startsWith("@")) below.push(next);
+        else if (next === "" || next.startsWith("//") || next.startsWith("*") || next.startsWith("/*")) continue;
+        else break;
+      }
+
+      const own = [...pending, lines[i] ?? "", ...below].join("\n");
+      if (/@Roles\(|@PlatformRoles\(|@Public\(\)/.test(own)) continue;
 
       const route = /\("([^"]*)"\)/.exec(line)?.[1] ?? "/";
       routes.push({
