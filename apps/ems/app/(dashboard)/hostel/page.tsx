@@ -188,7 +188,8 @@ function BlockCard({ block }: { block: HostelBlock }) {
           <p className="text-xs text-slate-500">
             {block.wardenName ? `Warden ${block.wardenName} · ` : ""}
             {block.occupancy.occupied} of {block.occupancy.beds} beds taken
-            {block.occupancy.emptyRooms > 0 && ` · ${block.occupancy.emptyRooms} empty rooms`}
+            {block.occupancy.emptyRooms > 0 &&
+              ` · ${block.occupancy.emptyRooms} empty room${block.occupancy.emptyRooms === 1 ? "" : "s"}`}
           </p>
         </div>
         {/* Called out, because somebody in that room has nowhere to sleep. */}
