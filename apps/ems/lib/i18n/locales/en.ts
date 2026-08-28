@@ -151,8 +151,7 @@ export const en = {
   "nav.messaging.sms": "SMS",
   "nav.messaging.whatsapp": "WhatsApp Business",
   "nav.messaging.push": "Push notifications",
-  "nav.messaging.announcements": "Announcements",
-  "nav.messaging.newsletters": "Newsletters",
+  "nav.messaging.announcements": "Announcements and newsletters",
 
   // ── Navigation: Settings ───────────────────────────────────────────
   "nav.settings.schoolProfile": "School profile",

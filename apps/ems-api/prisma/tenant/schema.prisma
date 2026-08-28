@@ -1806,12 +1806,25 @@ model Announcement {
   reached Int @default(0)
   skipped Int @default(0)
 
-  sentAt    DateTime @default(now())
-  createdAt DateTime @default(now())
+  /// DRAFT or SENT.
+  ///
+  /// A draft is a notice somebody has started and not sent — the thing the
+  /// "Newsletters" menu item was really asking for. Defaults to SENT, which
+  /// is what every row written before drafts existed was: this feature was
+  /// added after announcements had been going out for months, and calling
+  /// those drafts would have unsent them.
+  status String @default("SENT")
+
+  /// Null while it is a draft. Nullable rather than defaulting to now,
+  /// because "written on Monday" and "sent on Monday" are different facts
+  /// and a draft has only the first.
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
 
   messages Message[]
 
   @@index([sentAt])
+  @@index([status])
   @@map("announcements")
 }
 

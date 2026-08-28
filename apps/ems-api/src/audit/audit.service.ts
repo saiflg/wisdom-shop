@@ -76,7 +76,20 @@ export class AuditService {
         take,
         where: { OR: [{ approvedAt: { not: null } }, { paidAt: { not: null } }] },
       }),
-      client.announcement.findMany({ orderBy: { sentAt: "desc" }, take, where: window ? { sentAt: window } : {} }),
+      /*
+       * Sent announcements only.
+       *
+       * Drafts live in this table too, and a draft is not something that
+       * happened — it is something somebody is still writing. An audit trail
+       * that listed it would be reporting an event to an inspector that no
+       * family ever received. The compiler found this when sentAt became
+       * nullable; the filter is the fix, not a cast.
+       */
+      client.announcement.findMany({
+        orderBy: { sentAt: "desc" },
+        take,
+        where: { status: "SENT", ...(window ? { sentAt: window } : {}) },
+      }),
       client.guardianInvitation.findMany({
         orderBy: { createdAt: "desc" },
         take,
@@ -159,7 +172,9 @@ export class AuditService {
 
       announcements.map((row) => ({
         id: `announcement:${row.id}`,
-        at: row.sentAt,
+        // Non-null by the status filter above: a SENT announcement always has
+        // a send date, and the database enforces that pairing as a CHECK.
+        at: row.sentAt!,
         ...actorOf(row.sentByName, row.sentByUserId),
         category: "COMMUNICATION" as AuditCategory,
         summary: announcementSummary(row.title, row.audience, row.reached),

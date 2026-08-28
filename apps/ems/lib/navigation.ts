@@ -275,8 +275,15 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.messaging.whatsapp", href: "/settings/communication", roles: ADMIN_ONLY },
       { key: "nav.messaging.push", href: "/settings/communication", roles: ADMIN_ONLY },
       // Admin-only: it reaches every family in the school at once.
+      //
+      // Newsletters used to sit below this as its own item. It is the same
+      // screen: a newsletter is an announcement written in advance, and what
+      // was actually missing was the ability to save one as a draft rather
+      // than a second sender with its own audience rules to drift out of step.
+      // Drafts now live here, and a second menu item pointing at the same page
+      // would teach people there are two procedures when there is one — the
+      // same reasoning that folded Graduation into Promotion.
       { key: "nav.messaging.announcements", href: "/messaging/announcements", roles: ADMIN_ONLY },
-      { key: "nav.messaging.newsletters", roles: STAFF },
     ],
   },
   {

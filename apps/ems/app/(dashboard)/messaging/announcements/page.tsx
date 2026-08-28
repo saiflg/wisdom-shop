@@ -6,9 +6,12 @@ import { useClasses } from "@/lib/use-classes";
 import {
   AUDIENCES,
   useAnnouncements,
+  useDiscardDraft,
   usePreviewAnnouncement,
   useSendAnnouncement,
+  useSendDraft,
   type AnnouncementPreview,
+  type SentAnnouncement,
 } from "@/lib/use-announcements";
 
 /**
@@ -231,33 +234,145 @@ export default function AnnouncementsPage() {
       </div>
 
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Already sent</h2>
+        {/* Drafts sit above the history because they are the only rows here
+            that still need something doing. The API orders them this way; the
+            screen does not re-sort. */}
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Drafts and what has been sent
+        </h2>
         {(sent?.length ?? 0) === 0 ? (
           <p className="mt-2 text-sm text-slate-500">Nothing announced yet.</p>
         ) : (
           <ul className="mt-2 space-y-2">
             {sent?.map((announcement) => (
-              <li key={announcement.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+              <li
+                key={announcement.id}
+                className={`rounded-xl border p-4 ${
+                  announcement.status === "DRAFT"
+                    ? "border-amber-300 dark:border-amber-900"
+                    : "border-slate-200 dark:border-slate-800"
+                }`}
+              >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-semibold">{announcement.title}</p>
+                  <p className="font-semibold">
+                    {announcement.title}
+                    {announcement.status === "DRAFT" && (
+                      <span className="ml-2 text-xs font-normal text-amber-600">draft — not sent</span>
+                    )}
+                  </p>
                   <p className="text-xs text-slate-500">
-                    {new Date(announcement.sentAt).toLocaleString()}
+                    {/* A draft has no send date, and inventing one would make
+                        it read as sent in the one place people look. */}
+                    {announcement.sentAt
+                      ? new Date(announcement.sentAt).toLocaleString()
+                      : "not sent yet"}
                     {announcement.sentByName ? ` · ${announcement.sentByName}` : ""}
                   </p>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-400">
-                  {announcement.body}
+                  {announcement.body || <span className="italic text-slate-400">Nothing written yet.</span>}
                 </p>
-                <p className="mt-1.5 text-xs text-slate-500">
-                  {announcement.audienceLabel} · {announcement.channels.join(" and ").toLowerCase()} ·{" "}
-                  reached {announcement.reached}
-                  {announcement.skipped > 0 ? `, ${announcement.skipped} skipped` : ""}
-                </p>
+                {announcement.status === "SENT" ? (
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    {announcement.audienceLabel} · {announcement.channels.join(" and ").toLowerCase()} ·{" "}
+                    reached {announcement.reached}
+                    {announcement.skipped > 0 ? `, ${announcement.skipped} skipped` : ""}
+                  </p>
+                ) : (
+                  <DraftActions announcement={announcement} />
+                )}
               </li>
             ))}
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+/**
+ * What can be done with a draft.
+ *
+ * Send goes through the same path as any announcement, so a draft that was
+ * written weeks ago is checked against the school roll as it stands today —
+ * not as it stood when somebody started writing.
+ */
+function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
+  const send = useSendDraft(announcement.id);
+  const discard = useDiscardDraft();
+  const [note, setNote] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  const ready = Boolean(announcement.body?.trim() && announcement.audience && announcement.channels.length);
+
+  const doSend = async () => {
+    setNote(null);
+    try {
+      const result = await send.mutateAsync();
+      setNote(`Sent to ${result.reached}.`);
+    } catch (err) {
+      setNote(errorMessage(err, "Could not send that draft"));
+    }
+  };
+
+  return (
+    <div className="mt-2 space-y-2">
+      {!ready && (
+        // Said before the button is pressed rather than as an error after.
+        <p className="text-xs text-slate-500">
+          Still needs {[
+            announcement.body?.trim() ? null : "something written",
+            announcement.audience ? null : "an audience",
+            announcement.channels.length ? null : "a way to send it",
+          ]
+            .filter(Boolean)
+            .join(", ")}
+          .
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {/* Two presses to send. This reaches every family in the school at
+            once, and a draft sitting in a list is exactly the thing somebody
+            clicks by accident while scrolling. */}
+        {confirming ? (
+          <>
+            <button
+              type="button"
+              onClick={doSend}
+              disabled={send.isPending}
+              className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {send.isPending ? "Sending…" : "Yes, send it now"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            disabled={!ready}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-40 dark:border-slate-700"
+          >
+            Send this
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => discard.mutateAsync(announcement.id)}
+          disabled={discard.isPending}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 disabled:opacity-50 dark:border-slate-700"
+        >
+          Discard
+        </button>
+      </div>
+      {note && <p className="text-xs text-slate-600 dark:text-slate-400">{note}</p>}
     </div>
   );
 }
