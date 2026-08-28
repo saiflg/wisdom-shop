@@ -454,6 +454,7 @@ model StudentProfile {
   behaviourRecords  BehaviourRecord[]
   libraryLoans      LibraryLoan[]
   transportRides    TransportAssignment[]
+  hostelBeds        HostelAllocation[]
   marks             Mark[]
   termResults       TermResult[]
   messages          Message[]
@@ -2541,6 +2542,77 @@ model LibraryLoan {
   /// The common question is "what is still out", and it is asked constantly.
   @@index([returnedOn])
   @@map("library_loans")
+}
+
+/// A boarding house.
+model HostelBlock {
+  id         String  @id @default(cuid())
+  name       String
+  wardenName String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  rooms HostelRoom[]
+
+  @@map("hostel_blocks")
+}
+
+/// A room, and how many beds are in it.
+model HostelRoom {
+  id      String      @id @default(cuid())
+  blockId String
+  block   HostelBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  name String
+  /// Beds can be edited down while children are still in the room. That is a
+  /// real situation a school gets into, so it is reported as overfull rather
+  /// than made impossible — silently clamping it would hide that somebody has
+  /// nowhere to sleep.
+  beds Int @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  allocations HostelAllocation[]
+
+  @@index([blockId])
+  @@map("hostel_rooms")
+}
+
+/// One child in one bed, for a stretch of nights.
+///
+/// Kept as history rather than a current-room pointer on the student: "who
+/// slept where in March" is a question a boarding school genuinely has to
+/// answer, and a pointer overwritten at each move cannot answer it.
+model HostelAllocation {
+  id     String     @id @default(cuid())
+  roomId String
+  room   HostelRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  /// Date only, UTC midnight — a bed is taken for nights, not moments.
+  allocatedOn DateTime
+  releasedOn  DateTime?
+
+  /// By value, like every other actor here.
+  allocatedByUserId String
+  allocatedByName   String
+
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId])
+  @@index([studentProfileId])
+  /// "Who is in a bed tonight" is the question asked constantly.
+  @@index([releasedOn])
+  @@map("hostel_allocations")
 }
 
 enum TransportDirection {

@@ -90,7 +90,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "nav.students.academicRecords", href: "/results", roles: STAFF, module: "GRADING" },
       { key: "nav.students.behaviour", href: "/behaviour" },
       { key: "nav.students.medical" },
-      { key: "nav.students.hostel" },
+      { key: "nav.students.hostel", href: "/hostel" },
       { key: "nav.students.transport", href: "/transport" },
       { key: "nav.students.library", href: "/library" },
       { key: "nav.students.documents" },
