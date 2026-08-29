@@ -339,7 +339,7 @@ function RouteDetail({ route }: { route: Route }) {
             <li key={assignment.id} className="flex items-center justify-between gap-2 py-2">
               <span className="min-w-0 truncate text-sm">
                 {assignment.studentProfile.user.firstName} {assignment.studentProfile.user.lastName}
-                <span className="ml-2 text-xs text-slate-500">
+                <span className="ms-2 text-xs text-slate-500">
                   {DIRECTION_LABEL[assignment.direction]}
                   {assignment.stop && ` · ${assignment.stop.name}`}
                 </span>

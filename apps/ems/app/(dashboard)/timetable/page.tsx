@@ -311,7 +311,7 @@ function WeekGrid({
     <section className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
       <table className="w-full min-w-[46rem] text-sm">
         <thead>
-          <tr className="border-b border-slate-200 text-left dark:border-slate-800">
+          <tr className="border-b border-slate-200 text-start dark:border-slate-800">
             <th className="p-3 font-medium text-slate-500">{t("timetable.periods")}</th>
             {WEEKDAYS.map((day) => (
               <th key={day} className="p-3 font-medium">
@@ -347,7 +347,7 @@ function WeekGrid({
                       type="button"
                       onClick={() => setEditing({ weekday: day, period })}
                       className={clsx(
-                        "w-full rounded-lg border p-2 text-left transition",
+                        "w-full rounded-lg border p-2 text-start transition",
                         entry
                           ? "border-brand-300 bg-brand-50 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/30"
                           : "border-dashed border-slate-300 text-slate-400 hover:border-slate-400 dark:border-slate-700",

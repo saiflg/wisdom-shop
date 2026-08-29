@@ -140,7 +140,7 @@ function BookRow({ book, isStaff }: { book: LibraryBook; isStaff: boolean }) {
         <div className="flex shrink-0 items-center gap-3">
           <span className="text-xs tabular-nums text-slate-500">
             {book.availableCopies} of {book.copies} in
-            {book.overdueLoans > 0 && <span className="ml-1 text-red-600">· {book.overdueLoans} late</span>}
+            {book.overdueLoans > 0 && <span className="ms-1 text-red-600">· {book.overdueLoans} late</span>}
           </span>
           {isStaff && (
             <button

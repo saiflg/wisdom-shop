@@ -157,7 +157,7 @@ function AppraisalCard({ appraisal }: { appraisal: Appraisal }) {
             {appraisal.subject
               ? `${appraisal.subject.firstName} ${appraisal.subject.lastName}`
               : "This appraisal"}
-            <span className="ml-2 text-sm font-normal text-slate-500">{appraisal.periodLabel}</span>
+            <span className="ms-2 text-sm font-normal text-slate-500">{appraisal.periodLabel}</span>
           </p>
           <p className="mt-0.5 text-xs text-slate-500">
             Reviewer {appraisal.reviewerName}

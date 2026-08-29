@@ -96,7 +96,7 @@ export function DataExchangeBar({ entity, children }: { entity: string; children
   return (
     <section className="rounded-2xl border border-slate-200 dark:border-slate-800">
       <div className="flex flex-wrap items-center gap-2 p-3">
-        <span className="mr-1 text-sm font-medium text-slate-600 dark:text-slate-400">
+        <span className="me-1 text-sm font-medium text-slate-600 dark:text-slate-400">
           {t("data.barTitle")}
         </span>
 
@@ -127,7 +127,7 @@ export function DataExchangeBar({ entity, children }: { entity: string; children
             hundred and adding one belong in the same toolbar, and the one
             people reach for most often should be the one that reads as
             primary. */}
-        {children && <div className="ml-auto flex flex-wrap items-center gap-2">{children}</div>}
+        {children && <div className="ms-auto flex flex-wrap items-center gap-2">{children}</div>}
       </div>
 
       {open && (
@@ -153,7 +153,7 @@ export function DataExchangeBar({ entity, children }: { entity: string; children
               setFile(chosen);
               if (chosen) void runPreview(chosen);
             }}
-            className="block w-full text-sm file:mr-3 file:rounded-full file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold dark:file:bg-slate-800"
+            className="block w-full text-sm file:me-3 file:rounded-full file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold dark:file:bg-slate-800"
           />
           <p className="text-xs text-slate-500">{t("data.uploadHint")}</p>
 
@@ -208,7 +208,7 @@ function Menu({
                 setOpen(false);
                 onPick(format);
               }}
-              className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="block w-full px-3 py-2 text-start text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               {format === "xlsx" ? "Excel (.xlsx)" : "CSV (.csv)"}
             </button>

@@ -75,11 +75,11 @@ export default function TaxRegisterPage() {
             <>
               <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-left dark:bg-slate-900">
+                  <thead className="bg-slate-50 text-start dark:bg-slate-900">
                     <tr>
                       <th className="px-3 py-2 font-medium">S/N</th>
                       <th className="px-3 py-2 font-medium">Name</th>
-                      <th className="px-3 py-2 text-right font-medium">Tax/month</th>
+                      <th className="px-3 py-2 text-end font-medium">Tax/month</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -87,7 +87,7 @@ export default function TaxRegisterPage() {
                       <tr key={row.staffProfileId} className="border-t border-slate-100 dark:border-slate-800">
                         <td className="px-3 py-2 text-slate-500">{row.serial}</td>
                         <td className="px-3 py-2">{row.staffName}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{money(row.taxCents)}</td>
+                        <td className="px-3 py-2 text-end tabular-nums">{money(row.taxCents)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -96,7 +96,7 @@ export default function TaxRegisterPage() {
                       <td className="px-3 py-2" colSpan={2}>
                         Total to remit
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">{money(data.register.totalCents)}</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{money(data.register.totalCents)}</td>
                     </tr>
                   </tfoot>
                 </table>

@@ -1,9 +1,12 @@
 import { en, type Dictionary, type TranslationKey } from "./locales/en";
 import { fr } from "./locales/fr";
+import { ar } from "./locales/ar";
+import { ha } from "./locales/ha";
+import { tr } from "./locales/tr";
 
 export type { Dictionary, TranslationKey };
 
-export const LOCALES = ["en", "fr"] as const;
+export const LOCALES = ["en", "ar", "fr", "ha", "tr"] as const;
 export type Locale = (typeof LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = "en";
@@ -11,10 +14,35 @@ export const DEFAULT_LOCALE: Locale = "en";
 /** Endonyms — a language list is far more usable in its own language. */
 export const LOCALE_LABELS: Record<Locale, string> = {
   en: "English",
+  ar: "العربية",
   fr: "Français",
+  ha: "Hausa",
+  tr: "Türkçe",
 };
 
-const DICTIONARIES: Record<Locale, Partial<Dictionary>> = { en, fr };
+/**
+ * Which way each language runs.
+ *
+ * Not derived from the locale code: there is no reliable rule, and guessing
+ * would put a whole console backwards. `Intl.Locale.prototype.getTextInfo`
+ * knows, but it is not in every browser this app supports, so the answer is
+ * written down.
+ */
+export type Direction = "ltr" | "rtl";
+
+export const LOCALE_DIRECTION: Record<Locale, Direction> = {
+  en: "ltr",
+  ar: "rtl",
+  fr: "ltr",
+  ha: "ltr",
+  tr: "ltr",
+};
+
+export function directionOf(locale: Locale): Direction {
+  return LOCALE_DIRECTION[locale] ?? "ltr";
+}
+
+const DICTIONARIES: Record<Locale, Partial<Dictionary>> = { en, ar, fr, ha, tr };
 
 /** English is the fallback, so it is complete by definition. */
 export function isComplete(locale: Locale): boolean {

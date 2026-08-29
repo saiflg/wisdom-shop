@@ -49,7 +49,7 @@ export default function ComingSoonPage() {
         {ROADMAP.map((item) => (
           <div
             key={item.title}
-            className="rounded-2xl border border-slate-200 p-5 text-left dark:border-slate-800"
+            className="rounded-2xl border border-slate-200 p-5 text-start dark:border-slate-800"
           >
             <h2 className="font-semibold">{item.title}</h2>
             <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">{item.description}</p>

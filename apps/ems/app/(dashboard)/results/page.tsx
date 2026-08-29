@@ -136,7 +136,7 @@ export default function ResultsPage() {
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <div className="text-right">
+                <div className="text-end">
                   <p className="text-sm text-slate-500">{t("grading.results.overall")}</p>
                   <p className="font-semibold tabular-nums">{formatPercent(result.overallPercentHundredths)}</p>
                 </div>
@@ -157,7 +157,7 @@ export default function ResultsPage() {
                   <span>{subject.subject?.name}</span>
                   <span className="tabular-nums">
                     {formatPercent(subject.percentHundredths)}
-                    <span className="ml-2 font-semibold">{subject.gradeLabel}</span>
+                    <span className="ms-2 font-semibold">{subject.gradeLabel}</span>
                   </span>
                 </li>
               ))}

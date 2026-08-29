@@ -231,12 +231,12 @@ export default function MyPage() {
                 <li key={result.id} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                   <span>
                     <span className="font-medium">{result.term}</span>
-                    <span className="ml-1 text-slate-500">{result.academicYear}</span>
-                    {result.className && <span className="ml-1 text-slate-500">· {result.className}</span>}
+                    <span className="ms-1 text-slate-500">{result.academicYear}</span>
+                    {result.className && <span className="ms-1 text-slate-500">· {result.className}</span>}
                   </span>
                   <span className="tabular-nums">
                     {(result.overallPercent / 100).toFixed(2)}%
-                    {result.grade && <span className="ml-2 font-semibold">{result.grade}</span>}
+                    {result.grade && <span className="ms-2 font-semibold">{result.grade}</span>}
                   </span>
                 </li>
               ))}
@@ -261,7 +261,7 @@ export default function MyPage() {
               {homework?.recentlyMarked.map((mark) => (
                 <li key={mark.assignmentId} className="text-sm">
                   <span className="font-medium">{mark.title}</span>
-                  <span className="ml-2 tabular-nums">
+                  <span className="ms-2 tabular-nums">
                     {toMarks(mark.scoreHundredths)} / {toMarks(mark.maxScoreHundredths)}
                   </span>
                   {mark.feedback && (
@@ -316,9 +316,9 @@ export default function MyPage() {
               <li key={lesson.id} className="flex items-center justify-between gap-3 text-sm">
                 <Link href={`/ai-teacher/${lesson.id}`} className="min-w-0 truncate hover:underline">
                   {lesson.topic}
-                  {lesson.subject ? <span className="ml-2 text-xs text-slate-500">{lesson.subject}</span> : null}
+                  {lesson.subject ? <span className="ms-2 text-xs text-slate-500">{lesson.subject}</span> : null}
                   {lesson.askedAbout ? (
-                    <span className="ml-2 text-xs text-slate-500">· asked about {lesson.askedAbout}</span>
+                    <span className="ms-2 text-xs text-slate-500">· asked about {lesson.askedAbout}</span>
                   ) : null}
                 </Link>
                 <span className="shrink-0 text-xs text-slate-500">
@@ -359,9 +359,9 @@ function HomeworkList({
             <Link href="/homework" className="font-medium hover:underline">
               {item.title}
             </Link>
-            {item.subject && <span className="ml-2 text-xs text-slate-500">{item.subject}</span>}
+            {item.subject && <span className="ms-2 text-xs text-slate-500">{item.subject}</span>}
             {item.dueAt && (
-              <span className="ml-2 text-xs text-slate-500">
+              <span className="ms-2 text-xs text-slate-500">
                 {new Date(item.dueAt).toLocaleDateString()}
               </span>
             )}

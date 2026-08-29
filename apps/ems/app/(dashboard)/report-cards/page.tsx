@@ -81,7 +81,7 @@ export default function ReportCardsPage() {
                 {card.class?.name} · {card.academicYear} · {card.term}
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-end">
               <p className="text-sm text-slate-500">{t("grading.results.overall")}</p>
               <p className="text-2xl font-bold tabular-nums">{formatPercent(card.overallPercentHundredths)}</p>
             </div>
@@ -89,20 +89,20 @@ export default function ReportCardsPage() {
 
           <table className="mt-4 w-full text-sm">
             <thead>
-              <tr className="text-left text-slate-500">
+              <tr className="text-start text-slate-500">
                 <th className="pb-2 font-medium">{t("grading.subject")}</th>
-                <th className="pb-2 text-right font-medium">{t("grading.reportCard.score")}</th>
-                <th className="pb-2 text-right font-medium">{t("grading.results.grade")}</th>
-                <th className="pb-2 text-right font-medium">{t("grading.reportCard.remark")}</th>
+                <th className="pb-2 text-end font-medium">{t("grading.reportCard.score")}</th>
+                <th className="pb-2 text-end font-medium">{t("grading.results.grade")}</th>
+                <th className="pb-2 text-end font-medium">{t("grading.reportCard.remark")}</th>
               </tr>
             </thead>
             <tbody>
               {card.subjects.map((subject) => (
                 <tr key={subject.id} className="border-t border-slate-200 dark:border-slate-800">
                   <td className="py-2">{subject.subject?.name}</td>
-                  <td className="py-2 text-right tabular-nums">{formatPercent(subject.percentHundredths)}</td>
-                  <td className="py-2 text-right font-semibold">{subject.gradeLabel}</td>
-                  <td className="py-2 text-right text-slate-500">{subject.gradeRemark ?? "—"}</td>
+                  <td className="py-2 text-end tabular-nums">{formatPercent(subject.percentHundredths)}</td>
+                  <td className="py-2 text-end font-semibold">{subject.gradeLabel}</td>
+                  <td className="py-2 text-end text-slate-500">{subject.gradeRemark ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

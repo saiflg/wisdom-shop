@@ -96,12 +96,12 @@ export default function TurnoverPage() {
 
               <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-left dark:bg-slate-900">
+                  <thead className="bg-slate-50 text-start dark:bg-slate-900">
                     <tr>
                       <th className="px-3 py-2 font-medium">S/N</th>
                       <th className="px-3 py-2 font-medium">Name</th>
                       <th className="px-3 py-2 font-medium">Role</th>
-                      <th className="px-3 py-2 text-right font-medium">Monthly salary</th>
+                      <th className="px-3 py-2 text-end font-medium">Monthly salary</th>
                       <th className="px-3 py-2 font-medium">Commenced</th>
                       <th className="px-3 py-2 font-medium">Left</th>
                       <th className="px-3 py-2 font-medium">Stayed</th>
@@ -113,7 +113,7 @@ export default function TurnoverPage() {
                         <td className="px-3 py-2 text-slate-500">{row.serial}</td>
                         <td className="px-3 py-2">{row.name}</td>
                         <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{row.jobTitle ?? "—"}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2 text-end tabular-nums">
                           {row.lastMonthlyCents === null ? (
                             <span className="text-slate-400">not known</span>
                           ) : (

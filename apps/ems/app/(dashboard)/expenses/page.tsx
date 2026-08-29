@@ -284,7 +284,7 @@ function ExpenseRow({ expense }: { expense: Expense }) {
         <div className="min-w-0">
           <p className="font-medium">
             {expense.category}
-            <span className="ml-2 tabular-nums text-slate-600 dark:text-slate-400">
+            <span className="ms-2 tabular-nums text-slate-600 dark:text-slate-400">
               {formatAmount(expense.amountCents)}
             </span>
           </p>

@@ -155,7 +155,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
               <li key={question.id} className="flex items-start justify-between gap-3 text-sm">
                 <span>
                   {index + 1}. {question.prompt}
-                  <span className="ml-2 text-xs text-slate-500">
+                  <span className="ms-2 text-xs text-slate-500">
                     {QUESTION_TYPE_LABELS[question.type]} · {marksLabel(question.marksHundredths)}
                   </span>
                 </span>
@@ -215,7 +215,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 />
                 <span className={alreadyOnPaper.has(question.id) ? "text-slate-400" : ""}>
                   {question.prompt}
-                  <span className="ml-2 text-xs text-slate-500">
+                  <span className="ms-2 text-xs text-slate-500">
                     {QUESTION_TYPE_LABELS[question.type]} · {marksLabel(question.marksHundredths)}
                     {alreadyOnPaper.has(question.id) ? " · already on the paper" : ""}
                   </span>
@@ -246,7 +246,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                     {attempt.studentProfile?.user
                       ? `${attempt.studentProfile.user.firstName} ${attempt.studentProfile.user.lastName}`
                       : attempt.studentProfileId}
-                    <span className="ml-2 text-xs text-slate-500">
+                    <span className="ms-2 text-xs text-slate-500">
                       {attempt.status.toLowerCase().replace("_", " ")}
                       {attempt.autoSubmitted ? " · time ran out" : ""}
                       {attempt.needsReview ? " · needs you" : ""}

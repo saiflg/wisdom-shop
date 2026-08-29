@@ -265,14 +265,14 @@ export default function LoansPage() {
       {data && data.rows.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left dark:bg-slate-900">
+            <thead className="bg-slate-50 text-start dark:bg-slate-900">
               <tr>
                 <th className="px-3 py-2 font-medium">Staff</th>
                 <th className="px-3 py-2 font-medium">Reference</th>
-                <th className="px-3 py-2 text-right font-medium">Lent</th>
-                <th className="px-3 py-2 text-right font-medium">Repaid</th>
-                <th className="px-3 py-2 text-right font-medium">Outstanding</th>
-                <th className="px-3 py-2 text-right font-medium">Monthly</th>
+                <th className="px-3 py-2 text-end font-medium">Lent</th>
+                <th className="px-3 py-2 text-end font-medium">Repaid</th>
+                <th className="px-3 py-2 text-end font-medium">Outstanding</th>
+                <th className="px-3 py-2 text-end font-medium">Monthly</th>
                 <th className="px-3 py-2 font-medium">Left</th>
                 <th className="px-3 py-2 font-medium">Status</th>
                 <th className="px-3 py-2" />
@@ -284,16 +284,16 @@ export default function LoansPage() {
                   <td className="px-3 py-2">
                     {row.staffName}
                     {row.kind === "SALARY_ADVANCE" && (
-                      <span className="ml-2 text-xs text-slate-500">advance</span>
+                      <span className="ms-2 text-xs text-slate-500">advance</span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-slate-500">{row.reference}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{money(row.principalCents)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{money(row.repaidCents)}</td>
-                  <td className="px-3 py-2 text-right font-medium tabular-nums">
+                  <td className="px-3 py-2 text-end tabular-nums">{money(row.principalCents)}</td>
+                  <td className="px-3 py-2 text-end tabular-nums">{money(row.repaidCents)}</td>
+                  <td className="px-3 py-2 text-end font-medium tabular-nums">
                     {money(row.outstandingCents)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="px-3 py-2 text-end tabular-nums">
                     {row.monthlyDeductionCents > 0 ? money(row.monthlyDeductionCents) : "—"}
                   </td>
                   <td className="px-3 py-2 text-slate-500">
@@ -313,7 +313,7 @@ export default function LoansPage() {
                       {STATUS_LABEL[row.status]}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-end">
                     {row.status === "ACTIVE" && (
                       <div className="flex justify-end gap-2 whitespace-nowrap">
                         <button
@@ -356,7 +356,7 @@ export default function LoansPage() {
         <div className="space-y-3 rounded-2xl border border-brand-300 p-5 dark:border-brand-800">
           <p className="font-medium">
             Record a payment from {repaying.staffName}
-            <span className="ml-2 text-sm font-normal text-slate-500">
+            <span className="ms-2 text-sm font-normal text-slate-500">
               {money(repaying.outstandingCents)} outstanding
             </span>
           </p>

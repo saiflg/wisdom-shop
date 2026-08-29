@@ -115,7 +115,7 @@ function MessageRow({ message }: { message: OutboxMessage }) {
         <div className="min-w-0">
           <p className="font-medium">
             {t(`messaging.event.${message.event}` as TranslationKey)}
-            <span className="ml-2 text-xs text-slate-500">
+            <span className="ms-2 text-xs text-slate-500">
               {t(`messaging.channel.${message.channel}` as TranslationKey)}
             </span>
           </p>

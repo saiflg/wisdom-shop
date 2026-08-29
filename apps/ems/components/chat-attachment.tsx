@@ -110,7 +110,7 @@ export function ChatAttachmentView({ attachment }: { attachment: ChatAttachment 
     <button
       type="button"
       onClick={() => void download()}
-      className="mt-1.5 flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-left text-xs transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+      className="mt-1.5 flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-start text-xs transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
     >
       <span aria-hidden className="text-base">
         📄

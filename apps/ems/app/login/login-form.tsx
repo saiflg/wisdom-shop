@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,14 +9,28 @@ import { apiFetch } from "@/lib/api";
 import { describeSignInError } from "@/lib/sign-in-errors";
 import { useAuthStore, type SessionUser } from "@/store/auth-store";
 import { FormField } from "@/components/form-field";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
-const loginSchema = z.object({
-  schoolSlug: z.string().min(1, "Enter your school's identifier"),
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
-});
+/*
+ * Built inside the component, not at module scope.
+ *
+ * A schema defined at module load captures whatever language was active when
+ * the file was first imported — which is none, since the provider reads the
+ * stored locale in an effect. The validation messages would then be frozen in
+ * English for the life of the tab, including after somebody switched
+ * language. Rebuilding on `t` costs nothing and keeps the errors in the same
+ * language as the labels above them.
+ */
+function loginSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    schoolSlug: z.string().min(1, t("login.errorSchoolSlug")),
+    email: z.string().email(t("login.errorEmail")),
+    password: z.string().min(1, t("login.errorPassword")),
+  });
+}
 
-type LoginValues = z.infer<typeof loginSchema>;
+type LoginValues = z.infer<ReturnType<typeof loginSchemaFor>>;
 
 /**
  * `schoolKnown` means the page already identified the school — from the
@@ -29,11 +43,13 @@ export function LoginForm({
   schoolKnown = false,
 }: { defaultSchoolSlug?: string; schoolKnown?: boolean } = {}) {
   const router = useRouter();
+  const { t } = useTranslation();
   const setSession = useAuthStore((s) => s.setSession);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const schema = useMemo(() => loginSchemaFor(t), [t]);
   const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(schema),
     defaultValues: { schoolSlug: defaultSchoolSlug },
   });
 
@@ -80,7 +96,7 @@ export function LoginForm({
       router.push(isStaff ? "/dashboard" : "/my");
       router.refresh();
     } catch (error) {
-      setFormError(describeSignInError(error, "Incorrect school, email or password."));
+      setFormError(describeSignInError(error, t("login.errorGeneric")));
     }
   });
 
@@ -90,22 +106,22 @@ export function LoginForm({
         <input type="hidden" {...form.register("schoolSlug")} />
       ) : (
         <FormField
-          label="School identifier"
+          label={t("login.schoolSlug")}
           autoComplete="organization"
-          hint="The identifier your school was given at setup"
+          hint={t("login.schoolSlugHint")}
           error={form.formState.errors.schoolSlug?.message}
           {...form.register("schoolSlug")}
         />
       )}
       <FormField
-        label="Email"
+        label={t("login.email")}
         type="email"
         autoComplete="email"
         error={form.formState.errors.email?.message}
         {...form.register("email")}
       />
       <FormField
-        label="Password"
+        label={t("login.password")}
         type="password"
         autoComplete="current-password"
         error={form.formState.errors.password?.message}
@@ -121,7 +137,7 @@ export function LoginForm({
         disabled={form.formState.isSubmitting}
         className="w-full rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
       >
-        {form.formState.isSubmitting ? "Signing in…" : "Sign in"}
+        {form.formState.isSubmitting ? t("login.submitting") : t("login.submit")}
       </button>
     </form>
   );

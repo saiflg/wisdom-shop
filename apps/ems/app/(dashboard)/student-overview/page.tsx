@@ -168,7 +168,7 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
               {data.loans.map((loan) => (
                 <li key={loan.title} className="text-sm">
                   {loan.title}
-                  <span className={`ml-2 text-xs ${loan.overdue ? "text-red-600" : "text-slate-500"}`}>
+                  <span className={`ms-2 text-xs ${loan.overdue ? "text-red-600" : "text-slate-500"}`}>
                     {loan.overdue ? "overdue" : `due ${new Date(loan.dueOn).toLocaleDateString()}`}
                   </span>
                 </li>

@@ -170,7 +170,7 @@ export default function TranscriptsPage() {
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <p className="font-semibold">
                           {term.academicYear} · {term.term}
-                          {term.className && <span className="ml-2 font-normal text-slate-500">{term.className}</span>}
+                          {term.className && <span className="ms-2 font-normal text-slate-500">{term.className}</span>}
                         </p>
                         <p className="text-sm">
                           <span className="text-slate-500">Overall </span>
@@ -184,7 +184,7 @@ export default function TranscriptsPage() {
                             <span>{subject.subjectName}</span>
                             <span className="shrink-0 tabular-nums">
                               {(subject.percentHundredths / 100).toFixed(2)}%
-                              <span className="ml-2 font-semibold">{subject.gradeLabel}</span>
+                              <span className="ms-2 font-semibold">{subject.gradeLabel}</span>
                             </span>
                           </li>
                         ))}
@@ -212,7 +212,7 @@ export default function TranscriptsPage() {
                             </span>
                             <span className="shrink-0 tabular-nums">
                               {entry.percent}
-                              <span className="ml-2 font-semibold">{entry.gradeLabel}</span>
+                              <span className="ms-2 font-semibold">{entry.gradeLabel}</span>
                             </span>
                           </li>
                         ))}

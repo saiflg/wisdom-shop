@@ -159,8 +159,8 @@ function RecordRow({ record, isStaff }: { record: BehaviourRecord; isStaff: bool
             <span className={merit ? "text-emerald-600" : "text-amber-600"}>
               {merit ? "Merit" : "Concern"}
             </span>
-            <span className="ml-2 text-slate-600 dark:text-slate-400">{record.category}</span>
-            {record.points > 0 && <span className="ml-2 text-xs text-slate-500">{record.points} points</span>}
+            <span className="ms-2 text-slate-600 dark:text-slate-400">{record.category}</span>
+            {record.points > 0 && <span className="ms-2 text-xs text-slate-500">{record.points} points</span>}
           </p>
           <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{record.description}</p>
           <p className="mt-1 text-xs text-slate-500">
@@ -169,7 +169,7 @@ function RecordRow({ record, isStaff }: { record: BehaviourRecord; isStaff: bool
             {/* Said out loud. A record about a child that could be rewritten
                 with no trace would be worth nothing to a family disputing
                 it. */}
-            {wasAmended(record) && <span className="ml-1 italic">· edited</span>}
+            {wasAmended(record) && <span className="ms-1 italic">· edited</span>}
           </p>
         </div>
         {isStaff && isAdmin && (

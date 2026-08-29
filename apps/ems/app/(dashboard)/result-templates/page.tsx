@@ -130,7 +130,7 @@ function NewTemplate() {
                 value={toMarks(row.maxScoreHundredths)}
                 onChange={(event) => setRow(index, { maxScoreHundredths: fromMarks(Number(event.target.value)) })}
                 aria-label={`${row.name} maximum mark`}
-                className="ml-1 w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                className="ms-1 w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
             </label>
             <label className="text-xs text-slate-500">
@@ -142,7 +142,7 @@ function NewTemplate() {
                 value={row.weightPercent}
                 onChange={(event) => setRow(index, { weightPercent: Number(event.target.value) })}
                 aria-label={`${row.name} weight percent`}
-                className="ml-1 w-16 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                className="ms-1 w-16 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
               %
             </label>
@@ -204,7 +204,7 @@ function TemplateRow({ template }: { template: ResultTemplate }) {
         <div className="min-w-0">
           <p className="font-medium">
             {template.name}
-            {template.isDefault && <span className="ml-2 text-xs text-slate-500">· default</span>}
+            {template.isDefault && <span className="ms-2 text-xs text-slate-500">· default</span>}
           </p>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             {template.components

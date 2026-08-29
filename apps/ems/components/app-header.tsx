@@ -88,10 +88,10 @@ export function AppHeader() {
                     setSearch("");
                     router.push(leaf.href as string);
                   }}
-                  className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="block w-full px-3 py-2 text-start text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   {t(asKey(leaf.key))}
-                  <span className="ml-1 text-xs text-slate-500">· {t(asKey(group.key))}</span>
+                  <span className="ms-1 text-xs text-slate-500">· {t(asKey(group.key))}</span>
                 </button>
               </li>
             ))}
@@ -99,7 +99,7 @@ export function AppHeader() {
         )}
       </div>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ms-auto flex items-center gap-1">
         {/* The AI assistant button was permanently disabled — a control that
             can never be pressed is worse than no control, because it reads as
             broken rather than absent. Removed; the AI features that do exist
@@ -131,12 +131,12 @@ export function AppHeader() {
                     setOpenMenu("none");
                   }}
                   className={clsx(
-                    "block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800",
+                    "block w-full px-3 py-2 text-start text-sm hover:bg-slate-100 dark:hover:bg-slate-800",
                     option === locale && "font-semibold text-brand-600 dark:text-brand-400",
                   )}
                 >
                   {LOCALE_LABELS[option]}
-                  {!isComplete(option) && <span className="ml-1 text-xs text-slate-400">(partial)</span>}
+                  {!isComplete(option) && <span className="ms-1 text-xs text-slate-400">(partial)</span>}
                 </button>
               ))}
             </Dropdown>
@@ -158,7 +158,7 @@ export function AppHeader() {
                     setOpenMenu("none");
                   }}
                   className={clsx(
-                    "block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800",
+                    "block w-full px-3 py-2 text-start text-sm hover:bg-slate-100 dark:hover:bg-slate-800",
                     option === theme && "font-semibold text-brand-600 dark:text-brand-400",
                   )}
                 >
@@ -170,7 +170,7 @@ export function AppHeader() {
         </div>
 
         {user && (
-          <span className="ml-2 hidden truncate text-sm font-medium text-slate-700 dark:text-slate-300 sm:inline">
+          <span className="ms-2 hidden truncate text-sm font-medium text-slate-700 dark:text-slate-300 sm:inline">
             {user.schoolSlug}
           </span>
         )}
@@ -192,7 +192,7 @@ export function AppHeader() {
                   clearSession();
                   window.location.href = "/login";
                 }}
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="block w-full px-3 py-2 text-start text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 {t("header.signOut")}
               </button>
@@ -236,7 +236,7 @@ function HeaderButton({
 
 function Dropdown({ children }: { children: React.ReactNode }) {
   return (
-    <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+    <div className="absolute end-0 z-20 mt-1 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-800 dark:bg-slate-900">
       {children}
     </div>
   );

@@ -83,7 +83,7 @@ function TemplateCard({ template }: { template: MessageTemplate }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold">
           {t(`messaging.event.${template.event}` as TranslationKey)}
-          <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+          <span className="ms-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
             {t(`messaging.channel.${template.channel}` as TranslationKey)}
           </span>
         </h2>
@@ -112,7 +112,7 @@ function TemplateCard({ template }: { template: MessageTemplate }) {
         {allowed.map((name) => (
           <code
             key={name}
-            className="mr-1 rounded bg-slate-100 px-1 py-0.5 text-[11px] dark:bg-slate-800"
+            className="me-1 rounded bg-slate-100 px-1 py-0.5 text-[11px] dark:bg-slate-800"
           >{`{{${name}}}`}</code>
         ))}
       </p>
@@ -123,7 +123,7 @@ function TemplateCard({ template }: { template: MessageTemplate }) {
         <p className="mt-2 text-xs text-amber-600">
           {t("messaging.templates.unknown")}:{" "}
           {bad.map((name) => (
-            <code key={name} className="mr-1">{`{{${name}}}`}</code>
+            <code key={name} className="me-1">{`{{${name}}}`}</code>
           ))}
         </p>
       )}

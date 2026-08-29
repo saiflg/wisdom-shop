@@ -58,7 +58,7 @@ export default function ParentMessagesPage() {
                 setOpenId((current) => (current === thread.studentProfileId ? null : thread.studentProfileId))
               }
               aria-expanded={openId === thread.studentProfileId}
-              className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-brand-400 dark:border-slate-800"
+              className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-4 text-start transition hover:border-brand-400 dark:border-slate-800"
             >
               <PersonPhoto userId={thread.studentUserId} name={thread.studentName} size="md" />
               <span className="min-w-0 flex-1">

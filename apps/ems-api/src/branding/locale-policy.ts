@@ -16,17 +16,20 @@
  *
  * The alternative is the API importing the console's translation files,
  * which would make the server depend on the browser bundle to answer a
- * question about a database column. The list is two entries long and adding
- * to it is a deliberate act; a test asserts the shapes match.
+ * question about a database column. Adding to the list is a
+ * deliberate act in both places; a test asserts the shapes match.
  */
-export const SUPPORTED_LOCALES = ["en", "fr"] as const;
+export const SUPPORTED_LOCALES = ["en", "ar", "fr", "ha", "tr"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = "en";
 
 const LOCALE_NAMES: Record<Locale, string> = {
   en: "English",
+  ar: "العربية",
   fr: "Français",
+  ha: "Hausa",
+  tr: "Türkçe",
 };
 
 /** The language's own name, not its English name — a French speaker looks for "Français". */

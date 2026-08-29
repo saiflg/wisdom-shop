@@ -100,7 +100,7 @@ export default function BrandingSettingsPage() {
               ref={fileInput}
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              className="block text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-on-brand"
+              className="block text-sm file:me-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-on-brand"
               onChange={async (event) => {
                 const file = event.target.files?.[0];
                 if (!file) return;

@@ -173,7 +173,7 @@ function Lines({ title, lines }: { title: string; lines: MoneyLine[] }) {
             <li key={line.label} className="flex items-baseline justify-between gap-2 text-sm">
               <span>
                 {line.label}
-                <span className="ml-2 text-xs text-slate-500">{line.count}</span>
+                <span className="ms-2 text-xs text-slate-500">{line.count}</span>
               </span>
               <span className="tabular-nums">{formatAmount(line.amountCents)}</span>
             </li>

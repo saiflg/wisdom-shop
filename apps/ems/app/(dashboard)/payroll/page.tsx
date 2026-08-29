@@ -121,7 +121,7 @@ export default function PayrollPage() {
               type="button"
               onClick={() => setSelected(selected === run.id ? null : run.id)}
               aria-expanded={selected === run.id}
-              className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 text-left transition hover:border-brand-400 dark:border-slate-800"
+              className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 text-start transition hover:border-brand-400 dark:border-slate-800"
             >
               <div className="min-w-0">
                 <p className="font-semibold">{run.period}</p>
@@ -165,7 +165,7 @@ function Salaries() {
               type="button"
               onClick={() => setOpen(open === member.id ? null : member.id)}
               aria-expanded={open === member.id}
-              className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-3 text-left transition hover:border-brand-400 dark:border-slate-800"
+              className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-3 text-start transition hover:border-brand-400 dark:border-slate-800"
             >
               <span className="min-w-0">
                 <span className="block text-sm font-semibold">
@@ -319,12 +319,12 @@ function RunDetail({ id }: { id: string }) {
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
+          <thead className="text-start text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="py-2">Staff</th>
-              <th className="py-2 text-right">Gross</th>
-              <th className="py-2 text-right">Deductions</th>
-              <th className="py-2 text-right">Net</th>
+              <th className="py-2 text-end">Gross</th>
+              <th className="py-2 text-end">Deductions</th>
+              <th className="py-2 text-end">Net</th>
               <th className="py-2" />
             </tr>
           </thead>
@@ -334,16 +334,16 @@ function RunDetail({ id }: { id: string }) {
                 <td className="py-2">
                   {payslip.staffName}
                   {payslip.staffNumber ? (
-                    <span className="ml-1 text-xs text-slate-500">{payslip.staffNumber}</span>
+                    <span className="ms-1 text-xs text-slate-500">{payslip.staffNumber}</span>
                   ) : null}
                   {payslip.overDeducted && (
-                    <span className="ml-2 text-xs font-semibold text-red-600">deductions exceed pay</span>
+                    <span className="ms-2 text-xs font-semibold text-red-600">deductions exceed pay</span>
                   )}
                 </td>
-                <td className="py-2 text-right tabular-nums">{money(payslip.grossCents)}</td>
-                <td className="py-2 text-right tabular-nums">{money(payslip.deductionsCents)}</td>
-                <td className="py-2 text-right font-semibold tabular-nums">{money(payslip.netCents)}</td>
-                <td className="py-2 text-right">
+                <td className="py-2 text-end tabular-nums">{money(payslip.grossCents)}</td>
+                <td className="py-2 text-end tabular-nums">{money(payslip.deductionsCents)}</td>
+                <td className="py-2 text-end font-semibold tabular-nums">{money(payslip.netCents)}</td>
+                <td className="py-2 text-end">
                   <button
                     type="button"
                     onClick={() =>

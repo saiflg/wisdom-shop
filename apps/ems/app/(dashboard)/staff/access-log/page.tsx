@@ -77,20 +77,20 @@ export default function BankAccessLogPage() {
       {visible.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
+            <thead className="text-start text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="py-2 pr-4">When</th>
-                <th className="py-2 pr-4">Whose details</th>
-                <th className="py-2 pr-4">Who looked</th>
+                <th className="py-2 pe-4">When</th>
+                <th className="py-2 pe-4">Whose details</th>
+                <th className="py-2 pe-4">Who looked</th>
                 <th className="py-2">Why</th>
               </tr>
             </thead>
             <tbody>
               {visible.map((entry) => (
                 <tr key={entry.id} className="border-t border-slate-200 align-top dark:border-slate-800">
-                  <td className="whitespace-nowrap py-2 pr-4 text-slate-500">{when(entry.createdAt)}</td>
-                  <td className="py-2 pr-4 font-medium">{entry.staffName}</td>
-                  <td className="py-2 pr-4">{entry.actorName}</td>
+                  <td className="whitespace-nowrap py-2 pe-4 text-slate-500">{when(entry.createdAt)}</td>
+                  <td className="py-2 pe-4 font-medium">{entry.staffName}</td>
+                  <td className="py-2 pe-4">{entry.actorName}</td>
                   <td className="py-2 text-slate-600 dark:text-slate-400">{entry.reason}</td>
                 </tr>
               ))}

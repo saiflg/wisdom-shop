@@ -102,7 +102,7 @@ function SessionRow({ session }: { session: Session }) {
         <p className="text-sm font-medium">
           {session.device}
           {!session.active && (
-            <span className="ml-2 text-xs font-normal text-slate-500">
+            <span className="ms-2 text-xs font-normal text-slate-500">
               {session.revokedAt ? "ended" : "expired"}
             </span>
           )}

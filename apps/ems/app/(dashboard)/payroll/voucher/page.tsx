@@ -130,10 +130,10 @@ export default function VoucherPage() {
             data.voucher.pages.map((page) => (
               <div key={page.pageNumber} className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                 <table className="w-full text-xs">
-                  <thead className="bg-slate-50 text-left dark:bg-slate-900">
+                  <thead className="bg-slate-50 text-start dark:bg-slate-900">
                     <tr>
                       {data.columns.map((column) => (
-                        <th key={column.key} className={`whitespace-nowrap px-2 py-2 font-medium ${column.money ? "text-right" : ""}`}>
+                        <th key={column.key} className={`whitespace-nowrap px-2 py-2 font-medium ${column.money ? "text-end" : ""}`}>
                           {column.label}
                         </th>
                       ))}
@@ -151,7 +151,7 @@ export default function VoucherPage() {
                           return (
                             <td
                               key={column?.key ?? i}
-                              className={`whitespace-nowrap px-2 py-1.5 ${column?.money ? "text-right tabular-nums" : ""}`}
+                              className={`whitespace-nowrap px-2 py-1.5 ${column?.money ? "text-end tabular-nums" : ""}`}
                             >
                               {cell.text}
                             </td>
@@ -165,7 +165,7 @@ export default function VoucherPage() {
                       <td className="px-2 py-2" colSpan={data.columns.length - 1}>
                         Page {page.pageNumber} total
                       </td>
-                      <td className="px-2 py-2 text-right tabular-nums">{money(page.subtotalCents)}</td>
+                      <td className="px-2 py-2 text-end tabular-nums">{money(page.subtotalCents)}</td>
                     </tr>
                   </tfoot>
                 </table>
