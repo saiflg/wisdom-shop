@@ -47,7 +47,8 @@ const ALLOWED_WITHOUT_ROLES: Record<string, string> = {
   "attendance/attendance.controller.ts:AttendanceController:GET students/:studentProfileId": "service refuses another family's child",
   "classes/classes.controller.ts:ClassesController:GET /": "names only; a class list is not a contact list",
   "classes/classes.controller.ts:ClassesController:GET mine": "the viewer's own classes, by definition",
-  "classes/classes.controller.ts:ClassesController:GET :id": "names only",
+  "classes/classes.controller.ts:ClassesController:GET :id":
+    "the class itself to anyone; its roster only to staff and to pupils in it",
   // A section is the school describing its own shape — Primary, Secondary,
   // Islamiyyah — and the class names inside it. Same exposure as the class
   // list above, which is why it sits with it. Everything that writes here is
