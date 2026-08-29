@@ -12,6 +12,7 @@ import { useSubjects } from "@/lib/use-subjects";
 import { useAssessments } from "@/lib/use-grading";
 import { toMarks, useCreateExam, useExams, type ExamStatus } from "@/lib/use-exams";
 import { FormField } from "@/components/form-field";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const INPUT =
   "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900";
@@ -39,6 +40,7 @@ const examSchema = z.object({
 type ExamValues = z.infer<typeof examSchema>;
 
 export default function ExamsPage() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const isStaff = Boolean(user?.roles.some((r) => r === "SCHOOL_ADMIN" || r === "TEACHER"));
 
@@ -79,7 +81,7 @@ export default function ExamsPage() {
       form.reset();
       setOpen(false);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't create that exam.");
+      setFormError(err instanceof ApiError ? err.message : t("exams.createFailed"));
     }
   });
 
@@ -87,11 +89,11 @@ export default function ExamsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Exams</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("exams.title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             {isStaff
-              ? "Build a paper from the question bank, publish it, and mark what the machine could not."
-              : "Papers set for your class, and how you did once your teacher has released the marks."}
+              ? t("exams.staffIntro")
+              : t("exams.studentIntro")}
           </p>
         </div>
         {isStaff && (
@@ -100,7 +102,7 @@ export default function ExamsPage() {
             onClick={() => setOpen((current) => !current)}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
           >
-            {open ? "Cancel" : "New exam"}
+            {open ? t("common.cancel") : t("exams.new")}
           </button>
         )}
       </div>
@@ -109,9 +111,9 @@ export default function ExamsPage() {
         <form onSubmit={onCreate} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium">
-              Class
+              {t("exams.class")}
               <select className={INPUT} {...form.register("classId")}>
-                <option value="">Choose…</option>
+                <option value="">{t("shared.choose")}</option>
                 {classes?.map((klass) => (
                   <option key={klass.id} value={klass.id}>
                     {klass.name}
@@ -126,9 +128,9 @@ export default function ExamsPage() {
             </label>
 
             <label className="text-sm font-medium">
-              Subject
+              {t("exams.subject")}
               <select className={INPUT} {...form.register("subjectId")}>
-                <option value="">Choose…</option>
+                <option value="">{t("shared.choose")}</option>
                 {subjects?.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
@@ -143,33 +145,33 @@ export default function ExamsPage() {
             </label>
 
             <FormField
-              label="Title"
-              placeholder="End of term test"
+              label={t("exams.examTitle")}
+              placeholder={t("exams.titlePlaceholder")}
               error={form.formState.errors.title?.message}
               {...form.register("title")}
             />
             <FormField
-              label="Minutes each student gets"
-              hint="Counted from the moment they start, not from a fixed time."
+              label={t("exams.minutes")}
+              hint={t("exams.minutesHint")}
               error={form.formState.errors.durationMinutes?.message}
               {...form.register("durationMinutes")}
             />
             <FormField
-              label="Academic year"
+              label={t("exams.academicYear")}
               error={form.formState.errors.academicYear?.message}
               {...form.register("academicYear")}
             />
             <FormField
-              label="Term"
+              label={t("exams.term")}
               error={form.formState.errors.term?.message}
               {...form.register("term")}
             />
           </div>
 
           <label className="mt-4 block text-sm font-medium">
-            Counts towards
+            {t("exams.countsTowards")}
             <select className={INPUT} {...form.register("assessmentId")}>
-              <option value="">Nothing — this is a practice paper</option>
+              <option value="">{t("exams.practicePaper")}</option>
               {assessments?.map((assessment) => (
                 <option key={assessment.id} value={assessment.id}>
                   {assessment.name} ({assessment.maxScoreHundredths / 100} marks)
@@ -178,13 +180,13 @@ export default function ExamsPage() {
             </select>
             <span className="mt-1 block text-xs font-normal text-slate-500">
               {chosenClass
-                ? "A released result is scaled onto this assessment and reaches the report card. Leave it as a practice paper and the marks count towards nothing."
-                : "Choose a class first to see its assessments."}
+                ? t("exams.countsHint")
+                : t("exams.chooseClassFirst")}
             </span>
           </label>
 
           <label className="mt-4 block text-sm font-medium">
-            Instructions to the class
+            {t("exams.instructions")}
             <textarea rows={2} className={INPUT} {...form.register("instructions")} />
           </label>
 
@@ -199,21 +201,21 @@ export default function ExamsPage() {
             disabled={create.isPending}
             className="mt-4 rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {create.isPending ? "Creating…" : "Create as a draft"}
+            {create.isPending ? t("exams.creating") : t("exams.createDraft")}
           </button>
         </form>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {error instanceof ApiError ? error.message : "Couldn't load exams."}
+          {error instanceof ApiError ? error.message : t("exams.loadFailed")}
         </p>
       )}
 
       {exams && exams.length === 0 && (
         <p className="text-sm text-slate-500">
-          {isStaff ? "No exams yet." : "You have no exams at the moment."}
+          {isStaff ? t("exams.noneStaff") : t("exams.noneStudent")}
         </p>
       )}
 
@@ -242,16 +244,16 @@ export default function ExamsPage() {
                 {!isStaff && (
                   <p className="mt-1 text-sm">
                     {exam.attempt === null || exam.attempt === undefined ? (
-                      <span className="text-slate-500">Not started</span>
+                      <span className="text-slate-500">{t("exams.notStarted")}</span>
                     ) : exam.attempt.status === "IN_PROGRESS" ? (
-                      <span className="font-semibold text-amber-700 dark:text-amber-400">In progress</span>
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">{t("exams.inProgress")}</span>
                     ) : exam.attempt.status === "RELEASED" ? (
                       <span className="font-semibold">
                         {toMarks(exam.attempt.totalScoreHundredths)} marks
                       </span>
                     ) : (
                       // Never "marked" — that is the fact being withheld.
-                      <span className="text-slate-500">Handed in. Marks not released yet.</span>
+                      <span className="text-slate-500">{t("exams.handedIn")}</span>
                     )}
                   </p>
                 )}
@@ -264,12 +266,12 @@ export default function ExamsPage() {
                   className="text-xs font-semibold text-brand-600 hover:underline"
                 >
                   {isStaff
-                    ? "Open"
+                    ? t("exams.open")
                     : exam.attempt?.status === "IN_PROGRESS"
-                      ? "Continue"
+                      ? t("exams.continue")
                       : exam.attempt
-                        ? "See result"
-                        : "Start"}
+                        ? t("exams.seeResult")
+                        : t("exams.start")}
                 </Link>
               </div>
             </div>

@@ -102,13 +102,19 @@ describe("placeholders", () => {
   });
 
   it("allows Arabic to drop {count} only in the singular", () => {
-    // Arabic says "one invoice was issued", not "1 invoice was issued", and
-    // that form only ever renders for exactly one. Every other Arabic string
-    // must still carry its placeholders.
-    const allowed = new Set(["fees.structures.invoiceCount_one"]);
+    /*
+     * Arabic names the noun in the singular rather than counting it: "one
+     * invoice was issued", not "1 invoice was issued". A `_one` form only ever
+     * renders for exactly one, so dropping {count} there is correct grammar
+     * rather than a lost placeholder.
+     *
+     * Any OTHER Arabic string must still carry every placeholder the English
+     * has — a dropped {count} in `_other` would render "issued invoices" with
+     * no number at all.
+     */
     for (const [key, english] of Object.entries(en)) {
       const translated = ar[key as keyof Dictionary];
-      if (!translated || allowed.has(key)) continue;
+      if (!translated || key.endsWith("_one")) continue;
       expect({ key, braces: braces(translated) }).toEqual({ key, braces: braces(english) });
     }
   });
