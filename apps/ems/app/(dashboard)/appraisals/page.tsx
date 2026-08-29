@@ -6,10 +6,10 @@ import { useIsSchoolAdmin } from "@/lib/use-can-author";
 import { useStaff } from "@/lib/use-staff";
 import { useAuthStore } from "@/store/auth-store";
 import {
-  STATUS_LABEL,
+  STATUS_KEY,
   STATUS_STYLE,
   SUGGESTED_AREAS,
-  TRANSITION_LABEL,
+  TRANSITION_KEY,
   useAppraisals,
   useCreateAppraisal,
   useTransitionAppraisal,
@@ -18,6 +18,7 @@ import {
   type AppraisalRating,
   type AppraisalStatus,
 } from "@/lib/use-appraisals";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Staff appraisals.
@@ -145,6 +146,7 @@ function NewAppraisal() {
 }
 
 function AppraisalCard({ appraisal }: { appraisal: Appraisal }) {
+  const { t } = useTranslation();
   const me = useAuthStore((state) => state.user?.id ?? null);
   const [open, setOpen] = useState(false);
   const isSubject = appraisal.subjectUserId === me;
@@ -173,7 +175,7 @@ function AppraisalCard({ appraisal }: { appraisal: Appraisal }) {
             {appraisal.overall === null ? "not rated" : `${appraisal.overall} / 5`}
           </span>
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[appraisal.status]}`}>
-            {STATUS_LABEL[appraisal.status]}
+            {t(STATUS_KEY[appraisal.status])}
           </span>
           <button
             type="button"
@@ -192,6 +194,7 @@ function AppraisalCard({ appraisal }: { appraisal: Appraisal }) {
 }
 
 function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boolean }) {
+  const { t } = useTranslation();
   const update = useUpdateAppraisal(appraisal.id);
   const move = useTransitionAppraisal(appraisal.id);
   const [ratings, setRatings] = useState<AppraisalRating[]>(
@@ -320,7 +323,7 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
                 : "border border-slate-300 dark:border-slate-700"
             }`}
           >
-            {TRANSITION_LABEL[to]}
+            {t(TRANSITION_KEY[to])}
           </button>
         ))}
       </div>

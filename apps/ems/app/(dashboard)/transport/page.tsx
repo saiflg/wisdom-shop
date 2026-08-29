@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/api";
 import { useCanAuthor } from "@/lib/use-can-author";
 import { useStudents } from "@/lib/use-students";
 import {
-  DIRECTION_LABEL,
+  DIRECTION_KEY,
   formatMinute,
   parseMinute,
   useAddRoute,
@@ -345,7 +345,7 @@ function RouteDetail({ route }: { route: Route }) {
               <span className="min-w-0 truncate text-sm">
                 {assignment.studentProfile.user.firstName} {assignment.studentProfile.user.lastName}
                 <span className="ms-2 text-xs text-slate-500">
-                  {DIRECTION_LABEL[assignment.direction]}
+                  {t(DIRECTION_KEY[assignment.direction])}
                   {assignment.stop && ` · ${assignment.stop.name}`}
                 </span>
               </span>
@@ -384,9 +384,9 @@ function RouteDetail({ route }: { route: Route }) {
             aria-label={t("transport.whichRuns")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            {(Object.keys(DIRECTION_LABEL) as TransportDirection[]).map((value) => (
+            {(Object.keys(DIRECTION_KEY) as TransportDirection[]).map((value) => (
               <option key={value} value={value}>
-                {DIRECTION_LABEL[value]}
+                {t(DIRECTION_KEY[value])}
               </option>
             ))}
           </select>

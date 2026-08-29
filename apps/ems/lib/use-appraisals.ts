@@ -3,13 +3,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./api";
 import { authHeaders, useAuthQueryState } from "./api-auth";
+import type { TranslationKey } from "@/lib/i18n";
 
 export type AppraisalStatus = "DRAFT" | "SHARED" | "ACKNOWLEDGED";
 
-export const STATUS_LABEL: Record<AppraisalStatus, string> = {
-  DRAFT: "Draft — not shared",
-  SHARED: "Shared, waiting to be acknowledged",
-  ACKNOWLEDGED: "Acknowledged",
+export const STATUS_KEY: Record<AppraisalStatus, TranslationKey> = {
+  DRAFT: "appraisals.statusDRAFT",
+  SHARED: "appraisals.statusSHARED",
+  ACKNOWLEDGED: "appraisals.statusACKNOWLEDGED",
 };
 
 export const STATUS_STYLE: Record<AppraisalStatus, string> = {
@@ -18,10 +19,10 @@ export const STATUS_STYLE: Record<AppraisalStatus, string> = {
   ACKNOWLEDGED: "bg-emerald-600 text-white",
 };
 
-export const TRANSITION_LABEL: Record<AppraisalStatus, string> = {
-  SHARED: "Share with them",
-  ACKNOWLEDGED: "I have seen this",
-  DRAFT: "Take back to draft",
+export const TRANSITION_KEY: Record<AppraisalStatus, TranslationKey> = {
+  SHARED: "appraisals.transitionSHARED",
+  ACKNOWLEDGED: "appraisals.transitionACKNOWLEDGED",
+  DRAFT: "appraisals.transitionDRAFT",
 };
 
 export interface AppraisalRating {

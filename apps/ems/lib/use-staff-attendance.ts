@@ -3,14 +3,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./api";
 import { authHeaders, useAuthQueryState } from "./api-auth";
+import type { TranslationKey } from "@/lib/i18n";
 
 export type StaffAttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "ON_LEAVE";
 
-export const STATUS_LABEL: Record<StaffAttendanceStatus, string> = {
-  PRESENT: "Present",
-  ABSENT: "Absent",
-  LATE: "Late",
-  ON_LEAVE: "On leave",
+export const STATUS_KEY: Record<StaffAttendanceStatus, TranslationKey> = {
+  PRESENT: "staffAttendance.statusPRESENT",
+  ABSENT: "staffAttendance.statusABSENT",
+  LATE: "staffAttendance.statusLATE",
+  ON_LEAVE: "staffAttendance.statusON_LEAVE",
 };
 
 export const STATUS_STYLE: Record<StaffAttendanceStatus, string> = {

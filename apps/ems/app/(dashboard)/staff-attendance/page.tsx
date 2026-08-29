@@ -6,7 +6,7 @@ import { useIsSchoolAdmin } from "@/lib/use-can-author";
 import { useAuthStore } from "@/store/auth-store";
 import { useStaff } from "@/lib/use-staff";
 import {
-  STATUS_LABEL,
+  STATUS_KEY,
   STATUS_STYLE,
   todayIso,
   useMarkStaffAttendance,
@@ -15,6 +15,7 @@ import {
   type StaffAttendanceDay,
   type StaffAttendanceStatus,
 } from "@/lib/use-staff-attendance";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const STATUSES: StaffAttendanceStatus[] = ["PRESENT", "LATE", "ABSENT", "ON_LEAVE"];
 
@@ -94,6 +95,7 @@ function StaffRow({
   date: string;
   mark: StaffAttendanceDay | null;
 }) {
+  const { t } = useTranslation();
   const record = useMarkStaffAttendance();
   const [note, setNote] = useState<string | null>(null);
 
@@ -122,7 +124,7 @@ function StaffRow({
         <p className="text-sm font-medium">{name}</p>
         {mark && (
           <p className="text-xs text-slate-500">
-            {STATUS_LABEL[mark.status]}
+            {t(STATUS_KEY[mark.status])}
             {mark.minutesLate ? ` · ${mark.minutesLate} min late` : ""} · {mark.recordedByName}
           </p>
         )}
@@ -145,7 +147,7 @@ function StaffRow({
                   : "border border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-400"
               }`}
             >
-              {STATUS_LABEL[status]}
+              {t(STATUS_KEY[status])}
             </button>
           );
         })}
@@ -203,6 +205,7 @@ function MyRecord() {
 }
 
 function PeriodSummary({ data }: { data: NonNullable<ReturnType<typeof useStaffAttendancePeriod>["data"]> }) {
+  const { t } = useTranslation();
   return (
     <>
       <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
@@ -232,7 +235,7 @@ function PeriodSummary({ data }: { data: NonNullable<ReturnType<typeof useStaffA
           <li key={day.id} className="flex items-center justify-between gap-3 py-2">
             <span className="text-sm">{new Date(day.date).toLocaleDateString()}</span>
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[day.status]}`}>
-              {STATUS_LABEL[day.status]}
+              {t(STATUS_KEY[day.status])}
               {day.minutesLate ? ` · ${day.minutesLate} min` : ""}
             </span>
           </li>

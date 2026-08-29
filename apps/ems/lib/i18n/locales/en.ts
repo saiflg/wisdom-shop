@@ -843,6 +843,29 @@ export const en = {
   "expenses.transitionREJECTED": "Turn down",
   "expenses.transitionPAID": "Record payment",
   "expenses.transitionREQUESTED": "Ask again",
+
+  // ── Label maps that live in lib/, not in a page ─────────────────
+  "transport.dirMORNING": "Morning only",
+  "transport.dirAFTERNOON": "Afternoon only",
+  "transport.dirBOTH": "Both ways",
+  "appraisals.statusDRAFT": "Draft — not shared",
+  "appraisals.statusSHARED": "Shared, waiting to be acknowledged",
+  "appraisals.statusACKNOWLEDGED": "Acknowledged",
+  "appraisals.transitionSHARED": "Share with them",
+  "appraisals.transitionACKNOWLEDGED": "I have seen this",
+  "appraisals.transitionDRAFT": "Take back to draft",
+  "lessonNotes.statusDRAFT": "Draft",
+  "lessonNotes.statusSUBMITTED": "Waiting to be vetted",
+  "lessonNotes.statusAPPROVED": "Approved",
+  "lessonNotes.statusRETURNED": "Sent back",
+  "lessonNotes.transitionSUBMITTED": "Send for vetting",
+  "lessonNotes.transitionAPPROVED": "Approve",
+  "lessonNotes.transitionRETURNED": "Send back",
+  "lessonNotes.transitionDRAFT": "Back to draft",
+  "staffAttendance.statusPRESENT": "Present",
+  "staffAttendance.statusABSENT": "Absent",
+  "staffAttendance.statusLATE": "Late",
+  "staffAttendance.statusON_LEAVE": "On leave",
 } as const;
 
 /**

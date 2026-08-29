@@ -11,6 +11,7 @@ import {
   type LoanRow,
   type LoanStatus,
 } from "@/lib/use-loans";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Loans and salary advances.
@@ -46,6 +47,7 @@ function toCents(value: string): number | null {
 }
 
 export default function LoansPage() {
+  const { t } = useTranslation();
   const [includeSettled, setIncludeSettled] = useState(false);
   const { data, isLoading, error } = useLoans(includeSettled);
   const { data: staff } = useStaff();

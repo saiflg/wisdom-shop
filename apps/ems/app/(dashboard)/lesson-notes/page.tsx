@@ -6,9 +6,9 @@ import { useCanAuthor } from "@/lib/use-can-author";
 import { useClasses } from "@/lib/use-classes";
 import { useSubjects } from "@/lib/use-subjects";
 import {
-  STATUS_LABEL,
+  STATUS_KEY,
   STATUS_STYLE,
-  TRANSITION_LABEL,
+  TRANSITION_KEY,
   useCreateLessonNote,
   useLessonNotes,
   useTransitionLessonNote,
@@ -16,6 +16,7 @@ import {
   type LessonNote,
   type LessonNoteStatus,
 } from "@/lib/use-lesson-notes";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * The written subject content for a week, vetted before children read it.
@@ -242,6 +243,7 @@ function NewNote() {
 }
 
 function NoteRow({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -259,7 +261,7 @@ function NoteRow({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
               sent back twice before they were allowed to read it. */}
           {isStaff && (
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[note.status]}`}>
-              {STATUS_LABEL[note.status]}
+              {t(STATUS_KEY[note.status])}
             </span>
           )}
           <button
@@ -286,6 +288,7 @@ function NoteRow({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
 }
 
 function NoteBody({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
+  const { t } = useTranslation();
   const update = useUpdateLessonNote(note.id);
   const transition = useTransitionLessonNote(note.id);
   const [body, setBody] = useState(note.body);
@@ -369,7 +372,7 @@ function NoteBody({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
                     : "border border-slate-300 dark:border-slate-700"
                 }`}
               >
-                {TRANSITION_LABEL[to]}
+                {t(TRANSITION_KEY[to])}
               </button>
             ))}
           </div>

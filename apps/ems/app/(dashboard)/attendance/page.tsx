@@ -15,7 +15,7 @@ import {
   type AttendanceStatus,
 } from "@/lib/use-attendance";
 
-const STATUS_LABEL: Record<AttendanceStatus, TranslationKey> = {
+const STATUS_KEY: Record<AttendanceStatus, TranslationKey> = {
   PRESENT: "attendance.present",
   ABSENT: "attendance.absent",
   LATE: "attendance.late",
@@ -175,7 +175,7 @@ export default function AttendancePage() {
                             : "border border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-900",
                         )}
                       >
-                        {t(STATUS_LABEL[status])}
+                        {t(STATUS_KEY[status])}
                       </button>
                     ))}
                   </div>
@@ -260,7 +260,7 @@ function RecordRow({ record }: { record: AttendanceRecord }) {
         <span>{name}</span>
         <div className="flex items-center gap-2">
           <span className={clsx("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_STYLE[record.status])}>
-            {t(STATUS_LABEL[record.status])}
+            {t(STATUS_KEY[record.status])}
           </span>
           {record.amendments.length > 0 && (
             <span className="text-xs text-amber-600 dark:text-amber-400">
@@ -293,7 +293,7 @@ function RecordRow({ record }: { record: AttendanceRecord }) {
                     : "border border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-400",
                 )}
               >
-                {t(STATUS_LABEL[option])}
+                {t(STATUS_KEY[option])}
               </button>
             ))}
           </div>

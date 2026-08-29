@@ -12,6 +12,7 @@ import { useSchemesOfWork } from "@/lib/use-schemes-of-work";
 import { useTutorSessions, useStartTutorSession, type TutorSessionStatus } from "@/lib/use-ai-teacher";
 import { useAuthStore } from "@/store/auth-store";
 import { FormField } from "@/components/form-field";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const startSchema = z.object({
   subjectId: z.string().min(1, "Choose a subject"),
@@ -47,6 +48,7 @@ const STATUS_LABEL: Record<TutorSessionStatus, string> = {
 };
 
 export default function AiTeacherPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { data: subjects } = useSubjects();

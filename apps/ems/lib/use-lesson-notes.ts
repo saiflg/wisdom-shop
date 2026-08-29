@@ -3,14 +3,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./api";
 import { authHeaders, useAuthQueryState } from "./api-auth";
+import type { TranslationKey } from "@/lib/i18n";
 
 export type LessonNoteStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "RETURNED";
 
-export const STATUS_LABEL: Record<LessonNoteStatus, string> = {
-  DRAFT: "Draft",
-  SUBMITTED: "Waiting to be vetted",
-  APPROVED: "Approved",
-  RETURNED: "Sent back",
+export const STATUS_KEY: Record<LessonNoteStatus, TranslationKey> = {
+  DRAFT: "lessonNotes.statusDRAFT",
+  SUBMITTED: "lessonNotes.statusSUBMITTED",
+  APPROVED: "lessonNotes.statusAPPROVED",
+  RETURNED: "lessonNotes.statusRETURNED",
 };
 
 export const STATUS_STYLE: Record<LessonNoteStatus, string> = {
@@ -22,11 +23,11 @@ export const STATUS_STYLE: Record<LessonNoteStatus, string> = {
 };
 
 /** What each move is called on a button, from the mover's point of view. */
-export const TRANSITION_LABEL: Record<LessonNoteStatus, string> = {
-  SUBMITTED: "Send for vetting",
-  APPROVED: "Approve",
-  RETURNED: "Send back",
-  DRAFT: "Back to draft",
+export const TRANSITION_KEY: Record<LessonNoteStatus, TranslationKey> = {
+  SUBMITTED: "lessonNotes.transitionSUBMITTED",
+  APPROVED: "lessonNotes.transitionAPPROVED",
+  RETURNED: "lessonNotes.transitionRETURNED",
+  DRAFT: "lessonNotes.transitionDRAFT",
 };
 
 export interface LessonNote {

@@ -3,13 +3,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./api";
 import { authHeaders, useAuthQueryState } from "./api-auth";
+import type { TranslationKey } from "@/lib/i18n";
 
 export type TransportDirection = "MORNING" | "AFTERNOON" | "BOTH";
 
-export const DIRECTION_LABEL: Record<TransportDirection, string> = {
-  MORNING: "Morning only",
-  AFTERNOON: "Afternoon only",
-  BOTH: "Both ways",
+export const DIRECTION_KEY: Record<TransportDirection, TranslationKey> = {
+  MORNING: "transport.dirMORNING",
+  AFTERNOON: "transport.dirAFTERNOON",
+  BOTH: "transport.dirBOTH",
 };
 
 export interface Vehicle {
