@@ -844,4 +844,23 @@ export const tr: Partial<Dictionary> = {
   "staffAttendance.statusABSENT": "Yok",
   "staffAttendance.statusLATE": "Geç",
   "staffAttendance.statusON_LEAVE": "İzinde",
+
+  // ── Families and guardians ──────────────────────────────────────
+  "parents.title": "Aileler",
+  "parents.intro": "Bugün ilgi bekleyenler, en acili önce. Yanıt bekleyen bir aile, devamsız işaretlenmiş bir çocuktan önce gelir; o da paradan önce gelir.",
+  "parents.needsAttention": "İlgi bekliyor",
+  "parents.nothingToChase": "Takip edilecek bir şey yok. Her aileye yanıt verildi, kimse kayıp değil ve ödenmemiş fatura yok.",
+  "parents.familiesLabel": "Aileler",
+  "parents.waitingReply": "Yanıt bekleyen",
+  "parents.absentToday": "Bugün devamsız",
+  "parents.unpaidInvoices": "Ödenmemiş faturalar",
+  "parents.cannotBeReached": "Ulaşılamıyor",
+  "parents.outstandingFees": "Ödenmemiş ücretler",
+  "parents.alertAWAITING_REPLY": "Bizi bekliyor",
+  "parents.alertABSENT": "Devamsız",
+  "parents.alertUNPAID": "Ücretler",
+  "parents.alertUNREACHABLE": "İletişim bilgisi yok",
+  "parents.alertNO_PORTAL_ACCESS": "Giriş yapamıyor",
+  "guardians.search": "Veli ve çocuk ara",
+  "guardians.searchPlaceholder": "Bir veli veya çocuk arayın…",
 };

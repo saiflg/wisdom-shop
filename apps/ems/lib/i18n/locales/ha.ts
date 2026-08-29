@@ -850,4 +850,23 @@ export const ha: Partial<Dictionary> = {
   "staffAttendance.statusABSENT": "Bai halarta ba",
   "staffAttendance.statusLATE": "Ya makara",
   "staffAttendance.statusON_LEAVE": "A hutu",
+
+  // ── Families and guardians ──────────────────────────────────────
+  "parents.title": "Iyalai",
+  "parents.intro": "Abin da ke buƙatar kulawa yau, mafi gaggawa da farko. Iyalin da ke jiran amsa yana gaban yaron da aka rubuta bai halarta ba, wanda kuma yake gaban kuɗi.",
+  "parents.needsAttention": "Na buƙatar kulawa",
+  "parents.nothingToChase": "Babu abin da ke buƙatar bibiya. An amsa wa kowane iyali, babu wanda ba a san inda yake ba, kuma babu takardar biya da ta rage.",
+  "parents.familiesLabel": "Iyalai",
+  "parents.waitingReply": "Ana jiran amsa",
+  "parents.absentToday": "Bai halarta yau ba",
+  "parents.unpaidInvoices": "Takardun biya da ba a biya ba",
+  "parents.cannotBeReached": "Ba a iya samun su",
+  "parents.outstandingFees": "Kuɗin da suka rage",
+  "parents.alertAWAITING_REPLY": "Ana jiran mu",
+  "parents.alertABSENT": "Bai halarta ba",
+  "parents.alertUNPAID": "Kuɗi",
+  "parents.alertUNREACHABLE": "Babu bayanan tuntuɓa",
+  "parents.alertNO_PORTAL_ACCESS": "Ba ya iya shiga",
+  "guardians.search": "Nemi iyaye da yara",
+  "guardians.searchPlaceholder": "Nemi uba/uwa ko yaro…",
 };

@@ -8,6 +8,8 @@ import { filterGuardians, householdSummary, neverSignedIn, unreachable, withoutE
 import { PersonPhoto } from "@/components/person-photo";
 import { GuardianInvite } from "@/components/guardian-invite";
 import { GuardianContact } from "@/components/guardian-contact";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * Every family in the school.
@@ -16,6 +18,7 @@ import { GuardianContact } from "@/components/guardian-contact";
  * three children on it rather than three near-identical rows.
  */
 export default function GuardiansPage() {
+  const { t } = useTranslation();
   const { data: guardians, isLoading, error } = useGuardianDirectory();
   const [query, setQuery] = useState("");
 
@@ -36,14 +39,14 @@ export default function GuardiansPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <label htmlFor="guardian-search" className="sr-only">
-          Search parents and children
+          {t("guardians.search")}
         </label>
         <input
           id="guardian-search"
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search a parent or a child…"
+          placeholder={t("guardians.searchPlaceholder")}
           className="min-w-[16rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         {guardians && (

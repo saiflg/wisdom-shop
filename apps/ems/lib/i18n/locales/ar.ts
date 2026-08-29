@@ -850,4 +850,23 @@ export const ar: Partial<Dictionary> = {
   "staffAttendance.statusABSENT": "غائب",
   "staffAttendance.statusLATE": "متأخر",
   "staffAttendance.statusON_LEAVE": "في إجازة",
+
+  // ── Families and guardians ──────────────────────────────────────
+  "parents.title": "الأسر",
+  "parents.intro": "ما يحتاج إلى متابعة اليوم، الأكثر إلحاحًا أولًا. الأسرة التي تنتظر ردًا تسبق الطفل المسجَّل غائبًا، وهذا يسبق المال.",
+  "parents.needsAttention": "يحتاج إلى متابعة",
+  "parents.nothingToChase": "لا شيء يحتاج إلى متابعة. أُجيبت كل أسرة، ولا أحد مجهول الحال، ولا توجد فاتورة مستحقة.",
+  "parents.familiesLabel": "الأسر",
+  "parents.waitingReply": "بانتظار رد",
+  "parents.absentToday": "غائب اليوم",
+  "parents.unpaidInvoices": "فواتير غير مدفوعة",
+  "parents.cannotBeReached": "يتعذّر الوصول إليهم",
+  "parents.outstandingFees": "الرسوم المستحقة",
+  "parents.alertAWAITING_REPLY": "بانتظارنا",
+  "parents.alertABSENT": "غائب",
+  "parents.alertUNPAID": "الرسوم",
+  "parents.alertUNREACHABLE": "لا توجد بيانات اتصال",
+  "parents.alertNO_PORTAL_ACCESS": "لا يستطيع تسجيل الدخول",
+  "guardians.search": "ابحث عن أولياء الأمور والأبناء",
+  "guardians.searchPlaceholder": "ابحث عن ولي أمر أو طفل…",
 };

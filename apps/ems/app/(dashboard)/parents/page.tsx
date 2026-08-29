@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { errorMessage } from "@/lib/api";
 import { useParentsOverview, type ParentAlert, type ParentAlertKind } from "@/lib/use-parents-overview";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * The school office's morning view of its families.
@@ -13,29 +15,29 @@ import { useParentsOverview, type ParentAlert, type ParentAlertKind } from "@/li
  * once and never opened again.
  */
 
-const TONE: Record<ParentAlertKind, { label: string; dot: string; box: string }> = {
+const TONE: Record<ParentAlertKind, { key: TranslationKey; dot: string; box: string }> = {
   AWAITING_REPLY: {
-    label: "Waiting for us",
+    key: "parents.alertAWAITING_REPLY",
     dot: "bg-amber-500",
     box: "border-amber-200 bg-amber-50/60 dark:border-amber-900/50 dark:bg-amber-950/20",
   },
   ABSENT: {
-    label: "Absent",
+    key: "parents.alertABSENT",
     dot: "bg-red-500",
     box: "border-red-200 bg-red-50/60 dark:border-red-900/50 dark:bg-red-950/20",
   },
   UNPAID: {
-    label: "Fees",
+    key: "parents.alertUNPAID",
     dot: "bg-sky-500",
     box: "border-slate-200 dark:border-slate-800",
   },
   UNREACHABLE: {
-    label: "No contact details",
+    key: "parents.alertUNREACHABLE",
     dot: "bg-slate-400",
     box: "border-slate-200 dark:border-slate-800",
   },
   NO_PORTAL_ACCESS: {
-    label: "Cannot sign in",
+    key: "parents.alertNO_PORTAL_ACCESS",
     dot: "bg-slate-400",
     box: "border-slate-200 dark:border-slate-800",
   },
@@ -61,6 +63,7 @@ function Stat({ label, value, href }: { label: string; value: string; href?: str
 }
 
 function AlertRow({ alert }: { alert: ParentAlert }) {
+  const { t } = useTranslation();
   const tone = TONE[alert.kind];
   const body = (
     <div className={`flex items-start gap-3 rounded-xl border p-4 transition ${tone.box}`}>
@@ -69,7 +72,7 @@ function AlertRow({ alert }: { alert: ParentAlert }) {
         <p className="font-medium">{alert.headline}</p>
         <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{alert.detail}</p>
       </div>
-      <span className="shrink-0 text-xs text-slate-500">{tone.label}</span>
+      <span className="shrink-0 text-xs text-slate-500">{t(tone.key)}</span>
     </div>
   );
 
@@ -83,19 +86,19 @@ function AlertRow({ alert }: { alert: ParentAlert }) {
 }
 
 export default function ParentsDashboardPage() {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useParentsOverview();
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Families</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("parents.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          What needs attention today, most urgent first. A family waiting for an answer comes before a
-          child marked absent, which comes before money.
+          {t("parents.intro")}
         </p>
       </div>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           {errorMessage(error, "Couldn't load the family overview.")}
@@ -105,12 +108,12 @@ export default function ParentsDashboardPage() {
       {data && (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <Stat label="Families" value={String(data.familyCount)} href="/guardians" />
-            <Stat label="Waiting for a reply" value={String(data.awaitingReplyCount)} href="/parent-messages" />
-            <Stat label="Absent today" value={String(data.absentTodayCount)} href="/attendance" />
-            <Stat label="Unpaid invoices" value={String(data.unpaidCount)} href="/invoices" />
+            <Stat label={t("parents.familiesLabel")} value={String(data.familyCount)} href="/guardians" />
+            <Stat label={t("parents.waitingReply")} value={String(data.awaitingReplyCount)} href="/parent-messages" />
+            <Stat label={t("parents.absentToday")} value={String(data.absentTodayCount)} href="/attendance" />
+            <Stat label={t("parents.unpaidInvoices")} value={String(data.unpaidCount)} href="/invoices" />
             <Stat
-              label="Cannot be reached"
+              label={t("parents.cannotBeReached")}
               value={String(data.unreachableCount + data.noPortalAccessCount)}
               href="/guardians"
             />
@@ -121,7 +124,7 @@ export default function ParentsDashboardPage() {
               third that is true in neither. */}
           {data.outstandingTotals.length > 0 && (
             <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Outstanding fees</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">{t("parents.outstandingFees")}</p>
               <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1">
                 {data.outstandingTotals.map((total) => (
                   <p key={total.currency} className="text-lg font-semibold tabular-nums">
@@ -134,13 +137,12 @@ export default function ParentsDashboardPage() {
 
           <div className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Needs attention
+              {t("parents.needsAttention")}
             </h2>
 
             {data.alerts.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-                Nothing needs chasing. Every family has been answered, nobody is unaccounted for, and no
-                invoice is outstanding.
+                {t("parents.nothingToChase")}
               </p>
             ) : (
               data.alerts.map((alert, i) => <AlertRow key={`${alert.kind}-${i}`} alert={alert} />)

@@ -866,6 +866,25 @@ export const en = {
   "staffAttendance.statusABSENT": "Absent",
   "staffAttendance.statusLATE": "Late",
   "staffAttendance.statusON_LEAVE": "On leave",
+
+  // ── Families and guardians ──────────────────────────────────────
+  "parents.title": "Families",
+  "parents.intro": "What needs attention today, most urgent first. A family waiting for an answer comes before a child marked absent, which comes before money.",
+  "parents.needsAttention": "Needs attention",
+  "parents.nothingToChase": "Nothing needs chasing. Every family has been answered, nobody is unaccounted for, and no invoice is outstanding.",
+  "parents.familiesLabel": "Families",
+  "parents.waitingReply": "Waiting for a reply",
+  "parents.absentToday": "Absent today",
+  "parents.unpaidInvoices": "Unpaid invoices",
+  "parents.cannotBeReached": "Cannot be reached",
+  "parents.outstandingFees": "Outstanding fees",
+  "parents.alertAWAITING_REPLY": "Waiting for us",
+  "parents.alertABSENT": "Absent",
+  "parents.alertUNPAID": "Fees",
+  "parents.alertUNREACHABLE": "No contact details",
+  "parents.alertNO_PORTAL_ACCESS": "Cannot sign in",
+  "guardians.search": "Search parents and children",
+  "guardians.searchPlaceholder": "Search a parent or a child…",
 } as const;
 
 /**
