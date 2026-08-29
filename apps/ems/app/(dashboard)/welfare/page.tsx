@@ -257,7 +257,7 @@ function AskForHelp() {
         className="mt-2 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
       />
       <p className="mt-2 text-xs text-slate-500">
-        Only you and the school administrators will see this. Somebody other than you has to decide it.
+        {t("welfare.onlyYouAndAdmins")}
       </p>
       <div className="mt-3 flex gap-2">
         <button
@@ -272,7 +272,7 @@ function AskForHelp() {
           onClick={() => setOpen(false)}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -353,7 +353,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
 
       {moves.length === 0 && request.status === "REQUESTED" && (
         <p className="mt-2 text-xs text-slate-500">
-          Waiting for somebody else. A request cannot be decided by the person who made it.
+          {t("welfare.waitingForSomeoneElse")}
         </p>
       )}
 

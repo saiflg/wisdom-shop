@@ -310,7 +310,7 @@ function RouteDetail({ route }: { route: Route }) {
                 onClick={() => setRows(rows.filter((_, i) => i !== index))}
                 className="text-xs text-slate-500 underline"
               >
-                Remove
+                {t("shared.remove")}
               </button>
             </li>
           ))}
@@ -321,7 +321,7 @@ function RouteDetail({ route }: { route: Route }) {
             onClick={() => setRows([...rows, { name: "", time: "" }])}
             className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
           >
-            Add stop
+            {t("transport.addStop")}
           </button>
           <button
             type="button"
@@ -333,7 +333,7 @@ function RouteDetail({ route }: { route: Route }) {
           </button>
         </div>
         <p className="mt-1 text-xs text-slate-500">
-          Leave a time blank if the school has not set one. Blank is not midnight.
+          {t("transport.blankTimeHint")}
         </p>
       </div>
 
@@ -355,7 +355,7 @@ function RouteDetail({ route }: { route: Route }) {
                 disabled={unassign.isPending}
                 className="shrink-0 text-xs text-slate-500 underline disabled:opacity-50"
               >
-                Take off
+                {t("transport.takeOff")}
               </button>
             </li>
           ))}
@@ -427,16 +427,17 @@ function formatMinuteInput(minute: number | null): string {
 
 /** A family reading which bus their child is on. */
 function FamilyView() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Transport</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Which bus your child rides, where it picks up, and when.
+          {t("transport.familyIntro")}
         </p>
       </div>
       <p className="text-sm text-slate-600 dark:text-slate-400">
-        Ask the school office to add your child to a route, and their bus and stop will appear here.
+        {t("transport.familyEmpty")}
       </p>
     </div>
   );

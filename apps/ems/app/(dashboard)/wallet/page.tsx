@@ -51,7 +51,7 @@ export default function WalletPage() {
 
       {!isStaff && portalUnavailable && (
         <p className="text-sm text-amber-600">
-          Your school has not switched on the family portal, so this list is not available to you here.
+          {t("shared.portalOff")}
         </p>
       )}
 
@@ -107,7 +107,7 @@ function WalletPanel({ studentProfileId, isStaff }: { studentProfileId: string; 
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("wallet.statement")}</h2>
         {data.entries.length === 0 ? (
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Nothing has moved in this wallet yet.
+            {t("wallet.nothingMoved")}
           </p>
         ) : (
           <ul className="mt-2 divide-y divide-slate-200 dark:divide-slate-800">
@@ -188,7 +188,7 @@ function RecordEntry({ studentProfileId }: { studentProfileId: string }) {
 
       <div className="mt-3 flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">
-          Kind
+          {t("shared.kind")}
           <select
             value={kind}
             onChange={(event) => setKind(event.target.value as WalletEntryKind)}
@@ -202,7 +202,7 @@ function RecordEntry({ studentProfileId }: { studentProfileId: string }) {
           </select>
         </label>
         <label className="text-xs text-slate-500">
-          Amount
+          {t("shared.amount")}
           <input
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
@@ -212,7 +212,7 @@ function RecordEntry({ studentProfileId }: { studentProfileId: string }) {
           />
         </label>
         <label className="min-w-[14rem] flex-1 text-xs text-slate-500">
-          What for
+          {t("wallet.whatFor")}
           <input
             value={description}
             onChange={(event) => setDescription(event.target.value)}

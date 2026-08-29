@@ -46,7 +46,7 @@ export default function HostelPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Boarding</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Houses, rooms and beds. A child can only hold one bed at a time, anywhere in the school.
+          {t("hostel.intro")}
         </p>
       </div>
 
@@ -291,7 +291,7 @@ function RoomRow({ room }: { room: HostelRoom }) {
                     disabled={release.isPending}
                     className="shrink-0 text-xs text-slate-500 underline disabled:opacity-50"
                   >
-                    Release bed
+                    {t("hostel.releaseBed")}
                   </button>
                 </li>
               );

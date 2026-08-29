@@ -78,7 +78,7 @@ export default function TeachersPage() {
             disabled={form.formState.isSubmitting}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            Create teacher
+            {t("teachers.create")}
           </button>
         </form>
       )}

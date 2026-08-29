@@ -51,7 +51,7 @@ export default function BehaviourPage() {
 
       {!isStaff && portalUnavailable && (
         <p className="text-sm text-amber-600">
-          Your school has not switched on the family portal, so this list is not available to you here.
+          {t("shared.portalOff")}
         </p>
       )}
 
@@ -100,7 +100,7 @@ function StudentBehaviour({ studentProfileId, isStaff }: { studentProfileId: str
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Record</h2>
         {data.records.length === 0 ? (
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Nothing has been written down about this child.
+            {t("behaviour.nothingWritten")}
           </p>
         ) : (
           <ul className="mt-2 space-y-2">
@@ -184,7 +184,7 @@ function RecordRow({ record, isStaff }: { record: BehaviourRecord; isStaff: bool
             disabled={withdraw.isPending}
             className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700"
           >
-            Withdraw
+            {t("shared.withdraw")}
           </button>
         )}
       </div>
@@ -229,7 +229,7 @@ function NewRecord({ studentProfileId }: { studentProfileId: string }) {
 
       <div className="mt-3 flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">
-          Kind
+          {t("shared.kind")}
           <select
             value={kind}
             onChange={(event) => setKind(event.target.value as BehaviourKind)}
@@ -240,7 +240,7 @@ function NewRecord({ studentProfileId }: { studentProfileId: string }) {
           </select>
         </label>
         <label className="text-xs text-slate-500">
-          Category
+          {t("behaviour.category")}
           <input
             value={category}
             onChange={(event) => setCategory(event.target.value)}
@@ -251,7 +251,7 @@ function NewRecord({ studentProfileId }: { studentProfileId: string }) {
           />
         </label>
         <label className="text-xs text-slate-500">
-          Points
+          {t("behaviour.points")}
           <input
             type="number"
             min={0}
@@ -274,7 +274,7 @@ function NewRecord({ studentProfileId }: { studentProfileId: string }) {
       </div>
 
       <label className="mt-3 block text-xs text-slate-500">
-        What happened
+        {t("behaviour.whatHappened")}
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}

@@ -256,7 +256,7 @@ function OnLoan() {
               disabled={takeBack.isPending}
               className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700"
             >
-              Take back
+              {t("library.takeBack")}
             </button>
           </li>
         ))}

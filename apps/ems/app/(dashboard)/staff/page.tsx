@@ -51,7 +51,7 @@ export default function StaffDirectoryPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("staff.directory")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-            Everyone with a staff login, teaching and non-teaching. Bank details are shown here only as whether
+            {t("staff.intro")}
             an account is on file — the number itself lives behind a reason and a log entry.
           </p>
         </div>
@@ -59,7 +59,7 @@ export default function StaffDirectoryPage() {
           href="/staff/new"
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          Register staff
+          {t("staff.register")}
         </Link>
       </div>
 
@@ -116,7 +116,7 @@ export default function StaffDirectoryPage() {
 
       {staff && staff.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          Nobody has a staff record yet. Register the first one to get started.
+          {t("staff.noneYet")}
         </p>
       )}
 

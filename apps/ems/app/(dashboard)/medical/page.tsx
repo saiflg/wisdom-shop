@@ -128,7 +128,7 @@ function Record({ studentProfileId, isStaff }: { studentProfileId: string; isSta
       {data.critical.length > 0 && (
         <section className="rounded-2xl border-2 border-red-300 p-4 dark:border-red-900">
           <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">
-            Read before taking this child anywhere
+            {t("medical.readBefore")}
           </p>
           <ul className="mt-2 space-y-2">
             {data.critical.map((entry) => (
