@@ -98,8 +98,10 @@ const ALLOWED_WITHOUT_ROLES: Record<string, string> = {
   "people/people.controller.ts:PeopleController:GET :userId/photo": "photo-visibility.ts decides per viewer",
   "people/people.controller.ts:PeopleController:POST :userId/photo": "staff, or the person themselves",
   "people/people.controller.ts:PeopleController:DELETE :userId/photo": "staff, or the person themselves",
-  "students/students.controller.ts:StudentsController:GET /": "guardians see only their own children",
-  "students/students.controller.ts:StudentsController:GET :id": "404s for another family's child",
+  "students/students.controller.ts:StudentsController:GET /":
+    "staff see all; a guardian their linked children; a pupil only themselves",
+  "students/students.controller.ts:StudentsController:GET :id":
+    "404s for anyone the viewer may not see — another family's child, or another pupil",
   "subjects/subjects.controller.ts:SubjectsController:GET /": "the school's subject list is not sensitive",
   "subjects/subjects.controller.ts:SubjectsController:GET :id": "the school's subject list is not sensitive",
   "timetable/timetable.controller.ts:TimetableController:GET periods": "the school's timetable shape",
