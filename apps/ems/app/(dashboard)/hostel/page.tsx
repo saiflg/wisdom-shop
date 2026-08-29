@@ -13,6 +13,7 @@ import {
   type HostelBlock,
   type HostelRoom,
 } from "@/lib/use-hostel";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Boarding houses and who sleeps where.
@@ -24,6 +25,7 @@ import {
  * sleep and the screen is where that has to surface.
  */
 export default function HostelPage() {
+  const { t } = useTranslation();
   const isStaff = useCanAuthor();
   const { data: blocks, isLoading } = useHostelBlocks();
 
@@ -50,9 +52,9 @@ export default function HostelPage() {
 
       <Setup blocks={blocks ?? []} />
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {blocks?.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">No boarding houses yet.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("hostel.noHouses")}</p>
       )}
 
       <div className="space-y-4">
@@ -65,6 +67,7 @@ export default function HostelPage() {
 }
 
 function Setup({ blocks }: { blocks: HostelBlock[] }) {
+  const { t } = useTranslation();
   const addBlock = useAddBlock();
   const addRoom = useAddRoom();
   const [house, setHouse] = useState({ name: "", wardenName: "" });
@@ -84,26 +87,26 @@ function Setup({ blocks }: { blocks: HostelBlock[] }) {
             });
             setHouse({ name: "", wardenName: "" });
           } catch (err) {
-            setNote(err instanceof ApiError ? err.message : "Could not add that house");
+            setNote(err instanceof ApiError ? err.message : t("hostel.addHouseFailed"));
           }
         }}
         className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
       >
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Add a house</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("hostel.addHouse")}</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <input
             value={house.name}
             onChange={(event) => setHouse({ ...house, name: event.target.value })}
             required
-            placeholder="Yellow House"
-            aria-label="House name"
+            placeholder={t("hostel.housePlaceholder")}
+            aria-label={t("hostel.houseName")}
             className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
           <input
             value={house.wardenName}
             onChange={(event) => setHouse({ ...house, wardenName: event.target.value })}
-            placeholder="Warden"
-            aria-label="Warden name"
+            placeholder={t("hostel.wardenPlaceholder")}
+            aria-label={t("hostel.wardenName")}
             className="w-36 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
           <button
@@ -128,21 +131,21 @@ function Setup({ blocks }: { blocks: HostelBlock[] }) {
             });
             setRoom({ ...room, name: "" });
           } catch (err) {
-            setNote(err instanceof ApiError ? err.message : "Could not add that room");
+            setNote(err instanceof ApiError ? err.message : t("hostel.addRoomFailed"));
           }
         }}
         className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
       >
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Add a room</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("hostel.addRoom")}</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <select
             value={room.blockId}
             onChange={(event) => setRoom({ ...room, blockId: event.target.value })}
             required
-            aria-label="House"
+            aria-label={t("hostel.house")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose a house…</option>
+            <option value="">{t("hostel.chooseHouse")}</option>
             {blocks.map((block) => (
               <option key={block.id} value={block.id}>
                 {block.name}
@@ -153,8 +156,8 @@ function Setup({ blocks }: { blocks: HostelBlock[] }) {
             value={room.name}
             onChange={(event) => setRoom({ ...room, name: event.target.value })}
             required
-            placeholder="Room 3"
-            aria-label="Room name"
+            placeholder={t("hostel.roomPlaceholder")}
+            aria-label={t("hostel.roomName")}
             className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
           <input
@@ -162,7 +165,7 @@ function Setup({ blocks }: { blocks: HostelBlock[] }) {
             min={0}
             value={room.beds}
             onChange={(event) => setRoom({ ...room, beds: event.target.value })}
-            aria-label="Beds"
+            aria-label={t("hostel.beds")}
             className="w-20 rounded-lg border border-slate-300 px-3 py-2 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
           />
           <button
@@ -180,6 +183,7 @@ function Setup({ blocks }: { blocks: HostelBlock[] }) {
 }
 
 function BlockCard({ block }: { block: HostelBlock }) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -204,13 +208,14 @@ function BlockCard({ block }: { block: HostelBlock }) {
         {block.rooms.map((room) => (
           <RoomRow key={room.id} room={room} />
         ))}
-        {block.rooms.length === 0 && <p className="text-sm text-slate-500">No rooms in this house yet.</p>}
+        {block.rooms.length === 0 && <p className="text-sm text-slate-500">{t("hostel.noRooms")}</p>}
       </div>
     </section>
   );
 }
 
 function RoomRow({ room }: { room: HostelRoom }) {
+  const { t } = useTranslation();
   const { data: students } = useStudents();
   const allocate = useAllocateBed();
   const release = useReleaseBed();
@@ -225,7 +230,7 @@ function RoomRow({ room }: { room: HostelRoom }) {
       setStudentProfileId("");
     } catch (err) {
       // Where "they already have a bed in Yellow House, Room 3" surfaces.
-      setNote(err instanceof ApiError ? err.message : "Could not give them a bed");
+      setNote(err instanceof ApiError ? err.message : t("hostel.giveBedFailed"));
     }
   };
 
@@ -235,7 +240,7 @@ function RoomRow({ room }: { room: HostelRoom }) {
       const result = await release.mutateAsync(allocationId);
       if (result.alreadyReleased) setNote(`${name} had already been released.`);
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not release that bed");
+      setNote(err instanceof ApiError ? err.message : t("hostel.releaseBedFailed"));
     }
   };
 
@@ -263,7 +268,7 @@ function RoomRow({ room }: { room: HostelRoom }) {
           aria-expanded={open}
           className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
         >
-          {open ? "Close" : "Who is in here"}
+          {open ? t("shared.close") : t("hostel.whoIsInHere")}
         </button>
       </div>
 
@@ -292,7 +297,7 @@ function RoomRow({ room }: { room: HostelRoom }) {
               );
             })}
             {room.allocations.length === 0 && (
-              <li className="py-2 text-sm text-slate-500">Nobody in this room.</li>
+              <li className="py-2 text-sm text-slate-500">{t("hostel.nobodyInRoom")}</li>
             )}
           </ul>
 
@@ -300,10 +305,10 @@ function RoomRow({ room }: { room: HostelRoom }) {
             <select
               value={studentProfileId}
               onChange={(event) => setStudentProfileId(event.target.value)}
-              aria-label="Student"
+              aria-label={t("shared.student")}
               className="w-52 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
-              <option value="">Choose a student…</option>
+              <option value="">{t("transport.chooseStudent")}</option>
               {students?.map((student) => (
                 <option key={student.id} value={student.id}>
                   {student.user.firstName} {student.user.lastName}
@@ -316,9 +321,9 @@ function RoomRow({ room }: { room: HostelRoom }) {
               disabled={allocate.isPending || !studentProfileId || room.free === 0}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {allocate.isPending ? "Adding…" : "Give a bed"}
+              {allocate.isPending ? t("shared.adding") : t("hostel.giveBed")}
             </button>
-            {room.free === 0 && <span className="text-xs text-slate-500">No free beds in this room.</span>}
+            {room.free === 0 && <span className="text-xs text-slate-500">{t("hostel.noFreeBeds")}</span>}
           </div>
 
           {note && <p className="text-xs text-amber-600">{note}</p>}
