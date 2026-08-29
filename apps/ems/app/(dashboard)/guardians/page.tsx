@@ -30,7 +30,7 @@ export default function GuardiansPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Parents and guardians</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("guardians.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
           Search by a parent&apos;s name or by their child&apos;s — somebody ringing about a pupil rarely gives
           their own name first.
@@ -83,7 +83,7 @@ export default function GuardiansPage() {
         </p>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           {errorMessage(error, "Couldn't load the parent directory.")}

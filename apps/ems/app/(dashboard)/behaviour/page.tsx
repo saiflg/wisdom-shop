@@ -97,7 +97,7 @@ function StudentBehaviour({ studentProfileId, isStaff }: { studentProfileId: str
       {isStaff && <NewRecord studentProfileId={studentProfileId} />}
 
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Record</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("behaviour.record")}</h2>
         {data.records.length === 0 ? (
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {t("behaviour.nothingWritten")}
@@ -115,6 +115,7 @@ function StudentBehaviour({ studentProfileId, isStaff }: { studentProfileId: str
 }
 
 function Summary({ summary }: { summary: BehaviourSummary }) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
       <div className="flex flex-wrap gap-8">
@@ -122,17 +123,17 @@ function Summary({ summary }: { summary: BehaviourSummary }) {
             and one ten-point merit are the same total and a very different
             term. */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Merits</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("behaviour.merits")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">{summary.merits}</p>
           <p className="text-xs text-slate-500">{summary.meritPoints} points</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Concerns</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("behaviour.concerns")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-amber-600">{summary.concerns}</p>
           <p className="text-xs text-slate-500">{summary.concernPoints} points</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Net</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("behaviour.net")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums">{summary.netPoints}</p>
         </div>
       </div>

@@ -198,6 +198,17 @@ function NewBudget() {
   const [term, setTerm] = useState("First");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  /*
+   * Deliberately not translated.
+   *
+   * A category is data, not a label: it is saved as typed and matched against
+   * Expense.category by name. Prefilling "Motorin" for a Turkish reader would
+   * produce budget lines that match no expense the school has ever recorded,
+   * and the mismatch would show up as a category budgeted at zero rather than
+   * as anything anybody could diagnose.
+   *
+   * These are starter rows a school overwrites with its own words.
+   */
   const [rows, setRows] = useState<{ category: string; amount: string }[]>([
     { category: "Diesel", amount: "" },
     { category: "Stationery", amount: "" },
@@ -238,7 +249,7 @@ function NewBudget() {
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">New budget</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("budget.new")}</h2>
 
       <div className="mt-3 flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">

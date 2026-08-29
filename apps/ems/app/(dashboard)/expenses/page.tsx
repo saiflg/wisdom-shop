@@ -181,7 +181,7 @@ function NewExpense() {
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">New expense</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("expenses.new")}</h2>
 
       <div className="mt-3 flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">

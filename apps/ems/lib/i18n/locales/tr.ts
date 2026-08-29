@@ -863,4 +863,5 @@ export const tr: Partial<Dictionary> = {
   "parents.alertNO_PORTAL_ACCESS": "Giriş yapamıyor",
   "guardians.search": "Veli ve çocuk ara",
   "guardians.searchPlaceholder": "Bir veli veya çocuk arayın…",
+  "guardians.title": "Veliler ve vasiler",
 };

@@ -869,4 +869,5 @@ export const ha: Partial<Dictionary> = {
   "parents.alertNO_PORTAL_ACCESS": "Ba ya iya shiga",
   "guardians.search": "Nemi iyaye da yara",
   "guardians.searchPlaceholder": "Nemi uba/uwa ko yaro…",
+  "guardians.title": "Iyaye da masu kula",
 };

@@ -869,4 +869,5 @@ export const ar: Partial<Dictionary> = {
   "parents.alertNO_PORTAL_ACCESS": "لا يستطيع تسجيل الدخول",
   "guardians.search": "ابحث عن أولياء الأمور والأبناء",
   "guardians.searchPlaceholder": "ابحث عن ولي أمر أو طفل…",
+  "guardians.title": "أولياء الأمور",
 };

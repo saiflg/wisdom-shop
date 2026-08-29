@@ -154,7 +154,7 @@ function BookRow({ book, isStaff }: { book: LibraryBook; isStaff: boolean }) {
               aria-expanded={issuing}
               className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold disabled:opacity-40 dark:border-slate-700"
             >
-              {issuing ? t("common.cancel") : "Issue"}
+              {issuing ? t("common.cancel") : t("library.issue")}
             </button>
           )}
         </div>
@@ -207,7 +207,7 @@ function IssuePanel({ book, onDone }: { book: LibraryBook; onDone: () => void })
         disabled={borrow.isPending || !studentProfileId}
         className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
       >
-        {borrow.isPending ? t("library.issuing") : "Issue"}
+        {borrow.isPending ? t("library.issuing") : t("library.issue")}
       </button>
       {note && <p className="w-full text-xs text-amber-600">{note}</p>}
     </div>

@@ -885,6 +885,7 @@ export const en = {
   "parents.alertNO_PORTAL_ACCESS": "Cannot sign in",
   "guardians.search": "Search parents and children",
   "guardians.searchPlaceholder": "Search a parent or a child…",
+  "guardians.title": "Parents and guardians",
 } as const;
 
 /**

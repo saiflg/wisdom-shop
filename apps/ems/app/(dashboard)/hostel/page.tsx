@@ -32,7 +32,7 @@ export default function HostelPage() {
   if (!isStaff) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">Boarding</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("hostel.title")}</h1>
         <p className="text-sm text-slate-600 dark:text-slate-400">
           Ask the school office about boarding arrangements — where your child sleeps will appear here once
           they have been given a bed.
@@ -44,7 +44,7 @@ export default function HostelPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Boarding</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("hostel.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
           {t("hostel.intro")}
         </p>

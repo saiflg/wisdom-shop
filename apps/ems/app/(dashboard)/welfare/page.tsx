@@ -224,7 +224,7 @@ function AskForHelp() {
       }}
       className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
     >
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Ask for help</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("welfare.askForHelp")}</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         <select
           value={form.kind}
