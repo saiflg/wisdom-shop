@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { canSeeStudent, studentAudienceFor } from "./student-visibility";
 import * as argon2 from "argon2";
 import type { PrismaClient as TenantPrismaClient } from "ems-tenant-client";
 import { TenantPrismaService } from "@/tenancy/tenant-prisma.service";
@@ -141,22 +142,36 @@ export class StudentsService {
   }
 
   /**
-   * SCHOOL_ADMIN/TEACHER see every student. A GUARDIAN sees only students
-   * they are linked to via GuardianLink — the same shape as the shop's
-   * vendor-ownership scoping, applied here instead of at the guard layer,
-   * since "which rows" is a data filter, not a yes/no permission check.
+   * Staff see every student. A guardian sees the children they are linked to.
+   * A pupil sees themselves. Anyone else sees nothing.
+   *
+   * "Which rows" is a data filter rather than a yes/no permission check, which
+   * is why it lives here and not at the guard layer. It is written as an
+   * exhaustive match on the viewer's audience rather than as a special case
+   * for guardians — see student-visibility.ts. The previous shape asked
+   * "GUARDIAN and not SCHOOL_ADMIN", and a pupil, being neither, fell through
+   * to the branch that returns the whole roll.
    */
   async list(viewer: AuthenticatedUser) {
     const client = await this.tenantPrisma.getClient();
+    const audience = studentAudienceFor(viewer.roles);
 
-    if (viewer.roles.includes("GUARDIAN") && !viewer.roles.includes("SCHOOL_ADMIN")) {
-      return client.studentProfile.findMany({
-        where: { deletedAt: null, guardianLinks: { some: { guardianUserId: viewer.id } } },
-        include: STUDENT_INCLUDE,
-      });
+    switch (audience) {
+      case "ALL":
+        return client.studentProfile.findMany({ where: { deletedAt: null }, include: STUDENT_INCLUDE });
+      case "LINKED_CHILDREN":
+        return client.studentProfile.findMany({
+          where: { deletedAt: null, guardianLinks: { some: { guardianUserId: viewer.id } } },
+          include: STUDENT_INCLUDE,
+        });
+      case "SELF":
+        return client.studentProfile.findMany({
+          where: { deletedAt: null, userId: viewer.id },
+          include: STUDENT_INCLUDE,
+        });
+      case "NONE":
+        return [];
     }
-
-    return client.studentProfile.findMany({ where: { deletedAt: null }, include: STUDENT_INCLUDE });
   }
 
   async findOne(id: string, viewer: AuthenticatedUser) {
@@ -168,12 +183,21 @@ export class StudentsService {
 
     if (!record) throw new NotFoundException("No student found with that id");
 
-    const isOwnGuardian = record.guardianLinks.some((link) => link.guardianUserId === viewer.id);
-    if (viewer.roles.includes("GUARDIAN") && !viewer.roles.includes("SCHOOL_ADMIN") && !isOwnGuardian) {
-      // 404, not 403 — a guardian must not be able to tell "this student
-      // exists but isn't mine" from "this student doesn't exist at all".
-      throw new NotFoundException("No student found with that id");
-    }
+    const allowed = canSeeStudent(
+      studentAudienceFor(viewer.roles),
+      {
+        studentProfileId: record.id,
+        studentUserId: record.userId,
+        guardianUserIds: record.guardianLinks.map((link) => link.guardianUserId),
+      },
+      { userId: viewer.id },
+    );
+
+    // 404, not 403 — nobody must be able to tell "this student exists but
+    // isn't mine" from "this student doesn't exist at all". Previously only a
+    // guardian was checked here, so one pupil could read another pupil's
+    // record, guardians' email addresses included.
+    if (!allowed) throw new NotFoundException("No student found with that id");
 
     return record;
   }
