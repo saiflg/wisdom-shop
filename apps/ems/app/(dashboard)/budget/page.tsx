@@ -14,6 +14,7 @@ import {
   type BudgetComparisonRow,
   type BudgetLine,
 } from "@/lib/use-budgets";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * What the school meant to spend, beside what it actually spent.
@@ -24,6 +25,7 @@ import {
  * makes a school look comfortably within budget while it is not.
  */
 export default function BudgetPage() {
+  const { t } = useTranslation();
   const { data: budgets, isLoading } = useBudgets();
   const [selected, setSelected] = useState<string | null>(null);
   const current = selected ?? budgets?.[0]?.id ?? null;
@@ -31,23 +33,23 @@ export default function BudgetPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Budget</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("budget.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          What you planned to spend, beside what has actually gone out. Only approved and paid expenses count
+          {t("budget.intro")}
           — a request still waiting is not spending yet.
         </p>
       </div>
 
       <NewBudget />
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {budgets?.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">No budgets set yet.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("budget.none")}</p>
       )}
 
       {budgets && budgets.length > 1 && (
         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Budget
+          {t("budget.title")}
           <select
             value={current ?? ""}
             onChange={(event) => setSelected(event.target.value)}
@@ -68,6 +70,7 @@ export default function BudgetPage() {
 }
 
 function BudgetDetail({ id }: { id: string }) {
+  const { t } = useTranslation();
   const { data } = useBudgetWithActual(id);
   const remove = useDeleteBudget();
 
@@ -91,7 +94,7 @@ function BudgetDetail({ id }: { id: string }) {
           disabled={remove.isPending}
           className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 disabled:opacity-50 dark:border-red-900"
         >
-          Withdraw
+          {t("shared.withdraw")}
         </button>
       </div>
 
@@ -103,28 +106,29 @@ function BudgetDetail({ id }: { id: string }) {
         ))}
       </ul>
       {comparison.rows.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">This budget has no lines.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("budget.noLines")}</p>
       )}
     </div>
   );
 }
 
 function Totals({ comparison }: { comparison: BudgetComparison }) {
+  const { t } = useTranslation();
   const over = comparison.remainingCents < 0;
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
       <div className="flex flex-wrap gap-8">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Budgeted</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("budget.budgeted")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums">{formatAmount(comparison.budgetedCents)}</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Spent</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("budget.spent")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums">{formatAmount(comparison.spentCents)}</p>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {over ? "Over by" : "Left"}
+            {over ? t("budget.overBy") : t("budget.left")}
           </p>
           <p
             className={`mt-1 text-2xl font-bold tabular-nums ${over ? "text-red-600" : "text-emerald-600"}`}
@@ -140,7 +144,7 @@ function Totals({ comparison }: { comparison: BudgetComparison }) {
       {comparison.unbudgetedCents > 0 && (
         <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
           {formatAmount(comparison.unbudgetedCents)} was spent under categories this budget has no line for.
-          It is counted in the totals above and shown in the list below.
+          {t("budget.countedNote")}
         </p>
       )}
     </section>
@@ -186,6 +190,7 @@ function Row({ row }: { row: BudgetComparisonRow }) {
 }
 
 function NewBudget() {
+  const { t } = useTranslation();
   const create = useCreateBudget();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -215,7 +220,7 @@ function NewBudget() {
       setName("");
     } catch (err) {
       // Where "there are two lines for X" surfaces.
-      setError(err instanceof ApiError ? err.message : "Could not save that budget");
+      setError(err instanceof ApiError ? err.message : t("budget.saveFailed"));
     }
   };
 
@@ -226,7 +231,7 @@ function NewBudget() {
         onClick={() => setOpen(true)}
         className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
       >
-        New budget
+        {t("budget.new")}
       </button>
     );
   }
@@ -237,18 +242,18 @@ function NewBudget() {
 
       <div className="mt-3 flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">
-          Name
+          {t("budget.name")}
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
             required
             maxLength={120}
-            placeholder="2026-2027 First term"
+            placeholder={t("budget.namePlaceholder")}
             className="mt-1 block w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
         <label className="text-xs text-slate-500">
-          Year
+          {t("budget.year")}
           <input
             value={academicYear}
             onChange={(event) => setAcademicYear(event.target.value)}
@@ -257,19 +262,19 @@ function NewBudget() {
           />
         </label>
         <label className="text-xs text-slate-500">
-          Term
+          {t("budget.term")}
           <select
             value={term}
             onChange={(event) => setTerm(event.target.value)}
             className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option>First</option>
-            <option>Second</option>
-            <option>Third</option>
+            <option>{t("budget.termFirst")}</option>
+            <option>{t("budget.termSecond")}</option>
+            <option>{t("budget.termThird")}</option>
           </select>
         </label>
         <label className="text-xs text-slate-500">
-          From
+          {t("budget.from")}
           <input
             type="date"
             value={fromDate}
@@ -298,7 +303,7 @@ function NewBudget() {
               onChange={(event) =>
                 setRows(rows.map((r, i) => (i === index ? { ...r, category: event.target.value } : r)))
               }
-              placeholder="Category"
+              placeholder={t("budget.categoryPlaceholder")}
               aria-label={`Line ${index + 1} category`}
               className="w-40 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
@@ -317,7 +322,7 @@ function NewBudget() {
               onClick={() => setRows(rows.filter((_, i) => i !== index))}
               className="text-xs text-slate-500 underline"
             >
-              Remove
+              {t("shared.remove")}
             </button>
           </li>
         ))}
@@ -328,11 +333,11 @@ function NewBudget() {
         onClick={() => setRows([...rows, { category: "", amount: "" }])}
         className="mt-2 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
       >
-        Add line
+        {t("budget.addLine")}
       </button>
 
       <p className="mt-3 text-xs text-slate-500">
-        Categories are matched to expenses by name, ignoring capitals. Spending under a category with no line
+        {t("budget.matchNote")}
         here still shows up — it is not hidden.
       </p>
 
@@ -342,14 +347,14 @@ function NewBudget() {
           disabled={create.isPending || !valid}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {create.isPending ? "Saving…" : "Save budget"}
+          {create.isPending ? t("shared.saving") : t("budget.save")}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}

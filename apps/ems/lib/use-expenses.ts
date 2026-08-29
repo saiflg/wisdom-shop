@@ -3,14 +3,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./api";
 import { authHeaders, useAuthQueryState } from "./api-auth";
+import type { TranslationKey } from "@/lib/i18n";
 
 export type ExpenseStatus = "REQUESTED" | "APPROVED" | "PAID" | "REJECTED";
 
-export const STATUS_LABEL: Record<ExpenseStatus, string> = {
-  REQUESTED: "Waiting for approval",
-  APPROVED: "Approved, not yet paid",
-  PAID: "Paid",
-  REJECTED: "Turned down",
+// Keys, resolved by the screen at render. Held as English strings here they
+// were fixed at import and stayed English however the reader had chosen.
+export const STATUS_KEY: Record<ExpenseStatus, TranslationKey> = {
+  REQUESTED: "expenses.statusREQUESTED",
+  APPROVED: "expenses.statusAPPROVED",
+  PAID: "expenses.statusPAID",
+  REJECTED: "expenses.statusREJECTED",
 };
 
 export const STATUS_STYLE: Record<ExpenseStatus, string> = {
@@ -20,11 +23,11 @@ export const STATUS_STYLE: Record<ExpenseStatus, string> = {
   REJECTED: "bg-slate-500 text-white",
 };
 
-export const TRANSITION_LABEL: Record<ExpenseStatus, string> = {
-  APPROVED: "Approve",
-  REJECTED: "Turn down",
-  PAID: "Record payment",
-  REQUESTED: "Ask again",
+export const TRANSITION_KEY: Record<ExpenseStatus, TranslationKey> = {
+  APPROVED: "expenses.transitionAPPROVED",
+  REJECTED: "expenses.transitionREJECTED",
+  PAID: "expenses.transitionPAID",
+  REQUESTED: "expenses.transitionREQUESTED",
 };
 
 export interface Expense {
