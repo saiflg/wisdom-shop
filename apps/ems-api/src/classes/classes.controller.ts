@@ -38,8 +38,8 @@ export class ClassesController {
 
   @Get(":id")
   @ApiOperation({ summary: "A class and its active enrollments" })
-  findOne(@Param("id") id: string) {
-    return this.classes.findOne(id);
+  findOne(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.classes.findOne(id, user);
   }
 
   @Patch(":id")
