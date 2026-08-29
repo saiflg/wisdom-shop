@@ -237,7 +237,7 @@ export default function PromotionPage() {
 
           <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left dark:bg-slate-900">
+              <thead className="bg-slate-50 text-start dark:bg-slate-900">
                 <tr>
                   <th className="px-4 py-2 font-medium">Student</th>
                   <th className="px-4 py-2 font-medium">Now</th>

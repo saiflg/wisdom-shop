@@ -158,9 +158,9 @@ function Record({ studentProfileId, isStaff }: { studentProfileId: string; isSta
               <div className="min-w-0">
                 <p className="text-sm font-medium">
                   {entry.title}
-                  <span className="ml-2 text-xs font-normal text-slate-500">{KIND_LABEL[entry.kind]}</span>
+                  <span className="ms-2 text-xs font-normal text-slate-500">{KIND_LABEL[entry.kind]}</span>
                   {entry.archivedAt && (
-                    <span className="ml-2 text-xs font-normal italic text-slate-500">no longer current</span>
+                    <span className="ms-2 text-xs font-normal italic text-slate-500">no longer current</span>
                   )}
                 </p>
                 {entry.detail && <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{entry.detail}</p>}

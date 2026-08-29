@@ -143,14 +143,14 @@ export default function StaffFeesPage() {
         <>
           <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left dark:bg-slate-900">
+              <thead className="bg-slate-50 text-start dark:bg-slate-900">
                 <tr>
                   <th className="px-3 py-2 font-medium">Staff member</th>
                   <th className="px-3 py-2 font-medium">Children</th>
-                  <th className="px-3 py-2 text-right font-medium">Owed</th>
-                  <th className="px-3 py-2 text-right font-medium">Agreed monthly</th>
-                  <th className="px-3 py-2 text-right font-medium">This month</th>
-                  <th className="px-3 py-2 text-right font-medium">Left after</th>
+                  <th className="px-3 py-2 text-end font-medium">Owed</th>
+                  <th className="px-3 py-2 text-end font-medium">Agreed monthly</th>
+                  <th className="px-3 py-2 text-end font-medium">This month</th>
+                  <th className="px-3 py-2 text-end font-medium">Left after</th>
                 </tr>
               </thead>
               <tbody>
@@ -169,14 +169,14 @@ export default function StaffFeesPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{money(row.plan.outstandingCents)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-slate-500">
+                    <td className="px-3 py-2 text-end tabular-nums">{money(row.plan.outstandingCents)}</td>
+                    <td className="px-3 py-2 text-end tabular-nums text-slate-500">
                       {money(row.monthlyCapCents)}
                     </td>
-                    <td className="px-3 py-2 text-right font-medium tabular-nums">
+                    <td className="px-3 py-2 text-end font-medium tabular-nums">
                       {money(row.plan.totalCents)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{money(row.plan.remainingCents)}</td>
+                    <td className="px-3 py-2 text-end tabular-nums">{money(row.plan.remainingCents)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -185,7 +185,7 @@ export default function StaffFeesPage() {
                   <td className="px-3 py-2" colSpan={4}>
                     Total to settle
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{money(totalCents)}</td>
+                  <td className="px-3 py-2 text-end tabular-nums">{money(totalCents)}</td>
                   <td />
                 </tr>
               </tfoot>

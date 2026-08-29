@@ -295,7 +295,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
         <div className="min-w-0">
           <p className="font-medium">
             {KIND_LABEL[request.kind]}
-            <span className="ml-2 tabular-nums text-slate-600 dark:text-slate-400">
+            <span className="ms-2 tabular-nums text-slate-600 dark:text-slate-400">
               {formatAmount(request.amountCents)}
             </span>
           </p>

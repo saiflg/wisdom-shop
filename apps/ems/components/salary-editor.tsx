@@ -140,7 +140,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
               onChange={(event) => update(index, { amount: event.target.value })}
               inputMode="decimal"
               aria-label={draft.basis === "FIXED" ? "Amount" : "Percentage"}
-              className="w-28 rounded-lg border border-slate-300 bg-white px-3 py-2 text-right text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
+              className="w-28 rounded-lg border border-slate-300 bg-white px-3 py-2 text-end text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
             />
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-1 text-xs text-slate-500" title="Percentages are taken from this">

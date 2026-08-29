@@ -5,15 +5,12 @@ import { apiFetch, errorMessage } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
-import { LOCALES, isLocale, type Locale } from "@/lib/i18n";
+import { LOCALES, LOCALE_LABELS, isLocale, type Locale } from "@/lib/i18n";
 
 interface BrandingSettings {
   displayName: string | null;
   defaultLocale: string;
 }
-
-/** The language's own name — a French speaker scans for "Français". */
-const NAMES: Record<Locale, string> = { en: "English", fr: "Français" };
 
 /**
  * The language the school opens in, and the one this person reads in.
@@ -96,7 +93,7 @@ export default function LanguagesPage() {
                   : "rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
               }
             >
-              {NAMES[option]}
+              {LOCALE_LABELS[option]}
             </button>
           ))}
         </div>
@@ -129,7 +126,7 @@ export default function LanguagesPage() {
           >
             {LOCALES.map((option) => (
               <option key={option} value={option}>
-                {NAMES[option]}
+                {LOCALE_LABELS[option]}
               </option>
             ))}
           </select>

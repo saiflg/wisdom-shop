@@ -125,7 +125,7 @@ function LessonRow({ lesson, isStaff }: { lesson: Lesson; isStaff: boolean }) {
         <div className="min-w-0">
           <p className="text-sm font-medium">
             {lesson.title}
-            {lesson.subject && <span className="ml-2 text-xs text-slate-500">{lesson.subject.name}</span>}
+            {lesson.subject && <span className="ms-2 text-xs text-slate-500">{lesson.subject.name}</span>}
           </p>
           <p className="text-xs text-slate-500">
             {new Date(lesson.startsAt).toLocaleString()} · {lesson.createdByName}

@@ -207,7 +207,7 @@ export default function HomeworkPage() {
               type="button"
               onClick={() => setSelected(selected === assignment.id ? null : assignment.id)}
               aria-expanded={selected === assignment.id}
-              className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 text-left transition hover:border-brand-400 dark:border-slate-800"
+              className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 text-start transition hover:border-brand-400 dark:border-slate-800"
             >
               <span className="min-w-0">
                 <span className="block font-semibold">{assignment.title}</span>
@@ -343,7 +343,7 @@ function Detail({
                     {submission.studentProfile?.user
                       ? `${submission.studentProfile.user.firstName} ${submission.studentProfile.user.lastName}`
                       : "Student"}
-                    {submission.isLate && <span className="ml-2 text-xs font-semibold text-amber-600">late</span>}
+                    {submission.isLate && <span className="ms-2 text-xs font-semibold text-amber-600">late</span>}
                   </span>
                   <span className="text-xs text-slate-500">{submission.status.toLowerCase()}</span>
                 </div>
@@ -372,7 +372,7 @@ function Detail({
             <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 What you handed in
-                {mine.isLate && <span className="ml-2 text-amber-600">late</span>}
+                {mine.isLate && <span className="ms-2 text-amber-600">late</span>}
               </p>
               <p className="whitespace-pre-wrap text-sm">{mine.content}</p>
 
@@ -458,7 +458,7 @@ function MarkRow({
           onChange={(event) => setScore(event.target.value)}
           inputMode="decimal"
           aria-label={`Mark out of ${maxScoreHundredths / 100}`}
-          className="mt-1 block w-24 rounded-lg border border-slate-300 bg-white px-2 py-1 text-right text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
+          className="mt-1 block w-24 rounded-lg border border-slate-300 bg-white px-2 py-1 text-end text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
         />
       </label>
       <label className="min-w-0 flex-1 text-xs font-medium">

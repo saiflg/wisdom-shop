@@ -95,7 +95,7 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
       )}
 
       {open && history && history.length > 0 && (
-        <ul className="mt-2 space-y-1 border-l-2 border-slate-200 pl-3 dark:border-slate-800">
+        <ul className="mt-2 space-y-1 border-s-2 border-slate-200 ps-3 dark:border-slate-800">
           {history.map((invitation) => (
             <li key={invitation.id} className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span

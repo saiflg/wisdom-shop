@@ -83,7 +83,7 @@ export function Sidebar() {
   return (
     <aside
       className={clsx(
-        "flex shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-950",
+        "flex shrink-0 flex-col border-e border-slate-200 bg-white transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-950",
         collapsed ? "w-16" : "w-64",
       )}
       aria-label={t("app.name")}
@@ -108,7 +108,7 @@ export function Sidebar() {
           type="button"
           onClick={toggleCollapsed}
           aria-label={collapsed ? t("sidebar.expand") : t("sidebar.collapse")}
-          className="ml-auto rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 dark:hover:bg-slate-900"
+          className="ms-auto rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 dark:hover:bg-slate-900"
         >
           <ChevronIcon className={clsx("h-4 w-4 transition-transform", !collapsed && "rotate-180")} />
         </button>
@@ -202,7 +202,7 @@ export function Sidebar() {
                       <NavIconGlyph name={group.icon} className="h-5 w-5 shrink-0" />
                       {!collapsed && (
                         <>
-                          <span className="flex-1 truncate text-left">{t(asKey(group.key))}</span>
+                          <span className="flex-1 truncate text-start">{t(asKey(group.key))}</span>
                           <ChevronIcon
                             className={clsx("h-4 w-4 shrink-0 transition-transform", expanded && "rotate-90")}
                           />
@@ -211,7 +211,7 @@ export function Sidebar() {
                     </button>
 
                     {expanded && !collapsed && (
-                      <ul className="mt-0.5 space-y-0.5 border-l border-slate-200 pl-3 dark:border-slate-800">
+                      <ul className="mt-0.5 space-y-0.5 border-s border-slate-200 ps-3 dark:border-slate-800">
                         {group.items.map((leaf) => (
                           <LeafRow
                             key={leaf.key}
@@ -298,7 +298,7 @@ function LeafRow({
             {/* Search flattens the tree, so without this two modules that
                 share a label (Students/Attendance vs Staff/Attendance) are
                 indistinguishable in the results. */}
-            {showGroupName && <span className="ml-1 text-xs opacity-70">· {groupLabel}</span>}
+            {showGroupName && <span className="ms-1 text-xs opacity-70">· {groupLabel}</span>}
           </span>
           <span className="shrink-0 rounded-full border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:border-slate-700 dark:text-slate-600">
             {t("sidebar.plannedShort")}
@@ -322,7 +322,7 @@ function LeafRow({
       >
         <span className="flex-1 truncate">
           {label}
-          {showGroupName && <span className="ml-1 text-xs opacity-60">· {groupLabel}</span>}
+          {showGroupName && <span className="ms-1 text-xs opacity-60">· {groupLabel}</span>}
         </span>
         {favoriteButton}
       </Link>

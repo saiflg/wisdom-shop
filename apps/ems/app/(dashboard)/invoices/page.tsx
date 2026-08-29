@@ -102,11 +102,11 @@ function InvoiceCard({ invoice, open, onToggle }: { invoice: FeeInvoice; open: b
 
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-      <button type="button" onClick={onToggle} className="flex w-full flex-wrap items-center justify-between gap-3 text-left">
+      <button type="button" onClick={onToggle} className="flex w-full flex-wrap items-center justify-between gap-3 text-start">
         <div>
           <p className="font-semibold">
             {invoice.invoiceNumber}
-            {student && <span className="ml-2 font-normal text-slate-500">{`${student.firstName} ${student.lastName}`}</span>}
+            {student && <span className="ms-2 font-normal text-slate-500">{`${student.firstName} ${student.lastName}`}</span>}
           </p>
           <p className="text-sm text-slate-500">
             {invoice.academicYear} · {invoice.term}
@@ -114,7 +114,7 @@ function InvoiceCard({ invoice, open, onToggle }: { invoice: FeeInvoice; open: b
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="text-right">
+          <div className="text-end">
             <p className="text-sm text-slate-500">{t("fees.invoices.balance")}</p>
             <p className="font-semibold tabular-nums">{formatMoney(invoice.balanceCents, invoice.currency)}</p>
           </div>
@@ -226,7 +226,7 @@ function PayOnline({ invoice }: { invoice: FeeInvoice }) {
                 {/* A sandbox gateway takes a real-looking payment that is not
                     real. Nobody should discover that afterwards. */}
                 {option.sandbox && (
-                  <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                  <span className="ms-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
                     test mode
                   </span>
                 )}
@@ -336,7 +336,7 @@ function InvoiceDetail({ invoice }: { invoice: FeeInvoice }) {
                 <span className="text-slate-600 dark:text-slate-400">
                   {new Date(payment.receivedAt).toLocaleDateString()} · {t(methodKey(payment.method))}
                   {payment.reference && ` · ${payment.reference}`}
-                  <span className="ml-1 text-xs text-slate-500">
+                  <span className="ms-1 text-xs text-slate-500">
                     {t("fees.invoices.recordedBy")} {payment.recordedByName}
                   </span>
                 </span>

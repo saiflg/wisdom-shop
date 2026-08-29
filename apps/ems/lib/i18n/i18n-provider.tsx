@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_LOCALE,
+  directionOf,
   isLocale,
   translate,
   translatePlural,
@@ -54,11 +55,22 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  /*
+   * One place that touches the document, so `dir` can never drift from
+   * `lang`. It also fixes something the scattered assignments missed: the
+   * stored-locale path on first mount set the state but never the attribute,
+   * so a returning Arabic reader got a correctly translated page laid out
+   * left-to-right until they changed language again.
+   */
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = directionOf(locale);
+  }, [locale]);
+
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     setChosenByUser(true);
     window.localStorage.setItem(STORAGE_KEY, next);
-    document.documentElement.lang = next;
   }, []);
 
   const applySchoolDefault = useCallback((next: string | null | undefined) => {
@@ -67,10 +79,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     // not this person's choice, and storing it would make a later change to
     // the school setting stop reaching anybody who had once loaded the page.
     setChosenByUser((chosen) => {
-      if (!chosen) {
-        setLocaleState(next);
-        document.documentElement.lang = next;
-      }
+      if (!chosen) setLocaleState(next);
       return chosen;
     });
   }, []);

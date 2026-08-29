@@ -251,9 +251,9 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
                   />
                   <span className="min-w-0 truncate">
                     {schoolClass.name}
-                    <span className="ml-1 text-xs text-slate-500">{schoolClass.academicYear}</span>
+                    <span className="ms-1 text-xs text-slate-500">{schoolClass.academicYear}</span>
                     {elsewhere && !current.includes(schoolClass.id) && (
-                      <span className="ml-1 text-xs text-amber-600">· in another section</span>
+                      <span className="ms-1 text-xs text-amber-600">· in another section</span>
                     )}
                   </span>
                 </label>
@@ -283,7 +283,7 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
           type="button"
           onClick={destroy}
           disabled={remove.isPending}
-          className="ml-auto rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50 dark:border-red-900"
+          className="ms-auto rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50 dark:border-red-900"
         >
           Remove section
         </button>

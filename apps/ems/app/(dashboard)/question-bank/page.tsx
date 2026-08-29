@@ -313,7 +313,7 @@ export default function QuestionBankPage() {
           <div className="mt-2 text-sm">
             <p className="font-medium">Added {genResult.created} questions.</p>
             {genResult.rejected.length > 0 && (
-              <ul className="mt-1 list-disc pl-5 text-xs text-amber-700 dark:text-amber-400">
+              <ul className="mt-1 list-disc ps-5 text-xs text-amber-700 dark:text-amber-400">
                 {genResult.rejected.map((reason) => (
                   <li key={reason}>{reason}</li>
                 ))}

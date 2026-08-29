@@ -156,7 +156,7 @@ function Row({ row }: { row: BudgetComparisonRow }) {
         <p className="text-sm font-medium">
           {row.category}
           {row.unbudgeted && (
-            <span className="ml-2 text-xs font-normal text-amber-600">not budgeted for</span>
+            <span className="ms-2 text-xs font-normal text-amber-600">not budgeted for</span>
           )}
         </p>
         <p className="text-sm tabular-nums">

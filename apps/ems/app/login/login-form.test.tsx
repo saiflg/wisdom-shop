@@ -1,8 +1,20 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render as renderBare, screen, waitFor } from "@testing-library/react";
+import { I18nProvider } from "@/lib/i18n/i18n-provider";
 import userEvent from "@testing-library/user-event";
 import { LoginForm } from "@/app/login/login-form";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/auth-store";
+
+/*
+ * The form reads its labels and its validation messages from the dictionary
+ * now, so it needs the provider the app always gives it. Rendering it bare
+ * threw "useTranslation must be used inside <I18nProvider>" — a test harness
+ * gap, not a component fault.
+ *
+ * No locale is set, so this exercises the English the assertions below expect.
+ */
+const render = (ui: React.ReactElement) => renderBare(<I18nProvider>{ui}</I18nProvider>);
+
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),

@@ -130,7 +130,7 @@ function EntryRow({ entry }: { entry: WalletEntry }) {
           {entry.reference && ` · ref ${entry.reference}`}
         </p>
       </div>
-      <div className="text-right">
+      <div className="text-end">
         <p className={`text-sm font-semibold tabular-nums ${credit ? "text-emerald-600" : "text-slate-900 dark:text-slate-100"}`}>
           {credit ? "+" : ""}
           {formatAmount(entry.amountCents)}

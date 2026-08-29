@@ -98,7 +98,13 @@ describe("the supported set", () => {
 
   it("matches the locales the console actually ships", () => {
     // Kept in step by hand rather than importing the browser bundle into the
-    // server. This is the test that catches the two drifting apart.
-    expect([...SUPPORTED_LOCALES].sort()).toEqual(["en", "fr"]);
+    // server. This is the test that catches the two drifting apart, and it
+    // did: adding Arabic, Hausa and Turkish to apps/ems failed here until the
+    // server was told about them too.
+    //
+    // The console's own list lives in apps/ems/lib/i18n/index.ts. Direction
+    // (Arabic is rtl) is a console concern and deliberately not mirrored
+    // here — the server never lays anything out.
+    expect([...SUPPORTED_LOCALES].sort()).toEqual(["ar", "en", "fr", "ha", "tr"]);
   });
 });

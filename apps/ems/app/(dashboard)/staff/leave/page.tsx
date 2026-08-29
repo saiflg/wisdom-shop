@@ -217,7 +217,7 @@ export default function LeavePage() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             Waiting for a decision
             {office.data.pendingDays > 0 && (
-              <span className="ml-2 font-normal normal-case text-slate-400">
+              <span className="ms-2 font-normal normal-case text-slate-400">
                 {office.data.pendingDays} days in total
               </span>
             )}
@@ -234,7 +234,7 @@ export default function LeavePage() {
                   <div className="min-w-0">
                     <p className="font-semibold">
                       {request.staffName}
-                      <span className="ml-2 font-normal text-slate-500">{request.typeLabel}</span>
+                      <span className="ms-2 font-normal text-slate-500">{request.typeLabel}</span>
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-400">{request.dates}</p>
                     {request.reason && <p className="text-xs italic text-slate-500">“{request.reason}”</p>}
@@ -297,7 +297,7 @@ export default function LeavePage() {
                 <div className="min-w-0">
                   <p className="font-semibold">
                     {request.typeLabel}
-                    <span className="ml-2 font-normal text-slate-500">{request.dates}</span>
+                    <span className="ms-2 font-normal text-slate-500">{request.dates}</span>
                   </p>
                   {request.reason && <p className="text-xs italic text-slate-500">“{request.reason}”</p>}
                   {request.decidedByName && (

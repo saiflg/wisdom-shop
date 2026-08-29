@@ -44,6 +44,22 @@ export const en = {
 
   "breadcrumb.home": "Home",
 
+  // ── Sign in ────────────────────────────────────────────────────────
+  // The first screen anybody sees, and until now the only part of the
+  // console that stayed in English whatever language was chosen.
+  "login.title": "Welcome back",
+  "login.subtitle": "Sign in to manage your school's classes, students and teachers.",
+  "login.schoolSlug": "School identifier",
+  "login.schoolSlugHint": "The identifier your school was given at setup",
+  "login.email": "Email",
+  "login.password": "Password",
+  "login.submit": "Sign in",
+  "login.submitting": "Signing in…",
+  "login.errorSchoolSlug": "Enter your school's identifier",
+  "login.errorEmail": "Enter a valid email address",
+  "login.errorPassword": "Password is required",
+  "login.errorGeneric": "Incorrect school, email or password.",
+
   // ── Navigation: groups ─────────────────────────────────────────────
   "nav.dashboard": "Dashboard",
   "nav.students": "Students",

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { getBranding } from "@/lib/branding-server";
 import { LoginForm } from "./login-form";
 import { SchoolMark } from "@/components/school-mark";
+import { LoginHeading } from "./login-heading";
 
 export const metadata: Metadata = {
   title: "Sign in — Wisdom Campus",
@@ -38,12 +39,7 @@ export default async function LoginPage({
           </p>
         </>
       ) : (
-        <>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Sign in to manage your school&apos;s classes, students and teachers.
-          </p>
-        </>
+        <LoginHeading />
       )}
       {/* When the school is already known, the form carries its slug rather
           than asking for it — but it is still sent to the API, which goes on

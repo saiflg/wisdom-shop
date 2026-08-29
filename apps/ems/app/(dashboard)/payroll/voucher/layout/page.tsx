@@ -46,7 +46,7 @@ function describe(source: VoucherSource): string {
   }
 }
 
-/** Money columns are right-aligned and summed; the rest are text. */
+/** Money columns are end-aligned and summed; the rest are text. */
 function isMoney(source: VoucherSource): boolean {
   return source.kind === "TOTAL" || source.kind === "COMPONENT" || source.kind === "PAGE_TOTAL";
 }

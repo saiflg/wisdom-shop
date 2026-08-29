@@ -213,14 +213,14 @@ export default function PensionRegisterPage() {
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left dark:bg-slate-900">
+                <thead className="bg-slate-50 text-start dark:bg-slate-900">
                   <tr>
                     <th className="px-3 py-2 font-medium">S/N</th>
                     <th className="px-3 py-2 font-medium">Name</th>
                     <th className="px-3 py-2 font-medium">PIN number</th>
-                    <th className="px-3 py-2 text-right font-medium">Employer</th>
-                    <th className="px-3 py-2 text-right font-medium">Employee</th>
-                    <th className="px-3 py-2 text-right font-medium">Total</th>
+                    <th className="px-3 py-2 text-end font-medium">Employer</th>
+                    <th className="px-3 py-2 text-end font-medium">Employee</th>
+                    <th className="px-3 py-2 text-end font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -233,9 +233,9 @@ export default function PensionRegisterPage() {
                           <span className="font-sans text-amber-700 dark:text-amber-400">missing</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">{money(row.employerCents)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{money(row.employeeCents)}</td>
-                      <td className="px-3 py-2 text-right font-medium tabular-nums">{money(row.totalCents)}</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{money(row.employerCents)}</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{money(row.employeeCents)}</td>
+                      <td className="px-3 py-2 text-end font-medium tabular-nums">{money(row.totalCents)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -244,13 +244,13 @@ export default function PensionRegisterPage() {
                     <td className="px-3 py-2" colSpan={3}>
                       Total to remit
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    <td className="px-3 py-2 text-end tabular-nums">
                       {money(data.register.employerTotalCents)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    <td className="px-3 py-2 text-end tabular-nums">
                       {money(data.register.employeeTotalCents)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{money(data.register.totalCents)}</td>
+                    <td className="px-3 py-2 text-end tabular-nums">{money(data.register.totalCents)}</td>
                   </tr>
                 </tfoot>
               </table>

@@ -69,7 +69,7 @@ export default function ClassPage() {
                     <>
                       {data.classTeacher.name}
                       {data.classTeacher.online && (
-                        <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                        <span className="ms-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
                           Online
                         </span>
                       )}
@@ -125,7 +125,7 @@ export default function ClassPage() {
                       <PersonPhoto userId={student.id} name={student.name} size="sm" />
                       {student.online && (
                         <span
-                          className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-950"
+                          className="absolute -bottom-0.5 -end-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-950"
                           aria-hidden
                         />
                       )}
@@ -140,7 +140,7 @@ export default function ClassPage() {
                       </span>
                     )}
                     {student.studentCode && (
-                      <span className="ml-auto shrink-0 font-mono text-xs text-slate-500">{student.studentCode}</span>
+                      <span className="ms-auto shrink-0 font-mono text-xs text-slate-500">{student.studentCode}</span>
                     )}
                   </li>
                 ))}

@@ -248,11 +248,11 @@ function RoomRow({ room }: { room: HostelRoom }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium">
           {room.name}
-          <span className="ml-2 text-xs tabular-nums font-normal text-slate-500">
+          <span className="ms-2 text-xs tabular-nums font-normal text-slate-500">
             {room.taken}/{room.beds} beds
           </span>
           {room.overfull && (
-            <span className="ml-2 text-xs font-normal text-red-600">
+            <span className="ms-2 text-xs font-normal text-red-600">
               more children than beds
             </span>
           )}
@@ -276,7 +276,7 @@ function RoomRow({ room }: { room: HostelRoom }) {
                 <li key={allocation.id} className="flex items-center justify-between gap-2 py-2">
                   <span className="min-w-0 truncate text-sm">
                     {name}
-                    <span className="ml-2 text-xs text-slate-500">
+                    <span className="ms-2 text-xs text-slate-500">
                       {allocation.nights} night{allocation.nights === 1 ? "" : "s"}
                     </span>
                   </span>

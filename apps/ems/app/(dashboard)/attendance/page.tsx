@@ -222,7 +222,7 @@ export default function AttendancePage() {
                     {new Date(register.date).toLocaleDateString()}
                     {register.session && ` · ${register.session}`}
                     {register.takenBy && (
-                      <span className="ml-2 text-xs font-normal text-slate-500">
+                      <span className="ms-2 text-xs font-normal text-slate-500">
                         {t("attendance.takenBy")} {register.takenBy.firstName} {register.takenBy.lastName}
                       </span>
                     )}

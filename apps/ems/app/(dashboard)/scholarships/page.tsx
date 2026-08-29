@@ -254,7 +254,7 @@ function AwardRow({
         <div className="min-w-0">
           <p className="font-semibold">
             {scholarship.studentName}
-            <span className="ml-2 font-normal text-slate-500">{scholarship.name}</span>
+            <span className="ms-2 font-normal text-slate-500">{scholarship.name}</span>
           </p>
           <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
             {scholarship.describedAs}
