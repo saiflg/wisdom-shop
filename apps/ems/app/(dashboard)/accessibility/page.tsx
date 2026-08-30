@@ -8,22 +8,27 @@ import {
   type ReadingSupport,
   type UpdateAccessibilityInput,
 } from "@/lib/use-accessibility";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
-const READING_SUPPORT: Array<{ value: ReadingSupport; title: string; blurb: string }> = [
-  { value: "NONE", title: "Normal", blurb: "Lessons are explained the usual way." },
+// Keys rather than prose: this array is built once at module load, so held
+// as English it would stay English however the reader had set their language.
+const READING_SUPPORT: Array<{ value: ReadingSupport; titleKey: TranslationKey; blurbKey: TranslationKey }> = [
+  { value: "NONE", titleKey: "accessibility.readingNONE", blurbKey: "accessibility.readingNONEHint" },
   {
     value: "SIMPLIFIED",
-    title: "Simpler language",
-    blurb: "Short sentences and everyday words, with new words explained the first time.",
+    titleKey: "accessibility.readingSIMPLIFIED",
+    blurbKey: "accessibility.readingSIMPLIFIEDHint",
   },
   {
     value: "STEP_BY_STEP",
-    title: "One step at a time",
-    blurb: "Numbered steps, with a check that each one made sense before moving on.",
+    titleKey: "accessibility.readingSTEP_BY_STEP",
+    blurbKey: "accessibility.readingSTEP_BY_STEPHint",
   },
 ];
 
 export default function AccessibilityPage() {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useAccessibility();
   const save = useUpdateAccessibility();
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
@@ -35,13 +40,13 @@ export default function AccessibilityPage() {
     setMessage(null);
     try {
       await save.mutateAsync(input);
-      setMessage({ tone: "ok", text: "Saved." });
+      setMessage({ tone: "ok", text: t("accessibility.saved") });
     } catch (err) {
-      setMessage({ tone: "error", text: err instanceof ApiError ? err.message : "Couldn't save that." });
+      setMessage({ tone: "error", text: err instanceof ApiError ? err.message : t("accessibility.saveFailed") });
     }
   };
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading your settings…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("accessibility.loading")}</p>;
   // Saying so beats spinning forever — and a student who cannot load this
   // page is precisely the one who cannot work around it.
   if (error || !data) {
@@ -55,39 +60,38 @@ export default function AccessibilityPage() {
   return (
     <div className="max-w-2xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Accessibility</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("accessibility.title")}</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          These are your own settings. They change every page here, and they change how Wisdom Teacher
-          explains things to you. Nobody has to approve them and you can change them whenever you like.
+          {t("accessibility.intro")}
         </p>
       </div>
 
       <section aria-labelledby="display-heading" className="space-y-3">
         <h2 id="display-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          How things look
+          {t("accessibility.howThingsLook")}
         </h2>
 
         <Toggle
-          label="Bigger text"
-          hint="Makes everything larger, everywhere."
+          label={t("accessibility.biggerText")}
+          hint={t("accessibility.biggerTextHint")}
           checked={data.largeText}
           onChange={(largeText) => void set({ largeText })}
         />
         <Toggle
-          label="Higher contrast"
-          hint="Stronger colours and darker text."
+          label={t("accessibility.higherContrast")}
+          hint={t("accessibility.higherContrastHint")}
           checked={data.highContrast}
           onChange={(highContrast) => void set({ highContrast })}
         />
         <Toggle
-          label="Easier-to-read letters"
-          hint="A typeface with more space between letters and words."
+          label={t("accessibility.easierLetters")}
+          hint={t("accessibility.easierLettersHint")}
           checked={data.dyslexiaFont}
           onChange={(dyslexiaFont) => void set({ dyslexiaFont })}
         />
         <Toggle
-          label="Less movement"
-          hint="Turns off sliding and fading animations."
+          label={t("accessibility.lessMovement")}
+          hint={t("accessibility.lessMovementHint")}
           checked={data.reduceMotion}
           onChange={(reduceMotion) => void set({ reduceMotion })}
         />
@@ -95,11 +99,11 @@ export default function AccessibilityPage() {
 
       <section aria-labelledby="teaching-heading" className="space-y-3">
         <h2 id="teaching-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          How Wisdom Teacher explains things
+          {t("accessibility.howWisdomExplains")}
         </h2>
 
         <fieldset className="space-y-2">
-          <legend className="sr-only">Reading support</legend>
+          <legend className="sr-only">{t("accessibility.readingSupport")}</legend>
           {READING_SUPPORT.map((option) => (
             <label
               key={option.value}
@@ -113,22 +117,22 @@ export default function AccessibilityPage() {
                 onChange={() => void set({ readingSupport: option.value })}
               />
               <span>
-                <span className="block text-sm font-semibold">{option.title}</span>
-                <span className="mt-0.5 block text-xs text-slate-500">{option.blurb}</span>
+                <span className="block text-sm font-semibold">{t(option.titleKey)}</span>
+                <span className="mt-0.5 block text-xs text-slate-500">{t(option.blurbKey)}</span>
               </span>
             </label>
           ))}
         </fieldset>
 
         <Toggle
-          label="Describe pictures in words"
-          hint="The teacher explains every diagram out loud as well as drawing it."
+          label={t("accessibility.describePictures")}
+          hint={t("accessibility.describePicturesHint")}
           checked={data.describeVisuals}
           onChange={(describeVisuals) => void set({ describeVisuals })}
         />
         <Toggle
-          label="Only show videos with captions"
-          hint="Hides demonstration videos that aren't captioned."
+          label={t("accessibility.captionsOnly")}
+          hint={t("accessibility.captionsOnlyHint")}
           checked={data.requireCaptions}
           onChange={(requireCaptions) => void set({ requireCaptions })}
         />
@@ -143,8 +147,7 @@ export default function AccessibilityPage() {
       </p>
 
       <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-900">
-        Your teachers can also set these for you, and may keep a private note about the support you need. That
-        note is never shown to you here and is never sent to the AI provider.
+        {t("accessibility.teacherNote")}
       </p>
     </div>
   );
