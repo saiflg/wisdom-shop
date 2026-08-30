@@ -6,11 +6,13 @@ import { errorMessage } from "@/lib/api";
 import { useClassMembers } from "@/lib/use-class-chat";
 import { ClassChat } from "@/components/class-chat";
 import { PersonPhoto } from "@/components/person-photo";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
-const LEADERSHIP_LABELS: Record<string, string> = {
-  PRINCIPAL: "Principal",
-  VICE_PRINCIPAL: "Vice principal",
-  HEAD_TEACHER: "Head teacher",
+const LEADERSHIP_KEYS: Record<string, TranslationKey> = {
+  PRINCIPAL: "classDetail.rolePrincipal",
+  VICE_PRINCIPAL: "classDetail.roleVicePrincipal",
+  HEAD_TEACHER: "classDetail.roleHeadTeacher",
 };
 
 /**
@@ -21,13 +23,30 @@ const LEADERSHIP_LABELS: Record<string, string> = {
  * them — roll numbers to staff, names to classmates — rather than which
  * component renders.
  */
+/**
+ * The leadership title, or whatever the school called the job.
+ *
+ * The lookup is bound to a const before it is used: indexing a Record twice
+ * gives the compiler two unrelated expressions under
+ * noUncheckedIndexedAccess, so the null check on the first does not narrow
+ * the second.
+ */
+function leadershipLabel(
+  t: (key: TranslationKey) => string,
+  leader: { role: string; jobTitle?: string | null },
+): string {
+  const key = LEADERSHIP_KEYS[leader.role];
+  return key ? t(key) : (leader.jobTitle ?? leader.role);
+}
+
 export default function ClassPage() {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const classId = params?.id ?? "";
   const { data, isLoading, error } = useClassMembers(classId);
 
   if (!classId) return null;
-  if (isLoading) return <p className="text-sm text-slate-500">Loading the class…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("classDetail.loading")}</p>;
 
   if (error || !data) {
     return (
@@ -59,32 +78,32 @@ export default function ClassPage() {
       <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
         <div className="space-y-6">
           <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Who teaches this class</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("classDetail.whoTeaches")}</h2>
 
             <dl className="mt-3 space-y-3 text-sm">
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">Class teacher</dt>
+                <dt className="text-xs uppercase tracking-wide text-slate-500">{t("classDetail.classTeacher")}</dt>
                 <dd className="mt-0.5 font-medium">
                   {data.classTeacher ? (
                     <>
                       {data.classTeacher.name}
                       {data.classTeacher.online && (
                         <span className="ms-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                          Online
+                          {t("classDetail.online")}
                         </span>
                       )}
                     </>
                   ) : (
                     // Worth saying loudly: a class with no teacher assigned is
                     // also a class whose teachers cannot post in its chat.
-                    <span className="text-amber-700 dark:text-amber-400">Not assigned yet</span>
+                    <span className="text-amber-700 dark:text-amber-400">{t("classDetail.notAssigned")}</span>
                   )}
                 </dd>
               </div>
 
               {data.subjectTeachers.length > 0 && (
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">Subject teachers</dt>
+                  <dt className="text-xs uppercase tracking-wide text-slate-500">{t("classDetail.subjectTeachers")}</dt>
                   <dd className="mt-0.5 space-y-1">
                     {data.subjectTeachers.map((teacher) => (
                       <p key={`${teacher.id}-${teacher.subject}`}>
@@ -97,13 +116,13 @@ export default function ClassPage() {
 
               {data.leadership.length > 0 && (
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">School leadership</dt>
+                  <dt className="text-xs uppercase tracking-wide text-slate-500">{t("classDetail.leadership")}</dt>
                   <dd className="mt-0.5 space-y-1">
                     {data.leadership.map((leader) => (
                       <p key={leader.id}>
                         {leader.name}{" "}
                         <span className="text-slate-500">
-                          · {LEADERSHIP_LABELS[leader.role] ?? leader.jobTitle ?? leader.role}
+                          · {leadershipLabel(t, leader)}
                         </span>
                       </p>
                     ))}
@@ -114,9 +133,9 @@ export default function ClassPage() {
           </section>
 
           <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Class members</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("classDetail.members")}</h2>
             {data.students.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">Nobody is enrolled yet.</p>
+              <p className="mt-2 text-sm text-slate-500">{t("classDetail.nobodyEnrolled")}</p>
             ) : (
               <ul className="mt-3 space-y-1.5">
                 {data.students.map((student) => (
