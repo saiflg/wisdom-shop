@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 interface MoneyLine {
   label: string;
@@ -48,6 +50,7 @@ function useStatement(from: string, to: string) {
  * board, so what is not counted is listed as prominently as what is.
  */
 export default function AccountingPage() {
+  const { t } = useTranslation();
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setUTCMonth(d.getUTCMonth() - 3);
@@ -59,16 +62,15 @@ export default function AccountingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Accounting</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("accounting.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          What came in and what went out over a period, from what the school has recorded. This is a summary,
-          not a set of books — there is no ledger, no journal and no trial balance here.
+          {t("accounting.intro")}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">
-          From
+          {t("accounting.from")}
           <input
             type="date"
             value={from}
@@ -87,7 +89,7 @@ export default function AccountingPage() {
         </label>
       </div>
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
 
       {data && (
         <>
@@ -100,11 +102,11 @@ export default function AccountingPage() {
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Out</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("accounting.out")}</p>
                 <p className="mt-1 text-2xl font-bold tabular-nums">{formatAmount(data.outgoingsCents)}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Net</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("accounting.net")}</p>
                 {/* A negative term is a real fact and is shown as one. */}
                 <p
                   className={`mt-1 text-2xl font-bold tabular-nums ${
@@ -118,8 +120,8 @@ export default function AccountingPage() {
           </section>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <Lines title="Money in" lines={data.income} />
-            <Lines title="Money out" lines={data.outgoings} />
+            <Lines title={t("accounting.moneyIn")} lines={data.income} />
+            <Lines title={t("accounting.moneyOut")} lines={data.outgoings} />
           </div>
 
           {/* Kept out of the net, and said so. This is a record of what moved,
@@ -127,17 +129,17 @@ export default function AccountingPage() {
           <section className="grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Committed, not yet paid
+                {t("accounting.committedNotPaid")}
               </p>
               <p className="mt-1 text-xl font-bold tabular-nums">
                 {formatAmount(data.committedNotPaidCents)}
               </p>
-              <p className="text-xs text-slate-500">Not in the net figure above.</p>
+              <p className="text-xs text-slate-500">{t("accounting.notInNet")}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Owed to the school</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("accounting.owedToSchool")}</p>
               <p className="mt-1 text-xl font-bold tabular-nums">{formatAmount(data.owedToSchoolCents)}</p>
-              <p className="text-xs text-slate-500">Fees invoiced and not collected, across all time.</p>
+              <p className="text-xs text-slate-500">{t("accounting.owedNote")}</p>
             </div>
           </section>
 
@@ -145,7 +147,7 @@ export default function AccountingPage() {
               needs to know what is not in it. */}
           <section className="rounded-2xl border border-amber-300 p-4 dark:border-amber-900">
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
-              What this does not count
+              {t("accounting.notCounted")}
             </p>
             <ul className="mt-2 space-y-1">
               {data.excludes.map((line) => (
@@ -162,11 +164,12 @@ export default function AccountingPage() {
 }
 
 function Lines({ title, lines }: { title: string; lines: MoneyLine[] }) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
       {lines.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">Nothing in this period.</p>
+        <p className="mt-2 text-sm text-slate-500">{t("accounting.nothingInPeriod")}</p>
       ) : (
         <ul className="mt-2 space-y-1">
           {lines.map((line) => (

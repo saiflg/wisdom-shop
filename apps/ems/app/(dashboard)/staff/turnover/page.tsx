@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { errorMessage } from "@/lib/api";
 import { useTurnover } from "@/lib/use-turnover";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * Who has left the school.
@@ -12,6 +14,7 @@ import { useTurnover } from "@/lib/use-turnover";
  * recruitment, not reminiscing.
  */
 export default function TurnoverPage() {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useTurnover();
 
   const money = (cents: number) =>
@@ -31,14 +34,14 @@ export default function TurnoverPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Staff turnover</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("turnover.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
           Everyone who has left, by section. Somebody whose last day is still ahead is not here yet —
           their post is not vacant and the school is still paying them.
         </p>
       </div>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           {errorMessage(error, "Couldn't load the turnover register.")}
@@ -60,15 +63,15 @@ export default function TurnoverPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <p className="text-2xl font-bold tabular-nums">{data.total}</p>
-              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">Left</p>
+              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{t("turnover.left")}</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <p className="text-2xl font-bold tabular-nums">{money(data.monthlyCents)}</p>
-              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">Monthly salary to replace</p>
+              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{t("turnover.salaryToReplace")}</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <p className="text-2xl font-bold tabular-nums">{averageLabel(data.averageTenureMonths)}</p>
-              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">Average time at the school</p>
+              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{t("turnover.averageTenure")}</p>
             </div>
           </div>
 
@@ -98,13 +101,13 @@ export default function TurnoverPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 text-start dark:bg-slate-900">
                     <tr>
-                      <th className="px-3 py-2 font-medium">S/N</th>
-                      <th className="px-3 py-2 font-medium">Name</th>
-                      <th className="px-3 py-2 font-medium">Role</th>
-                      <th className="px-3 py-2 text-end font-medium">Monthly salary</th>
-                      <th className="px-3 py-2 font-medium">Commenced</th>
-                      <th className="px-3 py-2 font-medium">Left</th>
-                      <th className="px-3 py-2 font-medium">Stayed</th>
+                      <th className="px-3 py-2 font-medium">{t("turnover.serial")}</th>
+                      <th className="px-3 py-2 font-medium">{t("turnover.name")}</th>
+                      <th className="px-3 py-2 font-medium">{t("turnover.role")}</th>
+                      <th className="px-3 py-2 text-end font-medium">{t("turnover.monthlySalary")}</th>
+                      <th className="px-3 py-2 font-medium">{t("turnover.commenced")}</th>
+                      <th className="px-3 py-2 font-medium">{t("turnover.left")}</th>
+                      <th className="px-3 py-2 font-medium">{t("turnover.stayed")}</th>
                     </tr>
                   </thead>
                   <tbody>

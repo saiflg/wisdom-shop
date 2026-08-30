@@ -9,19 +9,36 @@ import {
   useUpdateSchoolProfile,
   type SchoolProfileInput,
 } from "@/lib/use-school-profile";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
-const FIELDS: { key: keyof SchoolProfileInput; label: string; placeholder?: string; wide?: boolean }[] = [
-  { key: "motto", label: "Motto", placeholder: "Learning with purpose", wide: true },
-  { key: "addressLine1", label: "Address", placeholder: "12 Awolowo Road", wide: true },
-  { key: "addressLine2", label: "Address line 2", wide: true },
-  { key: "town", label: "Town" },
-  { key: "state", label: "State" },
-  { key: "country", label: "Country" },
-  { key: "phone", label: "Phone", placeholder: "0801 234 5678" },
-  { key: "email", label: "Email", placeholder: "office@school.ng" },
-  { key: "website", label: "Website" },
-  { key: "registrationNumber", label: "Registration number" },
-  { key: "headTeacherName", label: "Head teacher" },
+/*
+ * Labels are keys; the example values beside them are not.
+ *
+ * "12 Awolowo Road", "0801 234 5678" and "office@school.ng" show the SHAPE of
+ * an address, a phone number and an email — a Nigerian school recognises them
+ * instantly and any other school reads them as "something like this". Turning
+ * them into locale-specific inventions would mean guessing at address formats
+ * and dialling codes for countries this software has never been used in.
+ */
+const FIELDS: {
+  key: keyof SchoolProfileInput;
+  labelKey: TranslationKey;
+  placeholderKey?: TranslationKey;
+  placeholder?: string;
+  wide?: boolean;
+}[] = [
+  { key: "motto", labelKey: "schoolProfile.motto", placeholderKey: "schoolProfile.mottoPlaceholder", wide: true },
+  { key: "addressLine1", labelKey: "schoolProfile.address", placeholder: "12 Awolowo Road", wide: true },
+  { key: "addressLine2", labelKey: "schoolProfile.address2", wide: true },
+  { key: "town", labelKey: "schoolProfile.town" },
+  { key: "state", labelKey: "schoolProfile.state" },
+  { key: "country", labelKey: "schoolProfile.country" },
+  { key: "phone", labelKey: "schoolProfile.phone", placeholder: "0801 234 5678" },
+  { key: "email", labelKey: "schoolProfile.email", placeholder: "office@school.ng" },
+  { key: "website", labelKey: "schoolProfile.website" },
+  { key: "registrationNumber", labelKey: "schoolProfile.registrationNumber" },
+  { key: "headTeacherName", labelKey: "schoolProfile.headTeacher" },
 ];
 
 /**
@@ -33,6 +50,7 @@ const FIELDS: { key: keyof SchoolProfileInput; label: string; placeholder?: stri
  * headed with the school's URL slug.
  */
 export default function SchoolProfilePage() {
+  const { t } = useTranslation();
   const isAdmin = useIsSchoolAdmin();
   const { data: profile, isLoading } = useSchoolProfile();
   const { data: header } = useDocumentHeader();
@@ -61,19 +79,19 @@ export default function SchoolProfilePage() {
       });
       setNote("Saved.");
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not save that");
+      setNote(err instanceof ApiError ? err.message : t("schoolProfile.saveFailed"));
     }
   };
 
-  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">School profile</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("schoolProfile.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Where the school is and how to reach it. These print on report cards, receipts and transcripts.
-          Colours and the logo live under Branding.
+          {t("schoolProfile.intro")}
+          {t("schoolProfile.brandingNote")}
         </p>
       </div>
 
@@ -82,7 +100,7 @@ export default function SchoolProfilePage() {
       {header && header.length > 0 && (
         <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            How a printed document will be headed
+            {t("schoolProfile.headingPreview")}
           </p>
           <div className="mt-2">
             <p className="text-sm font-semibold">{header[0]}</p>
@@ -94,7 +112,7 @@ export default function SchoolProfilePage() {
           </div>
           {header.length === 1 && (
             <p className="mt-2 text-xs text-slate-500">
-              Only the name so far. Anything you fill in below appears underneath it.
+              {t("schoolProfile.nameOnly")}
             </p>
           )}
         </section>
@@ -102,7 +120,7 @@ export default function SchoolProfilePage() {
 
       {!profile && (
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Nothing has been filled in yet.
+          {t("schoolProfile.nothingFilled")}
         </p>
       )}
 
@@ -113,12 +131,12 @@ export default function SchoolProfilePage() {
               key={field.key}
               className={`text-xs text-slate-500 ${field.wide ? "sm:col-span-2" : ""}`}
             >
-              {field.label}
+              {t(field.labelKey)}
               <input
                 value={(form[field.key] as string | null) ?? ""}
                 onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}
                 disabled={!isAdmin}
-                placeholder={field.placeholder}
+                placeholder={field.placeholderKey ? t(field.placeholderKey) : field.placeholder}
                 maxLength={200}
                 className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900"
               />
@@ -126,7 +144,7 @@ export default function SchoolProfilePage() {
           ))}
 
           <label className="text-xs text-slate-500">
-            Year founded
+            {t("schoolProfile.yearFounded")}
             <input
               type="number"
               value={year}
@@ -146,12 +164,12 @@ export default function SchoolProfilePage() {
             disabled={update.isPending}
             className="mt-4 rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {update.isPending ? "Saving…" : "Save"}
+            {update.isPending ? t("shared.saving") : t("shared.save")}
           </button>
         ) : (
           // Shown rather than a disabled Save with no explanation.
           <p className="mt-4 text-xs text-slate-500">
-            Only an administrator can change these. You can read them here.
+            {t("schoolProfile.readOnly")}
           </p>
         )}
         {note && <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{note}</p>}
