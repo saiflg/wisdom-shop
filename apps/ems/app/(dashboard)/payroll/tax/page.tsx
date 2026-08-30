@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { errorMessage } from "@/lib/api";
 import { usePayrollRuns } from "@/lib/use-payroll";
 import { useTaxRegister } from "@/lib/use-statutory";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * PAYE for one month.
@@ -14,6 +15,7 @@ import { useTaxRegister } from "@/lib/use-statutory";
  * the school has no answer to.
  */
 export default function TaxRegisterPage() {
+  const { t } = useTranslation();
   const { data: runs } = usePayrollRuns();
   const [runId, setRunId] = useState<string | null>(null);
 
@@ -31,7 +33,7 @@ export default function TaxRegisterPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">PAYE schedule</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("paye.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
           Tax deducted this month, taken from the approved payroll run. Nothing here is recalculated —
           it says exactly what the voucher said.
@@ -39,7 +41,7 @@ export default function TaxRegisterPage() {
       </div>
 
       <label className="block max-w-xs">
-        <span className="text-sm font-medium">Payroll run</span>
+        <span className="text-sm font-medium">{t("paye.payrollRun")}</span>
         <select
           value={runId ?? ""}
           onChange={(e) => setRunId(e.target.value || null)}
@@ -53,7 +55,7 @@ export default function TaxRegisterPage() {
         </select>
       </label>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           {errorMessage(error, "Couldn't load the PAYE schedule.")}
@@ -69,7 +71,7 @@ export default function TaxRegisterPage() {
 
           {data.register.rows.length === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-              Nobody paid tax in this run. There is nothing to file.
+              {t("paye.nobodyPaidTax")}
             </p>
           ) : (
             <>
@@ -77,9 +79,9 @@ export default function TaxRegisterPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 text-start dark:bg-slate-900">
                     <tr>
-                      <th className="px-3 py-2 font-medium">S/N</th>
-                      <th className="px-3 py-2 font-medium">Name</th>
-                      <th className="px-3 py-2 text-end font-medium">Tax/month</th>
+                      <th className="px-3 py-2 font-medium">{t("paye.serial")}</th>
+                      <th className="px-3 py-2 font-medium">{t("paye.name")}</th>
+                      <th className="px-3 py-2 text-end font-medium">{t("paye.taxPerMonth")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -94,7 +96,7 @@ export default function TaxRegisterPage() {
                   <tfoot>
                     <tr className="border-t-2 border-slate-300 font-semibold dark:border-slate-700">
                       <td className="px-3 py-2" colSpan={2}>
-                        Total to remit
+                        {t("paye.totalToRemit")}
                       </td>
                       <td className="px-3 py-2 text-end tabular-nums">{money(data.register.totalCents)}</td>
                     </tr>

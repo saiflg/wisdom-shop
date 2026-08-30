@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useBankAccessLog } from "@/lib/use-staff";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 function when(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -22,6 +23,7 @@ function when(iso: string): string {
  * inside a record.
  */
 export default function BankAccessLogPage() {
+  const { t } = useTranslation();
   const { data: entries, isLoading, error } = useBankAccessLog();
   const [query, setQuery] = useState("");
 
@@ -39,7 +41,7 @@ export default function BankAccessLogPage() {
         <Link href="/staff" className="text-sm font-semibold text-brand-600 hover:underline">
           ← Staff directory
         </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Bank-detail access log</h1>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">{t("accessLog.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
           Every time a full account number has been read — on a staff record or by producing a payroll bank
           file — with the reason given at the time. The log records that a number was read, never the number.
@@ -47,17 +49,17 @@ export default function BankAccessLogPage() {
       </div>
 
       <label className="block max-w-md text-sm">
-        <span className="sr-only">Search the log</span>
+        <span className="sr-only">{t("accessLog.search")}</span>
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Staff member, who looked, or the reason"
+          placeholder={t("accessLog.searchPlaceholder")}
           className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </label>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading the log…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("accessLog.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           Couldn&apos;t load the access log: {error.message}
@@ -71,7 +73,7 @@ export default function BankAccessLogPage() {
       )}
 
       {entries && entries.length > 0 && visible.length === 0 && (
-        <p className="text-sm text-slate-500">Nothing in the log matches that.</p>
+        <p className="text-sm text-slate-500">{t("accessLog.noMatch")}</p>
       )}
 
       {visible.length > 0 && (
@@ -79,10 +81,10 @@ export default function BankAccessLogPage() {
           <table className="w-full text-sm">
             <thead className="text-start text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="py-2 pe-4">When</th>
-                <th className="py-2 pe-4">Whose details</th>
-                <th className="py-2 pe-4">Who looked</th>
-                <th className="py-2">Why</th>
+                <th className="py-2 pe-4">{t("accessLog.when")}</th>
+                <th className="py-2 pe-4">{t("accessLog.whose")}</th>
+                <th className="py-2 pe-4">{t("accessLog.who")}</th>
+                <th className="py-2">{t("accessLog.why")}</th>
               </tr>
             </thead>
             <tbody>

@@ -10,6 +10,7 @@ import { useSubjects, useCreateSubject } from "@/lib/use-subjects";
 import { useIsSchoolAdmin } from "@/lib/use-can-author";
 import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const createSubjectSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -19,6 +20,7 @@ const createSubjectSchema = z.object({
 type CreateSubjectValues = z.infer<typeof createSubjectSchema>;
 
 export default function SubjectsPage() {
+  const { t } = useTranslation();
   const { data: subjects, isLoading, error } = useSubjects();
   const createSubject = useCreateSubject();
   const isSchoolAdmin = useIsSchoolAdmin();
@@ -34,14 +36,14 @@ export default function SubjectsPage() {
       form.reset();
       setShowForm(false);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't create that subject.");
+      setFormError(err instanceof ApiError ? err.message : t("subjects.createFailed"));
     }
   });
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Subjects</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("subjects.title")}</h1>
         {/* Subjects are set up by an administrator. A teacher teaches them
             and a student studies them; neither creates one. */}
         {isSchoolAdmin && (
@@ -50,7 +52,7 @@ export default function SubjectsPage() {
           onClick={() => setShowForm((v) => !v)}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          {showForm ? "Cancel" : "New subject"}
+          {showForm ? t("common.cancel") : t("subjects.new")}
         </button>
         )}
       </div>
@@ -59,10 +61,10 @@ export default function SubjectsPage() {
 
       {isSchoolAdmin && showForm && (
         <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-          <FormField label="Name" placeholder="Mathematics" error={form.formState.errors.name?.message} {...form.register("name")} />
+          <FormField label={t("subjects.name")} placeholder={t("subjects.namePlaceholder")} error={form.formState.errors.name?.message} {...form.register("name")} />
           <FormField
-            label="Grade level"
-            placeholder="Grade 5"
+            label={t("subjects.gradeLevel")}
+            placeholder={t("shared.gradePlaceholder")}
             error={form.formState.errors.gradeLevel?.message}
             {...form.register("gradeLevel")}
           />
@@ -76,12 +78,12 @@ export default function SubjectsPage() {
             disabled={form.formState.isSubmitting}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            Create subject
+            {t("subjects.create")}
           </button>
         </form>
       )}
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           Couldn&apos;t load subjects: {error.message}
@@ -89,7 +91,7 @@ export default function SubjectsPage() {
       )}
 
       {subjects && subjects.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">No subjects yet.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("subjects.none")}</p>
       )}
 
       {subjects && subjects.length > 0 && (
