@@ -13,6 +13,7 @@ import { useSchemesOfWork, useCreateSchemeOfWork, useGenerateSchemeOfWork } from
 import { useCanAuthor } from "@/lib/use-can-author";
 import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const createSchema = z.object({
   subjectId: z.string().min(1, "Choose a subject"),
@@ -39,6 +40,7 @@ function linesToList(value: string): string[] {
 }
 
 export default function SchemesOfWorkPage() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const subjectId = searchParams.get("subjectId") ?? undefined;
 
@@ -89,7 +91,7 @@ export default function SchemesOfWorkPage() {
       createForm.reset();
       setMode("none");
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't create that scheme of work.");
+      setFormError(err instanceof ApiError ? err.message : t("schemes.createFailed"));
     }
   });
 
@@ -100,14 +102,14 @@ export default function SchemesOfWorkPage() {
       generateForm.reset();
       setMode("none");
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't generate that scheme of work.");
+      setFormError(err instanceof ApiError ? err.message : t("schemes.generateFailed"));
     }
   });
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Schemes of work</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("schemes.title")}</h1>
         <div className="flex gap-2">
           {canAuthor && (
             <button
@@ -118,7 +120,7 @@ export default function SchemesOfWorkPage() {
               }}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              {mode === "manual" ? "Cancel" : "Create manually"}
+              {mode === "manual" ? t("common.cancel") : t("shared.createManually")}
             </button>
           )}
           {canGenerate && (
@@ -130,7 +132,7 @@ export default function SchemesOfWorkPage() {
               }}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
-              {mode === "generate" ? "Cancel" : "Generate with Wisdom"}
+              {mode === "generate" ? t("common.cancel") : t("shared.generateWithWisdom")}
             </button>
           )}
         </div>
@@ -142,7 +144,7 @@ export default function SchemesOfWorkPage() {
         <form onSubmit={onCreate} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <div>
             <label htmlFor="create-subjectId" className="block text-sm font-medium">
-              Subject
+              {t("schemes.subject")}
             </label>
             <select
               id="create-subjectId"
@@ -151,7 +153,7 @@ export default function SchemesOfWorkPage() {
               className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900"
             >
               <option value="" disabled>
-                Choose a subject
+                {t("schemes.chooseSubject")}
               </option>
               {subjects?.map((subject) => (
                 <option key={subject.id} value={subject.id}>
@@ -165,15 +167,19 @@ export default function SchemesOfWorkPage() {
             )}
           </div>
           <FormField
-            label="Academic year"
+            label={t("schemes.academicYear")}
             placeholder="2026-2027"
             error={createForm.formState.errors.academicYear?.message}
             {...createForm.register("academicYear")}
           />
-          <FormField label="Term" placeholder="Term 1" error={createForm.formState.errors.term?.message} {...createForm.register("term")} />
+{/* "Term 1" stays English: a term is data, matched by name across
+                  results, invoices and exams, and the exam form defaults to this
+                  exact string. A translated hint would invite a Turkish reader to
+                  type "1. Dönem" and then match nothing. */}
+                            <FormField label={t("schemes.term")} placeholder="Term 1" error={createForm.formState.errors.term?.message} {...createForm.register("term")} />
           <FormField
-            label="Week 1 topic"
-            placeholder="Introduction to fractions"
+            label={t("schemes.week1Topic")}
+            placeholder={t("schemes.topicPlaceholder")}
             error={createForm.formState.errors.topic?.message}
             {...createForm.register("topic")}
           />
@@ -215,9 +221,9 @@ export default function SchemesOfWorkPage() {
             disabled={createForm.formState.isSubmitting}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            Create
+            {t("common.create")}
           </button>
-          <p className="text-xs text-slate-500">More weeks can be added by editing the scheme after creation.</p>
+          <p className="text-xs text-slate-500">{t("schemes.moreWeeks")}</p>
         </form>
       )}
 
@@ -225,7 +231,7 @@ export default function SchemesOfWorkPage() {
         <form onSubmit={onGenerate} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <div>
             <label htmlFor="generate-subjectId" className="block text-sm font-medium">
-              Subject
+              {t("schemes.subject")}
             </label>
             <select
               id="generate-subjectId"
@@ -234,7 +240,7 @@ export default function SchemesOfWorkPage() {
               className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900"
             >
               <option value="" disabled>
-                Choose a subject
+                {t("schemes.chooseSubject")}
               </option>
               {subjects?.map((subject) => (
                 <option key={subject.id} value={subject.id}>
@@ -248,12 +254,12 @@ export default function SchemesOfWorkPage() {
             )}
           </div>
           <FormField
-            label="Academic year"
+            label={t("schemes.academicYear")}
             placeholder="2026-2027"
             error={generateForm.formState.errors.academicYear?.message}
             {...generateForm.register("academicYear")}
           />
-          <FormField label="Term" placeholder="Term 1" error={generateForm.formState.errors.term?.message} {...generateForm.register("term")} />
+          <FormField label={t("schemes.term")} placeholder="Term 1" error={generateForm.formState.errors.term?.message} {...generateForm.register("term")} />
           {formError && (
             <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
               {formError}
@@ -264,12 +270,12 @@ export default function SchemesOfWorkPage() {
             disabled={generateForm.formState.isSubmitting}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            Generate
+            {t("shared.generate")}
           </button>
         </form>
       )}
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           Couldn&apos;t load schemes of work: {error.message}
@@ -277,7 +283,7 @@ export default function SchemesOfWorkPage() {
       )}
 
       {schemes && schemes.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">No schemes of work yet.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("schemes.none")}</p>
       )}
 
       {schemes && schemes.length > 0 && (
@@ -286,7 +292,7 @@ export default function SchemesOfWorkPage() {
             <li key={sow.id} className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
               <div className="flex items-center justify-between">
                 <Link href={`/schemes-of-work/${sow.id}`} className="font-medium hover:underline">
-                  {sow.subject?.name ?? "Subject"} · {sow.academicYear} · {sow.term}
+                  {sow.subject?.name ?? t("shared.subjectFallback")} · {sow.academicYear} · {sow.term}
                 </Link>
                 <div className="flex gap-2">
                   <span
@@ -299,7 +305,7 @@ export default function SchemesOfWorkPage() {
                     {sow.status}
                   </span>
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                    {sow.source === "AI_GENERATED" ? "Wisdom generated" : "Manual"}
+                    {sow.source === "AI_GENERATED" ? t("shared.wisdomGenerated") : t("shared.manual")}
                   </span>
                 </div>
               </div>
