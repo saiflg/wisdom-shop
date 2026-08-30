@@ -11,6 +11,8 @@ import {
   type PromotionRequest,
   type PromotionResult,
 } from "@/lib/use-promotion";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * End of year: move every child up.
@@ -39,6 +41,7 @@ const OUTCOME_STYLE: Record<PromotionDecision["outcome"], string> = {
 const GRADUATE_VALUE = "__graduate__";
 
 export default function PromotionPage() {
+  const { t } = useTranslation();
   const { data: classes } = useClasses();
   const preview = usePromotionPreview();
   const apply = useApplyPromotion();
@@ -93,7 +96,7 @@ export default function PromotionPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">End of year</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("promotion.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
           Move every student into next year&apos;s classes. Choose where each class goes, read the plan,
           then apply it. Nothing changes until you do — and running it twice is safe.
@@ -102,7 +105,7 @@ export default function PromotionPage() {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="text-sm font-medium">Current year</span>
+          <span className="text-sm font-medium">{t("promotion.currentYear")}</span>
           <select
             value={fromYear}
             onChange={(e) => {
@@ -112,7 +115,7 @@ export default function PromotionPage() {
             }}
             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("shared.choose")}</option>
             {years.map((y) => (
               <option key={y} value={y}>
                 {y}
@@ -122,7 +125,7 @@ export default function PromotionPage() {
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium">Next year</span>
+          <span className="text-sm font-medium">{t("promotion.nextYear")}</span>
           <select
             value={toYear}
             onChange={(e) => {
@@ -132,7 +135,7 @@ export default function PromotionPage() {
             }}
             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("shared.choose")}</option>
             {years
               .filter((y) => y !== fromYear)
               .map((y) => (
@@ -147,7 +150,7 @@ export default function PromotionPage() {
       {fromYear && toYear && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Where does each class go?
+            {t("promotion.whereDoesEachClassGo")}
           </h2>
           {fromClasses.length === 0 && (
             <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
@@ -180,13 +183,13 @@ export default function PromotionPage() {
                 }
                 className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               >
-                <option value="">Not decided</option>
+                <option value="">{t("promotion.notDecided")}</option>
                 {toClasses.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
                   </option>
                 ))}
-                <option value={GRADUATE_VALUE}>Leaving the school</option>
+                <option value={GRADUATE_VALUE}>{t("promotion.leavingSchool")}</option>
               </select>
             </div>
           ))}
@@ -197,7 +200,7 @@ export default function PromotionPage() {
             disabled={preview.isPending || fromClasses.length === 0}
             className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            {preview.isPending ? "Working it out…" : "Show me the plan"}
+            {preview.isPending ? t("promotion.workingItOut") : t("promotion.showPlan")}
           </button>
         </div>
       )}
@@ -239,10 +242,10 @@ export default function PromotionPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-start dark:bg-slate-900">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Student</th>
-                  <th className="px-4 py-2 font-medium">Now</th>
-                  <th className="px-4 py-2 font-medium">What happens</th>
-                  <th className="px-4 py-2 font-medium">Change</th>
+                  <th className="px-4 py-2 font-medium">{t("promotion.student")}</th>
+                  <th className="px-4 py-2 font-medium">{t("promotion.now")}</th>
+                  <th className="px-4 py-2 font-medium">{t("promotion.whatHappens")}</th>
+                  <th className="px-4 py-2 font-medium">{t("promotion.change")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -268,10 +271,10 @@ export default function PromotionPage() {
                           }}
                           className="rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
                         >
-                          <option value="">As class</option>
-                          <option value="PROMOTE">Move up</option>
-                          <option value="REPEAT">Repeat</option>
-                          <option value="GRADUATE">Leaving</option>
+                          <option value="">{t("promotion.asClass")}</option>
+                          <option value="PROMOTE">{t("promotion.moveUp")}</option>
+                          <option value="REPEAT">{t("promotion.repeat")}</option>
+                          <option value="GRADUATE">{t("promotion.leaving")}</option>
                         </select>
                       )}
                     </td>
@@ -287,7 +290,7 @@ export default function PromotionPage() {
               onClick={() => void runPreview()}
               className="rounded-full border border-slate-300 px-4 py-1.5 text-sm dark:border-slate-700"
             >
-              Update the plan with my changes
+              {t("promotion.updatePlan")}
             </button>
           )}
 
@@ -299,7 +302,7 @@ export default function PromotionPage() {
               </p>
               <div className="flex flex-wrap gap-2">
                 <label htmlFor="confirm-year" className="sr-only">
-                  Type the destination year to confirm
+                  {t("promotion.typeToConfirm")}
                 </label>
                 <input
                   id="confirm-year"
@@ -314,7 +317,7 @@ export default function PromotionPage() {
                   disabled={!canApply || apply.isPending}
                   className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
                 >
-                  {apply.isPending ? "Moving students…" : "Apply"}
+                  {apply.isPending ? t("promotion.moving") : t("promotion.apply")}
                 </button>
               </div>
             </div>
