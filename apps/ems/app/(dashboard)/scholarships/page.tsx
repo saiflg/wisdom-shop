@@ -10,6 +10,7 @@ import {
   type DiscountKind,
   type Scholarship,
 } from "@/lib/use-discounts";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Standing awards: who has one, what it is worth, and what it has done.
@@ -21,6 +22,7 @@ import {
  * both are worth somebody noticing.
  */
 export default function ScholarshipsPage() {
+  const { t } = useTranslation();
   const { data: awards, isLoading } = useScholarships();
   const { data: students } = useStudents();
   const award = useAwardScholarship();
@@ -67,10 +69,10 @@ export default function ScholarshipsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Scholarships</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("scholarships.title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-            A standing award reduces every invoice raised while it runs, including bills that do not exist yet.
-            For money off one bill only, use the discount on that invoice.
+            {t("scholarships.intro")}
+            {t("scholarships.oneBillNote")}
           </p>
         </div>
         {!open && (
@@ -79,7 +81,7 @@ export default function ScholarshipsPage() {
             onClick={() => setOpen(true)}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
           >
-            Award a scholarship
+            {t("scholarships.award")}
           </button>
         )}
       </div>
@@ -88,13 +90,13 @@ export default function ScholarshipsPage() {
         <div className="space-y-3 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-medium">
-              Student
+              {t("shared.student")}
               <select
                 value={studentProfileId}
                 onChange={(event) => setStudent(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               >
-                <option value="">Choose a student…</option>
+                <option value="">{t("scholarships.chooseStudent")}</option>
                 {(students ?? []).map((student) => (
                   <option key={student.id} value={student.id}>
                     {student.user.firstName} {student.user.lastName}
@@ -105,11 +107,11 @@ export default function ScholarshipsPage() {
             </label>
 
             <label className="text-sm font-medium">
-              What is it called?
+              {t("scholarships.whatCalled")}
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Founder's Scholarship"
+                placeholder={t("scholarships.namePlaceholder")}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
             </label>
@@ -119,25 +121,25 @@ export default function ScholarshipsPage() {
               <input
                 value={sponsor}
                 onChange={(event) => setSponsor(event.target.value)}
-                placeholder="Al-Madina Foundation"
+                placeholder={t("scholarships.sponsorPlaceholder")}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
             </label>
 
             <div className="flex gap-2">
               <label className="text-sm font-medium">
-                Kind
+                {t("shared.kind")}
                 <select
                   value={kind}
                   onChange={(event) => setKind(event.target.value as DiscountKind)}
                   className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
                 >
-                  <option value="PERCENT">Percentage</option>
-                  <option value="FIXED">An amount</option>
+                  <option value="PERCENT">{t("scholarships.percentage")}</option>
+                  <option value="FIXED">{t("scholarships.anAmount")}</option>
                 </select>
               </label>
               <label className="flex-1 text-sm font-medium">
-                {kind === "PERCENT" ? "Per cent off" : "Amount off each bill"}
+                {kind === "PERCENT" ? t("scholarships.perCentOff") : t("scholarships.amountOff")}
                 <input
                   value={value}
                   onChange={(event) => setValue(event.target.value)}
@@ -165,7 +167,7 @@ export default function ScholarshipsPage() {
                 onChange={(event) => setEndDate(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
-              <span className="text-xs text-slate-500">Leave empty to run until it is withdrawn.</span>
+              <span className="text-xs text-slate-500">{t("scholarships.leaveEmpty")}</span>
             </label>
           </div>
 
@@ -178,14 +180,14 @@ export default function ScholarshipsPage() {
               disabled={award.isPending || !studentProfileId || !name.trim() || !value.trim()}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
             >
-              {award.isPending ? "Awarding…" : "Award it"}
+              {award.isPending ? t("scholarships.awarding") : t("scholarships.awardIt")}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -200,16 +202,16 @@ export default function ScholarshipsPage() {
         </p>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading awards…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("scholarships.loading")}</p>}
       {awards && awards.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          No scholarships awarded yet.
+          {t("scholarships.none")}
         </p>
       )}
 
       {active.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Running</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("scholarships.running")}</h2>
           <ul className="mt-2 space-y-2">
             {active.map((scholarship) => (
               <AwardRow
@@ -224,7 +226,7 @@ export default function ScholarshipsPage() {
 
       {ended.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Withdrawn</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("scholarships.withdrawn")}</h2>
           {/* Kept rather than deleted: the discounts these already granted are
               still on invoices the school has sent, and it has to explain them. */}
           <ul className="mt-2 space-y-2">
@@ -245,6 +247,7 @@ function AwardRow({
   scholarship: Scholarship;
   onWithdraw?: (reason: string) => void;
 }) {
+  const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
 
@@ -262,7 +265,7 @@ function AwardRow({
           </p>
           <p className="mt-0.5 text-xs text-slate-500">
             {scholarship.timesApplied === 0
-              ? "Has not reduced a bill yet"
+              ? t("scholarships.notReducedYet")
               : `Reduced ${scholarship.timesApplied} ${scholarship.timesApplied === 1 ? "bill" : "bills"}`}
             {scholarship.awardedByName ? ` · awarded by ${scholarship.awardedByName}` : ""}
           </p>
@@ -277,7 +280,7 @@ function AwardRow({
             onClick={() => setConfirming(true)}
             className="shrink-0 text-xs font-semibold text-brand-600 hover:underline"
           >
-            Withdraw
+            {t("shared.withdraw")}
           </button>
         )}
       </div>
@@ -285,13 +288,12 @@ function AwardRow({
       {confirming && onWithdraw && (
         <div className="mt-3 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-700">
           <p className="text-xs text-slate-600 dark:text-slate-400">
-            Future invoices will be charged in full. Bills already reduced by this award are left exactly as
-            they are.
+            {t("scholarships.withdrawNote")}
           </p>
           <input
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="Why is it ending?"
+            placeholder={t("scholarships.whyEnding")}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
           <div className="flex gap-2">
@@ -301,14 +303,14 @@ function AwardRow({
               disabled={reason.trim().length < 3}
               className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
             >
-              Withdraw it
+              {t("scholarships.withdrawIt")}
             </button>
             <button
               type="button"
               onClick={() => setConfirming(false)}
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold dark:border-slate-700"
             >
-              Keep it
+              {t("scholarships.keepIt")}
             </button>
           </div>
         </div>

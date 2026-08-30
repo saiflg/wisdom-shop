@@ -12,6 +12,7 @@ import {
   useUpdateSection,
   type Section,
 } from "@/lib/use-sections";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * The parts a school divides itself into — Primary, Secondary, Islamiyyah.
@@ -22,25 +23,25 @@ import {
  * turnover can be read "by section".
  */
 export default function SectionsPage() {
+  const { t } = useTranslation();
   const isAdmin = useIsSchoolAdmin();
   const { data: sections, isLoading } = useSections();
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Sections</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("sections.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          The parts your school is divided into, and which classes sit in each. A class does not have to be in
-          a section — until you say otherwise it simply is not in one.
+          {t("sections.intro")}
         </p>
       </div>
 
       {isAdmin && <NewSection />}
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {sections?.length === 0 && (
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          No sections yet. Most schools start with Primary and Secondary.
+          {t("sections.none")}
         </p>
       )}
 
@@ -54,6 +55,7 @@ export default function SectionsPage() {
 }
 
 function NewSection() {
+  const { t } = useTranslation();
   const create = useCreateSection();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -69,29 +71,29 @@ function NewSection() {
     } catch (err) {
       // The duplicate-name conflict is the one a person actually hits, and
       // the API wording already says what happened.
-      setError(err instanceof ApiError ? err.message : "Could not add that section");
+      setError(err instanceof ApiError ? err.message : t("sections.addFailed"));
     }
   };
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Add a section</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("sections.add")}</h2>
       <div className="mt-3 flex flex-wrap gap-3">
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
           maxLength={80}
-          placeholder="Primary"
-          aria-label="Section name"
+          placeholder={t("sections.namePlaceholder")}
+          aria-label={t("sections.name")}
           className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <input
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           maxLength={300}
-          placeholder="Nursery 1 through Grade 6 (optional)"
-          aria-label="What this section covers"
+          placeholder={t("sections.coversPlaceholder")}
+          aria-label={t("sections.covers")}
           className="min-w-[16rem] flex-[2] rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <button
@@ -99,7 +101,7 @@ function NewSection() {
           disabled={create.isPending || !name.trim()}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {create.isPending ? "Adding…" : "Add"}
+          {create.isPending ? t("shared.adding") : "Add"}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -108,6 +110,7 @@ function NewSection() {
 }
 
 function SectionRow({ section, isAdmin }: { section: Section; isAdmin: boolean }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const count = section._count?.classes ?? 0;
 
@@ -120,9 +123,9 @@ function SectionRow({ section, isAdmin }: { section: Section; isAdmin: boolean }
             <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{section.description}</p>
           )}
           <p className="mt-1 text-xs text-slate-500">
-            {/* "No classes yet" rather than "0 classes": an empty section is
+            {/* t("sections.noClasses") rather than "0 classes": an empty section is
                 a setup step somebody has not finished, not a statistic. */}
-            {count === 0 ? "No classes yet" : `${count} ${count === 1 ? "class" : "classes"}`}
+            {count === 0 ? t("sections.noClasses") : `${count} ${count === 1 ? "class" : "classes"}`}
             {section.head && ` · headed by ${section.head.firstName} ${section.head.lastName}`}
           </p>
         </div>
@@ -133,7 +136,7 @@ function SectionRow({ section, isAdmin }: { section: Section; isAdmin: boolean }
             aria-expanded={open}
             className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
           >
-            {open ? "Done" : "Edit"}
+            {open ? t("sections.done") : t("sections.edit")}
           </button>
         )}
       </div>
@@ -144,6 +147,7 @@ function SectionRow({ section, isAdmin }: { section: Section; isAdmin: boolean }
 }
 
 function SectionEditor({ section, onDone }: { section: Section; onDone: () => void }) {
+  const { t } = useTranslation();
   const { data: classes } = useClasses();
   const assign = useAssignClasses(section.id);
   const update = useUpdateSection(section.id);
@@ -183,7 +187,7 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
       await assign.mutateAsync(current);
       onDone();
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not save those changes");
+      setNote(err instanceof ApiError ? err.message : t("sections.saveFailed"));
     }
   };
 
@@ -192,7 +196,7 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
     try {
       await remove.mutateAsync(section.id);
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not remove that section");
+      setNote(err instanceof ApiError ? err.message : t("sections.removeFailed"));
     }
   };
 
@@ -203,7 +207,7 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
           className="text-xs font-semibold uppercase tracking-wide text-slate-500"
           htmlFor={`section-name-${section.id}`}
         >
-          Name
+          {t("sections.nameLabel")}
         </label>
         <input
           id={`section-name-${section.id}`}
@@ -219,21 +223,21 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
           className="text-xs font-semibold uppercase tracking-wide text-slate-500"
           htmlFor={`section-description-${section.id}`}
         >
-          What this section covers
+          {t("sections.covers")}
         </label>
         <input
           id={`section-description-${section.id}`}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           maxLength={300}
-          placeholder="Nursery 1 through Grade 6 (optional)"
+          placeholder={t("sections.coversPlaceholder")}
           className="mt-1 w-full max-w-xl rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </div>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Classes in this section</p>
-        {classes?.length === 0 && <p className="mt-1 text-sm text-slate-500">This school has no classes yet.</p>}
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("sections.classesIn")}</p>
+        {classes?.length === 0 && <p className="mt-1 text-sm text-slate-500">{t("sections.schoolHasNoClasses")}</p>}
         <ul className="mt-2 grid gap-1 sm:grid-cols-2">
           {classes?.map((schoolClass) => {
             // A class belongs to one section, so ticking it here is also how
@@ -270,14 +274,14 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
           disabled={assign.isPending || update.isPending}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {assign.isPending || update.isPending ? "Saving…" : "Save"}
+          {assign.isPending || update.isPending ? t("shared.saving") : t("shared.save")}
         </button>
         <button
           type="button"
           onClick={onDone}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="button"
@@ -285,7 +289,7 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
           disabled={remove.isPending}
           className="ms-auto rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50 dark:border-red-900"
         >
-          Remove section
+          {t("sections.remove")}
         </button>
       </div>
 
@@ -293,8 +297,7 @@ function SectionEditor({ section, onDone }: { section: Section; onDone: () => vo
           control here that touches classes an admin did not open this screen
           to change. */}
       <p className="text-xs text-slate-500">
-        Removing a section keeps every class in it. They stop belonging to any section and stay exactly where
-        they are.
+        {t("sections.removeNote")}
       </p>
       {note && <p className="text-xs text-red-600">{note}</p>}
     </div>
