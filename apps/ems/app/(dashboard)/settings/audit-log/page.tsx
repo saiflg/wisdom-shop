@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, errorMessage } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 type AuditCategory =
   | "STAFF_PRIVACY"
@@ -31,13 +33,13 @@ interface AuditResponse {
   truncated: boolean;
 }
 
-const CATEGORIES: { value: AuditCategory; label: string }[] = [
-  { value: "STAFF_PRIVACY", label: "Staff privacy" },
-  { value: "CHILD_RECORD", label: "Child's record" },
-  { value: "MONEY", label: "Money" },
-  { value: "COMMUNICATION", label: "Communication" },
-  { value: "ACCESS", label: "Access" },
-  { value: "MODERATION", label: "Moderation" },
+const CATEGORIES: { value: AuditCategory; key: TranslationKey }[] = [
+  { value: "STAFF_PRIVACY", key: "auditLog.catSTAFF_PRIVACY" },
+  { value: "CHILD_RECORD", key: "auditLog.catCHILD_RECORD" },
+  { value: "MONEY", key: "auditLog.catMONEY" },
+  { value: "COMMUNICATION", key: "auditLog.catCOMMUNICATION" },
+  { value: "ACCESS", key: "auditLog.catACCESS" },
+  { value: "MODERATION", key: "auditLog.catMODERATION" },
 ];
 
 const TONE: Record<AuditCategory, string> = {
@@ -59,6 +61,7 @@ const TONE: Record<AuditCategory, string> = {
  * Read-only by construction: there is no write route to call.
  */
 export default function AuditLogPage() {
+  const { t } = useTranslation();
   const { accessToken, enabled } = useAuthQueryState();
 
   const [query, setQuery] = useState("");
@@ -82,41 +85,40 @@ export default function AuditLogPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Audit log</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("auditLog.title")}</h1>
         <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-400">
-          Who read a bank account, who changed a mark, who took money, who told the whole school something.
-          Names are as they were recorded at the time — nothing here can be edited or added to.
+          {t("auditLog.intro")}
         </p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="min-w-[14rem] flex-1 text-sm">
-          <span className="sr-only">Search the log</span>
+          <span className="sr-only">{t("auditLog.search")}</span>
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="A person, what they did, or why"
+            placeholder={t("auditLog.searchPlaceholder")}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
 
         <label className="text-sm">
-          <span className="sr-only">Category</span>
+          <span className="sr-only">{t("auditLog.category")}</span>
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value)}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Everything</option>
+            <option value="">{t("auditLog.everything")}</option>
             {CATEGORIES.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
+              <option key={option.value} value={option.value}>{t(option.key)}</option>
             ))}
           </select>
         </label>
 
         <label className="text-xs font-medium">
-          From
+          {t("auditLog.from")}
           <input
             type="date"
             value={from}
@@ -135,7 +137,7 @@ export default function AuditLogPage() {
         </label>
       </div>
 
-      {isLoading && <p className="text-sm text-slate-500">Reading the trails…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("auditLog.reading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           {errorMessage(error, "Couldn't read the audit log.")}
@@ -144,7 +146,7 @@ export default function AuditLogPage() {
 
       {data && data.entries.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          Nothing matches that.
+          {t("auditLog.noMatch")}
         </p>
       )}
 
