@@ -15,6 +15,13 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * administrator named cannot be filed. Somebody discovering that should be
  * able to fix it where they found it.
  */
+/*
+ * "FCMB Pensions Ltd" and "United Bank for Africa" are left in English on
+ * purpose. They are named institutions showing what kind of thing goes in
+ * the field; inventing a plausible Turkish pension administrator would be
+ * making up a company that does not exist. Same call as NERDC on the
+ * curriculum settings screen.
+ */
 export default function PensionRegisterPage() {
   const { t } = useTranslation();
   const { data: runs } = usePayrollRuns();
@@ -100,10 +107,7 @@ export default function PensionRegisterPage() {
               <input
                 value={form.providerName}
                 onChange={(e) => setForm({ ...form, providerName: e.target.value })}
-{/* Named institutions, left as written. They show what kind of thing
-              goes here; inventing a plausible Turkish pension administrator
-              would be making up a company. Same call as NERDC. */}
-                              placeholder="FCMB Pensions Ltd"
+                placeholder="FCMB Pensions Ltd"
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
             </label>
