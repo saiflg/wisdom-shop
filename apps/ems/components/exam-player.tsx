@@ -14,6 +14,7 @@ import {
   type Paper,
   type StudentQuestion,
 } from "@/lib/use-exams";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const CARD = "rounded-xl border border-slate-200 p-4 dark:border-slate-800";
 
@@ -32,6 +33,7 @@ const CARD = "rounded-xl border border-slate-200 p-4 dark:border-slate-800";
  *     someone's cursor while they are writing is its own kind of cruelty.
  */
 export function ExamPlayer({ examId }: { examId: string }) {
+  const { t } = useTranslation();
   const start = useStartExam(examId);
   const save = useSaveAnswer(examId);
   const submit = useSubmitExam(examId);
@@ -65,7 +67,7 @@ export function ExamPlayer({ examId }: { examId: string }) {
       .catch((err) => {
         // A student who has already sat it, or whose paper has closed, lands
         // here — and is told which, in the server's own words.
-        setError(err instanceof ApiError ? err.message : "Couldn't open this exam.");
+        setError(err instanceof ApiError ? err.message : t("examPlayer.openFailed"));
       });
     // Deliberately once, on mount: `start` is a new object each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,7 +88,7 @@ export function ExamPlayer({ examId }: { examId: string }) {
       await submit.mutateAsync();
       setDone(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't hand your paper in.");
+      setError(err instanceof ApiError ? err.message : t("examPlayer.handInFailed"));
     }
   }, [submit]);
 
@@ -113,7 +115,7 @@ export function ExamPlayer({ examId }: { examId: string }) {
       <div className="space-y-4">
         <ReleasedResult examId={examId} />
         <Link href="/exams" className="text-sm font-semibold text-brand-600 hover:underline">
-          Back to exams
+          {t("examPlayer.backToExams")}
         </Link>
       </div>
     );
@@ -126,7 +128,7 @@ export function ExamPlayer({ examId }: { examId: string }) {
           {error}
         </p>
         <Link href="/exams" className="text-sm font-semibold text-brand-600 hover:underline">
-          Back to exams
+          {t("examPlayer.backToExams")}
         </Link>
       </div>
     );
@@ -136,19 +138,19 @@ export function ExamPlayer({ examId }: { examId: string }) {
     return (
       <div className="space-y-4">
         <div className={CARD}>
-          <h1 className="text-xl font-bold">Handed in</h1>
+          <h1 className="text-xl font-bold">{t("examPlayer.handedIn")}</h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Your paper is with your teacher. Your marks will appear here once they release them.
+            {t("examPlayer.withTeacher")}
           </p>
         </div>
         <Link href="/exams" className="text-sm font-semibold text-brand-600 hover:underline">
-          Back to exams
+          {t("examPlayer.backToExams")}
         </Link>
       </div>
     );
   }
 
-  if (!paper) return <p className="text-sm text-slate-500">Opening your paper…</p>;
+  if (!paper) return <p className="text-sm text-slate-500">{t("examPlayer.opening")}</p>;
 
   const answered = paper.questions.filter((question) => (answers[question.id] ?? []).length > 0).length;
 
@@ -179,7 +181,7 @@ export function ExamPlayer({ examId }: { examId: string }) {
             disabled={submit.isPending}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {submit.isPending ? "Handing in…" : "Hand in"}
+            {submit.isPending ? t("examPlayer.handingIn") : t("examPlayer.handIn")}
           </button>
         </div>
       </div>
@@ -209,7 +211,7 @@ export function ExamPlayer({ examId }: { examId: string }) {
             <div className="mt-3">
               {(question.type === "SINGLE_CHOICE" || question.type === "TRUE_FALSE") && (
                 <fieldset className="space-y-2">
-                  <legend className="sr-only">Choose one answer</legend>
+                  <legend className="sr-only">{t("examPlayer.chooseOne")}</legend>
                   {question.options.map((option) => (
                     <label key={option.key} className="flex items-center gap-3 text-sm">
                       <input
@@ -258,7 +260,7 @@ export function ExamPlayer({ examId }: { examId: string }) {
 
               {(question.type === "SHORT_ANSWER" || question.type === "ESSAY") && (
                 <label className="block">
-                  <span className="sr-only">Your answer</span>
+                  <span className="sr-only">{t("examPlayer.yourAnswer")}</span>
                   <textarea
                     rows={question.type === "ESSAY" ? 6 : 1}
                     defaultValue={(answers[question.id] ?? [""])[0]}
@@ -291,7 +293,7 @@ export function ExamPlayer({ examId }: { examId: string }) {
         disabled={submit.isPending}
         className="w-full rounded-lg bg-brand-gradient px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
       >
-        {submit.isPending ? "Handing in…" : "Hand in my paper"}
+        {submit.isPending ? t("examPlayer.handingIn") : t("examPlayer.handInMyPaper")}
       </button>
     </div>
   );
@@ -299,13 +301,14 @@ export function ExamPlayer({ examId }: { examId: string }) {
 
 /** A student's own released result: their answers, their marks, no key. */
 export function ReleasedResult({ examId }: { examId: string }) {
+  const { t } = useTranslation();
   const { data: attempt, isLoading, error } = useMyAttempt(examId);
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("common.loading")}</p>;
   if (error || !attempt) {
     return (
       <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-        {error instanceof ApiError ? error.message : "Couldn't load your result."}
+        {error instanceof ApiError ? error.message : t("examPlayer.resultLoadFailed")}
       </p>
     );
   }
@@ -314,7 +317,7 @@ export function ReleasedResult({ examId }: { examId: string }) {
     return (
       <div className={CARD}>
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          You handed this in. Your marks will appear once your teacher releases them.
+          {t("examPlayer.youHandedIn")}
         </p>
       </div>
     );
