@@ -14,6 +14,7 @@ import {
 import { ChatAttachmentView } from "./chat-attachment";
 import { ClassPresenceStrip } from "./class-presence-strip";
 import { ACCEPTED_UPLOADS, formatSeconds, useVoiceRecorder } from "./chat-compose-extras";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * The class conversation.
@@ -24,6 +25,7 @@ import { ACCEPTED_UPLOADS, formatSeconds, useVoiceRecorder } from "./chat-compos
  * this.
  */
 export function ClassChat({ classId }: { classId: string }) {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useConversation(classId);
   const post = usePostMessage(classId);
   const remove = useRemoveMessage(classId);
@@ -48,7 +50,7 @@ export function ClassChat({ classId }: { classId: string }) {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [count]);
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading the class chat…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("classChat.loading")}</p>;
   if (error || !data) {
     return (
       <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
@@ -88,18 +90,18 @@ export function ClassChat({ classId }: { classId: string }) {
   return (
     <section className="flex flex-col rounded-2xl border border-slate-200 dark:border-slate-800">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 p-4 dark:border-slate-800">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Class chat</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("classChat.title")}</h2>
         {data.canModerate && (
           <button
             type="button"
             onClick={() =>
               void lock
-                .mutateAsync({ locked: !data.locked, reason: data.locked ? undefined : "Paused by a teacher" })
+                .mutateAsync({ locked: !data.locked, reason: data.locked ? undefined : t("classChat.paused") })
                 .catch((err) => setProblem(errorMessage(err, "Couldn't change that.")))
             }
             className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
           >
-            {data.locked ? "Let students post again" : "Pause students posting"}
+            {data.locked ? t("classChat.letPost") : t("classChat.pausePosting")}
           </button>
         )}
       </div>
@@ -114,7 +116,7 @@ export function ClassChat({ classId }: { classId: string }) {
 
       <div className="max-h-[28rem] space-y-3 overflow-y-auto p-4">
         {data.messages.length === 0 && (
-          <p className="text-sm text-slate-500">Nothing here yet. Say hello to your class.</p>
+          <p className="text-sm text-slate-500">{t("classChat.empty")}</p>
         )}
         {data.messages.map((message) => (
           <Message
@@ -154,14 +156,14 @@ export function ClassChat({ classId }: { classId: string }) {
             {pending && (
               <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs dark:bg-slate-800">
                 <span className="min-w-0 truncate">
-                  {pending.type.startsWith("audio/") ? "Voice note" : pending.name} ready to send
+                  {pending.type.startsWith("audio/") ? t("classChat.voiceNote") : pending.name} ready to send
                 </span>
                 <button
                   type="button"
                   onClick={() => setPending(null)}
                   className="shrink-0 font-semibold text-brand-600 hover:underline"
                 >
-                  Remove
+                  {t("shared.remove")}
                 </button>
               </div>
             )}
@@ -174,10 +176,10 @@ export function ClassChat({ classId }: { classId: string }) {
                 </span>
                 <span className="flex gap-2">
                   <button type="button" onClick={() => void finishRecording()} className="font-semibold underline">
-                    Stop
+                    {t("classChat.stop")}
                   </button>
                   <button type="button" onClick={recorder.cancel} className="font-semibold underline">
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                 </span>
               </div>
@@ -185,7 +187,7 @@ export function ClassChat({ classId }: { classId: string }) {
 
             <div className="flex flex-wrap gap-2">
               <label htmlFor="chat-draft" className="sr-only">
-                Message your class
+                {t("classChat.messageYourClass")}
               </label>
               <input
                 id="chat-draft"
@@ -194,7 +196,7 @@ export function ClassChat({ classId }: { classId: string }) {
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && (draft.trim() || pending)) void send();
                 }}
-                placeholder={pending ? "Add a caption (optional)…" : "Message your class…"}
+                placeholder={pending ? t("classChat.captionPlaceholder") : t("classChat.messagePlaceholder")}
                 maxLength={2000}
                 className="min-w-[10rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
@@ -215,11 +217,11 @@ export function ClassChat({ classId }: { classId: string }) {
                 type="button"
                 onClick={() => filePicker.current?.click()}
                 disabled={post.isPending || withFile.isPending || recorder.recording}
-                title="Attach a photo or PDF"
+                title={t("classChat.attach")}
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
               >
                 <span aria-hidden>📎</span>
-                <span className="sr-only">Attach a photo or PDF</span>
+                <span className="sr-only">{t("classChat.attach")}</span>
               </button>
 
               {recorder.supported && !recorder.recording && (
@@ -227,11 +229,11 @@ export function ClassChat({ classId }: { classId: string }) {
                   type="button"
                   onClick={() => void recorder.start()}
                   disabled={post.isPending || withFile.isPending || Boolean(pending)}
-                  title="Record a voice note"
+                  title={t("classChat.record")}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
                 >
                   <span aria-hidden>🎤</span>
-                  <span className="sr-only">Record a voice note</span>
+                  <span className="sr-only">{t("classChat.record")}</span>
                 </button>
               )}
 
@@ -241,20 +243,20 @@ export function ClassChat({ classId }: { classId: string }) {
                 disabled={post.isPending || withFile.isPending || (!draft.trim() && !pending)}
                 className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
               >
-                {withFile.isPending ? "Sending…" : "Send"}
+                {withFile.isPending ? t("classChat.sending") : t("classChat.send")}
               </button>
             </div>
 
             {recorder.error && <p className="text-xs text-red-600">{recorder.error}</p>}
             <p className="text-xs text-slate-500">
-              Photos, voice notes and PDFs only. Your teachers can see everything you share here.
+              {t("classChat.rules")}
             </p>
           </div>
         )}
 
         {!data.canPost && !data.locked && (
           <p className="text-sm text-slate-500">
-            {data.cannotPostReason ?? "You can read this conversation but not post in it."}
+            {data.cannotPostReason ?? t("classChat.readOnly")}
           </p>
         )}
 
@@ -284,6 +286,7 @@ function Message({
   onRemove: () => void;
   onReport: (reason: string) => void;
 }) {
+  const { t } = useTranslation();
   const [reporting, setReporting] = useState(false);
   const [reason, setReason] = useState("");
 
@@ -327,12 +330,12 @@ function Message({
         <span>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
         {!message.deleted && (message.mine || canModerate) && (
           <button type="button" onClick={onRemove} className="hover:underline">
-            Remove
+            {t("shared.remove")}
           </button>
         )}
         {!message.deleted && !message.mine && (
           <button type="button" onClick={() => setReporting((open) => !open)} className="hover:underline">
-            Tell a teacher
+            {t("classChat.tellATeacher")}
           </button>
         )}
       </div>
@@ -342,7 +345,7 @@ function Message({
           <input
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="What is wrong with this message?"
+            placeholder={t("classChat.reportPlaceholder")}
             className="min-w-[10rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900"
           />
           <button
@@ -355,7 +358,7 @@ function Message({
             }}
             className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           >
-            Send to a teacher
+            {t("classChat.sendToTeacher")}
           </button>
         </div>
       )}

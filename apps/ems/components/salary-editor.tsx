@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { errorMessage } from "@/lib/api";
 import { useSalary, useSetSalary, type PayComponentBasis, type PayComponentKind } from "@/lib/use-payroll";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 interface Draft {
   label: string;
@@ -34,6 +35,7 @@ function toHundredths(text: string): number {
 }
 
 export function SalaryEditor({ userId }: { userId: string }) {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useSalary(userId);
   const save = useSetSalary(userId);
 
@@ -56,7 +58,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
     );
   }, [data, drafts]);
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading salary…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("salary.loading")}</p>;
 
   // The API explains *why* — usually "no employment record yet" — and that
   // sentence is the whole value of the failure. Spinning forever instead
@@ -98,7 +100,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
   return (
     <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Salary</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("salary.title")}</h2>
         {data && (
           <p className="text-xs text-slate-500">
             Gross {money(data.preview.grossCents)} · deductions {money(data.preview.deductionsCents)} · net{" "}
@@ -113,37 +115,37 @@ export function SalaryEditor({ userId }: { userId: string }) {
             <input
               value={draft.label}
               onChange={(event) => update(index, { label: event.target.value })}
-              placeholder="Basic"
-              aria-label="Component name"
+              placeholder={t("salary.componentPlaceholder")}
+              aria-label={t("salary.componentName")}
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
             <select
               value={draft.kind}
               onChange={(event) => update(index, { kind: event.target.value as PayComponentKind })}
-              aria-label="Earning or deduction"
+              aria-label={t("salary.earningOrDeduction")}
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
-              <option value="EARNING">Earning</option>
-              <option value="DEDUCTION">Deduction</option>
+              <option value="EARNING">{t("salary.earning")}</option>
+              <option value="DEDUCTION">{t("salary.deduction")}</option>
             </select>
             <select
               value={draft.basis}
               onChange={(event) => update(index, { basis: event.target.value as PayComponentBasis })}
-              aria-label="Fixed amount or percentage"
+              aria-label={t("salary.fixedOrPercentage")}
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
-              <option value="FIXED">Amount</option>
+              <option value="FIXED">{t("salary.amount")}</option>
               <option value="PERCENT_OF_BASIC">% of basic</option>
             </select>
             <input
               value={draft.amount}
               onChange={(event) => update(index, { amount: event.target.value })}
               inputMode="decimal"
-              aria-label={draft.basis === "FIXED" ? "Amount" : "Percentage"}
+              aria-label={draft.basis === "FIXED" ? t("salary.amount") : t("salary.percentage")}
               className="w-28 rounded-lg border border-slate-300 bg-white px-3 py-2 text-end text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
             />
             <div className="flex items-center gap-2">
-              <label className="flex items-center gap-1 text-xs text-slate-500" title="Percentages are taken from this">
+              <label className="flex items-center gap-1 text-xs text-slate-500" title={t("salary.percentBase")}>
                 <input
                   type="radio"
                   name="isBasic"
@@ -163,7 +165,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
                 aria-label={`Remove ${draft.label || "component"}`}
                 className="text-xs font-semibold text-red-600 hover:underline"
               >
-                Remove
+                {t("shared.remove")}
               </button>
             </div>
           </li>
@@ -181,7 +183,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
           }
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
         >
-          Add a line
+          {t("salary.addLine")}
         </button>
         <button
           type="button"
@@ -189,7 +191,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
           disabled={save.isPending}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
-          {save.isPending ? "Saving…" : "Save salary"}
+          {save.isPending ? t("shared.saving") : t("salary.save")}
         </button>
       </div>
 

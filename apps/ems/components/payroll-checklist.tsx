@@ -8,6 +8,7 @@ import {
   useRemoveChecklistItem,
   useSetChecklistItem,
 } from "@/lib/use-payroll";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * The month-end checks, above the approve button.
@@ -19,6 +20,7 @@ import {
  * without being read, which is worse than no checklist at all.
  */
 export function PayrollChecklist({ runId, readOnly = false }: { runId: string; readOnly?: boolean }) {
+  const { t } = useTranslation();
   const { data: checklist, isLoading, error } = useChecklist(runId);
   const setItem = useSetChecklistItem(runId);
   const addItem = useAddChecklistItem(runId);
@@ -47,11 +49,11 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
     } catch (err) {
       // Put it back rather than making them retype it.
       setLabel(trimmed);
-      setMessage(err instanceof ApiError ? err.message : "Couldn't add that check.");
+      setMessage(err instanceof ApiError ? err.message : t("payrollChecks.addFailed"));
     }
   };
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading the month-end checks…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("payrollChecks.loading")}</p>;
   if (error || !checklist) return null;
 
   const { items, progress } = checklist;
@@ -61,11 +63,11 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            {readOnly ? "Month-end checks" : "Before you approve"}
+            {readOnly ? t("payrollChecks.title") : t("payrollChecks.beforeApprove")}
           </h3>
           <p className="mt-0.5 text-xs text-slate-500">
             {progress.total === 0
-              ? "No checks on this list."
+              ? t("payrollChecks.none")
               : `${progress.done} of ${progress.total} checked`}
           </p>
         </div>
@@ -78,7 +80,7 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
               aria-valuenow={progress.percent}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label="Month-end checks completed"
+              aria-label={t("payrollChecks.completed")}
             >
               <div
                 className={`h-full transition-all ${progress.complete ? "bg-emerald-500" : "bg-amber-500"}`}
@@ -125,7 +127,7 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
                 aria-label={`Remove "${item.label}" from the list`}
                 className="shrink-0 rounded px-1.5 text-xs font-semibold text-slate-400 opacity-0 transition hover:text-red-600 focus:opacity-100 group-hover:opacity-100"
               >
-                Remove
+                {t("shared.remove")}
               </button>
             )}
           </li>
@@ -135,8 +137,8 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
       {items.length === 0 && (
         <p className="mt-2 rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-xs text-slate-500 dark:border-slate-700">
           {readOnly
-            ? "No month-end checks were kept for this run."
-            : "This school keeps no month-end checks. Add one below if you want them back."}
+            ? t("payrollChecks.noneKept")
+            : t("payrollChecks.schoolKeepsNone")}
         </p>
       )}
 
@@ -154,7 +156,7 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
             }}
             autoFocus
             maxLength={200}
-            placeholder="What else gets checked each month?"
+            placeholder={t("payrollChecks.addPlaceholder")}
             className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
           <button
@@ -170,7 +172,7 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
             onClick={() => setAdding(false)}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       ) : (
@@ -185,8 +187,8 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
 
       <p className="mt-3 text-xs text-slate-500">
         {readOnly
-          ? "Kept as a record of what was checked for this month."
-          : "Next month starts with this same list — the wording carries forward, the ticks do not."}
+          ? t("payrollChecks.keptAsRecord")
+          : t("payrollChecks.carriesForward")}
       </p>
 
       {message && (

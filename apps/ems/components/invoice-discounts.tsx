@@ -8,6 +8,7 @@ import {
   useRevokeDiscount,
   type DiscountKind,
 } from "@/lib/use-discounts";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 function money(cents: number, currency: string): string {
   return `${currency} ${(cents / 100).toLocaleString("en-GB", {
@@ -28,6 +29,7 @@ function money(cents: number, currency: string): string {
  * says so before the button is pressed rather than only afterwards.
  */
 export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
+  const { t } = useTranslation();
   const { data, isLoading } = useInvoiceDiscounts(invoiceId);
   const grant = useGrantDiscount(invoiceId);
   const revoke = useRevokeDiscount(invoiceId);
@@ -77,14 +79,14 @@ export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
   return (
     <div className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium">Discounts</p>
+        <p className="text-sm font-medium">{t("discounts.title")}</p>
         {!open && room > 0 && (
           <button
             type="button"
             onClick={() => { setOpen(true); setProblem(null); }}
             className="text-xs font-semibold text-brand-600 hover:underline"
           >
-            Take money off this bill
+            {t("discounts.takeMoneyOff")}
           </button>
         )}
       </div>
@@ -93,7 +95,7 @@ export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
           parent ring the office. */}
       <dl className="mt-2 space-y-1 text-sm">
         <div className="flex justify-between">
-          <dt className="text-slate-500">Fees</dt>
+          <dt className="text-slate-500">{t("discounts.fees")}</dt>
           <dd className="tabular-nums">{money(data.grossCents, currency)}</dd>
         </div>
         {data.discounts.map((discount) => (
@@ -121,7 +123,7 @@ export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
                   type="button"
                   onClick={() => void revoke.mutateAsync(discount.id)}
                   disabled={revoke.isPending}
-                  title="Undo this discount"
+                  title={t("discounts.undo")}
                   className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-50"
                 >
                   ✕
@@ -131,7 +133,7 @@ export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
           </div>
         ))}
         <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold dark:border-slate-700">
-          <dt>Payable</dt>
+          <dt>{t("discounts.payable")}</dt>
           <dd className="tabular-nums">{money(data.payableCents, currency)}</dd>
         </div>
       </dl>
@@ -140,29 +142,29 @@ export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
         <div className="mt-3 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-700">
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="text-xs font-medium">
-              What is it for?
+              {t("discounts.whatFor")}
               <input
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
-                placeholder="Sibling discount"
+                placeholder={t("discounts.namePlaceholder")}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
             </label>
 
             <div className="flex gap-2">
               <label className="text-xs font-medium">
-                Kind
+                {t("discounts.kind")}
                 <select
                   value={kind}
                   onChange={(event) => setKind(event.target.value as DiscountKind)}
                   className="mt-1 block rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
                 >
-                  <option value="PERCENT">Percentage</option>
-                  <option value="FIXED">An amount</option>
+                  <option value="PERCENT">{t("discounts.percentage")}</option>
+                  <option value="FIXED">{t("discounts.anAmount")}</option>
                 </select>
               </label>
               <label className="flex-1 text-xs font-medium">
-                {kind === "PERCENT" ? "Per cent" : `Amount (${currency})`}
+                {kind === "PERCENT" ? t("discounts.perCent") : `Amount (${currency})`}
                 <input
                   value={value}
                   onChange={(event) => setValue(event.target.value)}
@@ -179,7 +181,7 @@ export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
             <input
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="Second child at the school"
+              placeholder={t("discounts.notePlaceholder")}
               className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
@@ -210,14 +212,14 @@ export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
               disabled={grant.isPending || !label.trim() || worth === null || tooMuch}
               className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
             >
-              {grant.isPending ? "Applying…" : "Apply"}
+              {grant.isPending ? t("discounts.applying") : t("discounts.apply")}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>

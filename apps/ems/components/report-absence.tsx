@@ -9,6 +9,7 @@ import {
   useWithdrawAbsenceNote,
   type AbsenceNote,
 } from "@/lib/use-absence-notes";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -25,6 +26,7 @@ const today = () => new Date().toISOString().slice(0, 10);
  * says their child is missing.
  */
 export function ReportAbsence({ studentProfileId, childName }: { studentProfileId: string; childName: string }) {
+  const { t } = useTranslation();
   const { data: notes } = useAbsenceNotes(studentProfileId);
   const report = useReportAbsence();
   const withdraw = useWithdrawAbsenceNote();
@@ -68,7 +70,7 @@ export function ReportAbsence({ studentProfileId, childName }: { studentProfileI
   return (
     <section className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Absence</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("absence.title")}</h2>
         {!open && (
           <button
             type="button"
@@ -82,7 +84,7 @@ export function ReportAbsence({ studentProfileId, childName }: { studentProfileI
 
       {sent && !open && (
         <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
-          Sent. The school will see it when they take the register.
+          {t("absence.sent")}
         </p>
       )}
 
@@ -90,7 +92,7 @@ export function ReportAbsence({ studentProfileId, childName }: { studentProfileI
         <div className="mt-3 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-medium">
-              First day away
+              {t("absence.firstDay")}
               <input
                 type="date"
                 value={fromDate}
@@ -104,7 +106,7 @@ export function ReportAbsence({ studentProfileId, childName }: { studentProfileI
               />
             </label>
             <label className="text-xs font-medium">
-              Last day away
+              {t("absence.lastDay")}
               <input
                 type="date"
                 value={toDate}
@@ -115,10 +117,10 @@ export function ReportAbsence({ studentProfileId, childName }: { studentProfileI
             </label>
           </div>
 
-          {backwards && <p className="text-xs text-red-600">The last day cannot be before the first day.</p>}
+          {backwards && <p className="text-xs text-red-600">{t("absence.badRange")}</p>}
 
           <label className="block text-xs font-medium">
-            Reason
+            {t("absence.reason")}
             <select
               value={reason}
               onChange={(event) => setReason(event.target.value)}
@@ -133,13 +135,13 @@ export function ReportAbsence({ studentProfileId, childName }: { studentProfileI
           </label>
 
           <label className="block text-xs font-medium">
-            {reason === "OTHER" ? "Please say briefly why" : "Anything the school should know (optional)"}
+            {reason === "OTHER" ? t("absence.reasonRequired") : t("absence.reasonOptional")}
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
               rows={2}
               maxLength={500}
-              placeholder={reason === "ILLNESS" ? "You do not have to describe symptoms." : ""}
+              placeholder={reason === "ILLNESS" ? t("absence.noSymptoms") : ""}
               className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
@@ -157,14 +159,14 @@ export function ReportAbsence({ studentProfileId, childName }: { studentProfileI
               disabled={report.isPending || backwards || needsWhy}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
             >
-              {report.isPending ? "Sending…" : "Send to the school"}
+              {report.isPending ? t("absence.sending") : t("absence.send")}
             </button>
             <button
               type="button"
               onClick={() => { setOpen(false); setError(null); }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
 
@@ -188,6 +190,7 @@ export function ReportAbsence({ studentProfileId, childName }: { studentProfileI
 }
 
 function NoteRow({ note, onWithdraw }: { note: AbsenceNote; onWithdraw: (id: string) => void }) {
+  const { t } = useTranslation();
   return (
     <li className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-900">
       <span className="min-w-0">
@@ -198,9 +201,9 @@ function NoteRow({ note, onWithdraw }: { note: AbsenceNote; onWithdraw: (id: str
 
       <span className="flex shrink-0 items-center gap-2 text-xs">
         {note.state === "ACKNOWLEDGED" ? (
-          <span className="text-emerald-600">Seen by the school</span>
+          <span className="text-emerald-600">{t("absence.seen")}</span>
         ) : (
-          <span className="text-slate-500">Sent</span>
+          <span className="text-slate-500">{t("absence.sentShort")}</span>
         )}
         {note.canWithdraw && (
           <button
@@ -208,7 +211,7 @@ function NoteRow({ note, onWithdraw }: { note: AbsenceNote; onWithdraw: (id: str
             onClick={() => onWithdraw(note.id)}
             className="font-semibold text-brand-600 hover:underline"
           >
-            Take back
+            {t("absence.takeBack")}
           </button>
         )}
       </span>
