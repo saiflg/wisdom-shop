@@ -14,15 +14,17 @@ import { ParentThread } from "@/components/parent-thread";
 import { MyContactDetails } from "@/components/my-contact-details";
 import { ReportAbsence } from "@/components/report-absence";
 import { useAuthStore } from "@/store/auth-store";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const CARD = "rounded-xl border border-slate-200 p-4 dark:border-slate-800";
 
 export default function MyPage() {
+  const { t } = useTranslation();
   const [childId, setChildId] = useState<string | null>(null);
   const { data, isLoading, error } = usePortalHome(childId);
   const isGuardian = useAuthStore((state) => state.user?.roles.includes("GUARDIAN")) ?? false;
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("common.loading")}</p>;
   if (error || !data) {
     return (
       <p role="alert" className="text-sm text-red-600 dark:text-red-400">
@@ -36,7 +38,7 @@ export default function MyPage() {
   if (data.isStaff && data.children.length === 0) {
     return (
       <div className="space-y-3">
-        <h1 className="text-2xl font-bold tracking-tight">My school</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("my.title")}</h1>
         <p className="text-sm text-slate-600 dark:text-slate-400">
           This page is for students and parents. Your own overview is on the{" "}
           <Link href="/dashboard" className="font-semibold text-brand-600 hover:underline">
@@ -51,9 +53,9 @@ export default function MyPage() {
   if (!data.child) {
     return (
       <div className="space-y-3">
-        <h1 className="text-2xl font-bold tracking-tight">My school</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("my.title")}</h1>
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          There is no student linked to your account yet. Ask the school office to link you.
+          {t("my.noStudentLinked")}
         </p>
       </div>
     );
@@ -69,7 +71,7 @@ export default function MyPage() {
           <PersonPhoto userId={data.child.userId} name={data.child.name} size="lg" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {data.children.length > 1 ? data.child.name : "My school"}
+              {data.children.length > 1 ? data.child.name : t("my.title")}
             </h1>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
               {/* The class name is a link now: it is the way to the class
@@ -91,7 +93,7 @@ export default function MyPage() {
             one option is furniture. */}
         {data.children.length > 1 && (
           <label className="text-sm font-medium">
-            <span className="sr-only">Choose a child</span>
+            <span className="sr-only">{t("my.chooseChild")}</span>
             <select
               value={data.child.studentProfileId}
               onChange={(event) => setChildId(event.target.value)}
@@ -113,7 +115,7 @@ export default function MyPage() {
             Today&apos;s lessons
           </h2>
           {data.today.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">Nothing timetabled today.</p>
+            <p className="mt-2 text-sm text-slate-500">{t("my.nothingToday")}</p>
           ) : (
             <ul className="mt-2 space-y-1.5">
               {data.today.map((lesson, index) => (
@@ -128,30 +130,30 @@ export default function MyPage() {
             </ul>
           )}
           <Link href="/timetable" className="mt-3 inline-block text-xs font-semibold text-brand-600 hover:underline">
-            Full timetable
+            {t("my.fullTimetable")}
           </Link>
         </section>
 
         <section className={CARD} aria-labelledby="homework-heading">
           <h2 id="homework-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Homework to do
+            {t("my.homeworkToDo")}
           </h2>
           {dueNow.length === 0 && (homework?.upcoming.length ?? 0) === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">Nothing outstanding. </p>
+            <p className="mt-2 text-sm text-slate-500">{t("my.nothingOutstanding")}</p>
           ) : (
             <>
               {homework?.overdue.length ? (
-                <HomeworkList label="Overdue" items={homework.overdue} tone="overdue" />
+                <HomeworkList label={t("my.overdue")} items={homework.overdue} tone="overdue" />
               ) : null}
-              {homework?.today.length ? <HomeworkList label="Due today" items={homework.today} /> : null}
-              {homework?.upcoming.length ? <HomeworkList label="Coming up" items={homework.upcoming} /> : null}
+              {homework?.today.length ? <HomeworkList label={t("my.dueToday")} items={homework.today} /> : null}
+              {homework?.upcoming.length ? <HomeworkList label={t("my.comingUp")} items={homework.upcoming} /> : null}
               {homework?.noDeadline.length ? (
-                <HomeworkList label="No deadline" items={homework.noDeadline} />
+                <HomeworkList label={t("my.noDeadline")} items={homework.noDeadline} />
               ) : null}
             </>
           )}
           <Link href="/homework" className="mt-3 inline-block text-xs font-semibold text-brand-600 hover:underline">
-            All homework
+            {t("my.allHomework")}
           </Link>
         </section>
 
@@ -162,7 +164,7 @@ export default function MyPage() {
         {(data.exams?.length ?? 0) > 0 && (
           <section className={CARD} aria-labelledby="exams-heading">
             <h2 id="exams-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Exams to sit
+              {t("my.examsToSit")}
             </h2>
             <ul className="mt-2 space-y-2">
               {data.exams?.map((exam) => (
@@ -199,7 +201,7 @@ export default function MyPage() {
               id="school-messages-heading"
               className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500"
             >
-              Message the school
+              {t("my.messageSchool")}
             </h2>
             <ParentThread studentProfileId={data.child.studentProfileId} />
           </section>
@@ -217,13 +219,13 @@ export default function MyPage() {
 
         <section className={CARD} aria-labelledby="results-heading">
           <h2 id="results-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Report cards
+            {t("my.reportCards")}
           </h2>
           {(data.results?.length ?? 0) === 0 ? (
             // Says why rather than looking broken: a family whose school has
             // not published yet should know that is the reason.
             <p className="mt-2 text-sm text-slate-500">
-              Nothing published yet. Results appear here once the school releases them.
+              {t("my.nothingPublished")}
             </p>
           ) : (
             <ul className="mt-2 space-y-2">
@@ -246,16 +248,16 @@ export default function MyPage() {
             href="/report-cards"
             className="mt-3 inline-block text-xs font-semibold text-brand-600 hover:underline"
           >
-            Open report cards
+            {t("my.openReportCards")}
           </Link>
         </section>
 
         <section className={CARD} aria-labelledby="marks-heading">
           <h2 id="marks-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Recent marks
+            {t("my.recentMarks")}
           </h2>
           {(homework?.recentlyMarked.length ?? 0) === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">No marks released yet.</p>
+            <p className="mt-2 text-sm text-slate-500">{t("my.noMarks")}</p>
           ) : (
             <ul className="mt-2 space-y-2">
               {homework?.recentlyMarked.map((mark) => (
@@ -275,21 +277,21 @@ export default function MyPage() {
 
         <section className={CARD} aria-labelledby="school-heading">
           <h2 id="school-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Attendance and fees
+            {t("my.attendanceAndFees")}
           </h2>
           <dl className="mt-2 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <dt className="text-slate-500">Attendance</dt>
+              <dt className="text-slate-500">{t("my.attendance")}</dt>
               <dd className="tabular-nums">
                 {/* Null, not 0% — "0% attendance" for a child with no
                     registers yet is a lie a parent would panic about. */}
                 {data.attendance?.presentRate === null || data.attendance === null
-                  ? "Not taken yet"
+                  ? t("my.notTakenYet")
                   : `${data.attendance.presentRate}%`}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-500">Fees outstanding</dt>
+              <dt className="text-slate-500">{t("my.feesOutstanding")}</dt>
               <dd className="tabular-nums">
                 {data.fees ? money(data.fees.outstanding) : "—"}
               </dd>
@@ -297,10 +299,10 @@ export default function MyPage() {
           </dl>
           <div className="mt-3 flex gap-3">
             <Link href="/attendance" className="text-xs font-semibold text-brand-600 hover:underline">
-              Attendance
+              {t("my.attendance")}
             </Link>
             <Link href="/invoices" className="text-xs font-semibold text-brand-600 hover:underline">
-              Invoices
+              {t("my.invoices")}
             </Link>
           </div>
         </section>
@@ -309,7 +311,7 @@ export default function MyPage() {
       {data.lessons.length > 0 && (
         <section className={CARD} aria-labelledby="lessons-heading">
           <h2 id="lessons-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            My Wisdom lessons
+            {t("my.wisdomLessons")}
           </h2>
           <ul className="mt-2 space-y-1.5">
             {data.lessons.map((lesson) => (
