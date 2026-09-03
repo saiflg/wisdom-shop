@@ -5,6 +5,7 @@ import Link from "next/link";
 import { errorMessage } from "@/lib/api";
 import { usePayrollRuns } from "@/lib/use-payroll";
 import { usePensionRegister, useSavePensionSettings } from "@/lib/use-statutory";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * The contribution schedule filed with the pension administrator.
@@ -15,6 +16,7 @@ import { usePensionRegister, useSavePensionSettings } from "@/lib/use-statutory"
  * able to fix it where they found it.
  */
 export default function PensionRegisterPage() {
+  const { t } = useTranslation();
   const { data: runs } = usePayrollRuns();
   const [runId, setRunId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -75,7 +77,7 @@ export default function PensionRegisterPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Pension schedule</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("pension.title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             Contributions for one month, ready to send to the administrator. The employer&apos;s share is
             worked out from the employee&apos;s, so the two always agree.
@@ -86,7 +88,7 @@ export default function PensionRegisterPage() {
           onClick={() => setEditing((v) => !v)}
           className="rounded-full border border-slate-300 px-4 py-1.5 text-sm transition hover:border-brand-400 dark:border-slate-700"
         >
-          {editing ? "Cancel" : "Pension details"}
+          {editing ? t("common.cancel") : t("pension.details")}
         </button>
       </div>
 
@@ -94,16 +96,19 @@ export default function PensionRegisterPage() {
         <div className="space-y-3 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-sm font-medium">Pension administrator (PFA)</span>
+              <span className="text-sm font-medium">{t("pension.administrator")}</span>
               <input
                 value={form.providerName}
                 onChange={(e) => setForm({ ...form, providerName: e.target.value })}
-                placeholder="FCMB Pensions Ltd"
+{/* Named institutions, left as written. They show what kind of thing
+              goes here; inventing a plausible Turkish pension administrator
+              would be making up a company. Same call as NERDC. */}
+                              placeholder="FCMB Pensions Ltd"
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
             </label>
             <label className="block">
-              <span className="text-sm font-medium">Employer share</span>
+              <span className="text-sm font-medium">{t("pension.employerShare")}</span>
               <div className="mt-1 flex items-center gap-2">
                 <input
                   value={form.employerMatchPercent}
@@ -118,7 +123,7 @@ export default function PensionRegisterPage() {
               </span>
             </label>
             <label className="block">
-              <span className="text-sm font-medium">Remittance bank</span>
+              <span className="text-sm font-medium">{t("pension.remittanceBank")}</span>
               <input
                 value={form.remittanceBankName}
                 onChange={(e) => setForm({ ...form, remittanceBankName: e.target.value })}
@@ -127,7 +132,7 @@ export default function PensionRegisterPage() {
               />
             </label>
             <label className="block">
-              <span className="text-sm font-medium">Remittance account</span>
+              <span className="text-sm font-medium">{t("pension.remittanceAccount")}</span>
               <input
                 value={form.remittanceAccountNumber}
                 onChange={(e) => setForm({ ...form, remittanceAccountNumber: e.target.value })}
@@ -142,13 +147,13 @@ export default function PensionRegisterPage() {
             disabled={save.isPending}
             className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            {save.isPending ? "Saving…" : "Save"}
+            {save.isPending ? t("shared.saving") : t("shared.save")}
           </button>
         </div>
       )}
 
       <label className="block max-w-xs">
-        <span className="text-sm font-medium">Payroll run</span>
+        <span className="text-sm font-medium">{t("payroll.run")}</span>
         <select
           value={runId ?? ""}
           onChange={(e) => setRunId(e.target.value || null)}
@@ -168,7 +173,7 @@ export default function PensionRegisterPage() {
         </p>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           {errorMessage(error, "Couldn't load the pension schedule.")}
@@ -208,19 +213,19 @@ export default function PensionRegisterPage() {
 
           {data.register.rows.length === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-              Nobody contributed to a pension in this run.
+              {t("pension.nobody")}
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-start dark:bg-slate-900">
                   <tr>
-                    <th className="px-3 py-2 font-medium">S/N</th>
-                    <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">PIN number</th>
-                    <th className="px-3 py-2 text-end font-medium">Employer</th>
-                    <th className="px-3 py-2 text-end font-medium">Employee</th>
-                    <th className="px-3 py-2 text-end font-medium">Total</th>
+                    <th className="px-3 py-2 font-medium">{t("pension.serial")}</th>
+                    <th className="px-3 py-2 font-medium">{t("pension.name")}</th>
+                    <th className="px-3 py-2 font-medium">{t("pension.pin")}</th>
+                    <th className="px-3 py-2 text-end font-medium">{t("pension.employer")}</th>
+                    <th className="px-3 py-2 text-end font-medium">{t("pension.employee")}</th>
+                    <th className="px-3 py-2 text-end font-medium">{t("pension.total")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -242,7 +247,7 @@ export default function PensionRegisterPage() {
                 <tfoot>
                   <tr className="border-t-2 border-slate-300 font-semibold dark:border-slate-700">
                     <td className="px-3 py-2" colSpan={3}>
-                      Total to remit
+                      {t("pension.totalToRemit")}
                     </td>
                     <td className="px-3 py-2 text-end tabular-nums">
                       {money(data.register.employerTotalCents)}

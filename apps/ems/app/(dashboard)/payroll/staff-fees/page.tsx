@@ -5,6 +5,7 @@ import Link from "next/link";
 import { errorMessage } from "@/lib/api";
 import { usePayrollRuns } from "@/lib/use-payroll";
 import { useApplyStaffFees, useStaffFeesPreview, type AppliedFees } from "@/lib/use-staff-fees";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Settling staff children's school fees out of salary.
@@ -15,6 +16,7 @@ import { useApplyStaffFees, useStaffFeesPreview, type AppliedFees } from "@/lib/
  * single click on arrival.
  */
 export default function StaffFeesPage() {
+  const { t } = useTranslation();
   const { data: runs } = usePayrollRuns();
   const { data: rows, isLoading, error } = useStaffFeesPreview();
   const apply = useApplyStaffFees();
@@ -51,7 +53,7 @@ export default function StaffFeesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Staff children&apos;s fees</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("staffFees.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
           Recover school fees for staff members&apos; own children from their salary. Only people who have
           agreed to it appear here — the monthly amount is set on each{" "}
@@ -64,7 +66,7 @@ export default function StaffFeesPage() {
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="block">
-          <span className="text-sm font-medium">Payroll run</span>
+          <span className="text-sm font-medium">{t("payroll.run")}</span>
           <select
             value={runId ?? ""}
             onChange={(e) => {
@@ -113,7 +115,7 @@ export default function StaffFeesPage() {
         </div>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           {errorMessage(error, "Couldn't work out what would be recovered.")}
@@ -135,7 +137,7 @@ export default function StaffFeesPage() {
 
       {rows && active.length === 0 && blocked.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          Nothing to recover. Either nobody has agreed to this arrangement, or their children owe nothing.
+          {t("staffFees.none")}
         </p>
       )}
 
@@ -145,12 +147,12 @@ export default function StaffFeesPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-start dark:bg-slate-900">
                 <tr>
-                  <th className="px-3 py-2 font-medium">Staff member</th>
-                  <th className="px-3 py-2 font-medium">Children</th>
-                  <th className="px-3 py-2 text-end font-medium">Owed</th>
-                  <th className="px-3 py-2 text-end font-medium">Agreed monthly</th>
-                  <th className="px-3 py-2 text-end font-medium">This month</th>
-                  <th className="px-3 py-2 text-end font-medium">Left after</th>
+                  <th className="px-3 py-2 font-medium">{t("staffFees.member")}</th>
+                  <th className="px-3 py-2 font-medium">{t("staffFees.children")}</th>
+                  <th className="px-3 py-2 text-end font-medium">{t("staffFees.owed")}</th>
+                  <th className="px-3 py-2 text-end font-medium">{t("staffFees.agreedMonthly")}</th>
+                  <th className="px-3 py-2 text-end font-medium">{t("staffFees.thisMonth")}</th>
+                  <th className="px-3 py-2 text-end font-medium">{t("staffFees.leftAfter")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -183,7 +185,7 @@ export default function StaffFeesPage() {
               <tfoot>
                 <tr className="border-t-2 border-slate-300 font-semibold dark:border-slate-700">
                   <td className="px-3 py-2" colSpan={4}>
-                    Total to settle
+                    {t("staffFees.totalToSettle")}
                   </td>
                   <td className="px-3 py-2 text-end tabular-nums">{money(totalCents)}</td>
                   <td />
@@ -206,14 +208,14 @@ export default function StaffFeesPage() {
                   disabled={apply.isPending}
                   className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
                 >
-                  {apply.isPending ? "Settling…" : "Yes, settle these fees"}
+                  {apply.isPending ? t("staffFees.settling") : t("staffFees.confirm")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirming(false)}
                   className="rounded-full border border-slate-300 px-5 py-2 text-sm dark:border-slate-700"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </div>
             </div>

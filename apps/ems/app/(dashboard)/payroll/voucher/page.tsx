@@ -5,6 +5,7 @@ import Link from "next/link";
 import { errorMessage } from "@/lib/api";
 import { usePayrollRuns } from "@/lib/use-payroll";
 import { useDownloadVoucher, useVoucher } from "@/lib/use-voucher";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * The salary voucher for one payroll run.
@@ -14,6 +15,7 @@ import { useDownloadVoucher, useVoucher } from "@/lib/use-voucher";
  * a bursar signs against.
  */
 export default function VoucherPage() {
+  const { t } = useTranslation();
   const { data: runs } = usePayrollRuns();
   const [runId, setRunId] = useState<string | null>(null);
   const [includeAccounts, setIncludeAccounts] = useState(false);
@@ -35,22 +37,22 @@ export default function VoucherPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Salary voucher</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("voucher.title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-            Every member of staff on one sheet, with a subtotal at the foot of each page.
+            {t("voucher.intro")}
           </p>
         </div>
         <Link
           href="/payroll/voucher/layout"
           className="rounded-full border border-slate-300 px-4 py-1.5 text-sm transition hover:border-brand-400 dark:border-slate-700"
         >
-          Change the layout
+          {t("voucher.changeLayout")}
         </Link>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="block">
-          <span className="text-sm font-medium">Payroll run</span>
+          <span className="text-sm font-medium">{t("payroll.run")}</span>
           <select
             value={runId ?? ""}
             onChange={(e) => setRunId(e.target.value || null)}
@@ -75,7 +77,7 @@ export default function VoucherPage() {
           }}
           className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
         >
-          {download.isPending ? "Building…" : "Download spreadsheet"}
+          {download.isPending ? t("voucher.building") : t("voucher.download")}
         </button>
       </div>
 
@@ -89,10 +91,9 @@ export default function VoucherPage() {
           className="mt-0.5"
         />
         <span>
-          <span className="font-medium">Include full account numbers</span>
+          <span className="font-medium">{t("voucher.includeAccounts")}</span>
           <span className="mt-0.5 block text-slate-600 dark:text-slate-400">
-            Only for a copy going to the bank. Every staff member whose number is printed is recorded in
-            the{" "}
+            {t("voucher.accountsNote")}
             <Link href="/staff/access-log" className="underline">
               bank detail access log
             </Link>
@@ -107,7 +108,7 @@ export default function VoucherPage() {
         </p>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           {errorMessage(error, "Couldn't load the voucher.")}
@@ -124,7 +125,7 @@ export default function VoucherPage() {
 
           {data.voucher.staffCount === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-              This run has no payslips yet.
+              {t("voucher.noPayslips")}
             </p>
           ) : (
             data.voucher.pages.map((page) => (

@@ -17,6 +17,7 @@ import {
   useRefreshRun,
   type PayrollRunStatus,
 } from "@/lib/use-payroll";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /** Minor units to a readable amount. Derived, never stored. */
 function money(cents: number): string {
@@ -31,6 +32,7 @@ const STATUS_BADGE: Record<PayrollRunStatus, string> = {
 };
 
 export default function PayrollPage() {
+  const { t } = useTranslation();
   const now = new Date();
   const { data: runs, isLoading, error } = usePayrollRuns();
   const createRun = useCreatePayrollRun();
@@ -48,7 +50,7 @@ export default function PayrollPage() {
     } catch (err) {
       setMessage({
         tone: "error",
-        text: err instanceof ApiError ? err.message : "Couldn't open that month.",
+        text: err instanceof ApiError ? err.message : t("payroll.openFailed"),
       });
     }
   };
@@ -56,16 +58,15 @@ export default function PayrollPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Payroll</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("payroll.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Open a month, check the payslips, approve them, then download the file to take to the bank. Nothing
-          here moves money — it produces the instruction, and you record when the bank has acted on it.
+          {t("payroll.intro")}
         </p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
         <label className="text-sm font-medium">
-          Year
+          {t("payroll.year")}
           <input
             type="number"
             value={year}
@@ -76,7 +77,7 @@ export default function PayrollPage() {
           />
         </label>
         <label className="text-sm font-medium">
-          Month
+          {t("payroll.month")}
           <select
             value={month}
             onChange={(event) => setMonth(Number(event.target.value))}
@@ -95,7 +96,7 @@ export default function PayrollPage() {
           disabled={createRun.isPending}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
-          {createRun.isPending ? "Opening…" : "Open this month"}
+          {createRun.isPending ? t("payroll.opening") : t("payroll.openMonth")}
         </button>
       </div>
 
@@ -105,12 +106,12 @@ export default function PayrollPage() {
         </p>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading payroll…</p>}
-      {error && <p className="text-sm text-red-600">Couldn&apos;t load payroll.</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("payroll.loading")}</p>}
+      {error && <p className="text-sm text-red-600">{t("payroll.loadFailed")}</p>}
 
       {runs && runs.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          No payroll has been run yet.
+          {t("payroll.none")}
         </p>
       )}
 
@@ -149,14 +150,15 @@ export default function PayrollPage() {
  * about pay.
  */
 function Salaries() {
+  const { t } = useTranslation();
   const { data: staff, isLoading } = useStaff();
   const [open, setOpen] = useState<string | null>(null);
 
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Salaries</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("payroll.salaries")}</h2>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading staff…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("payroll.loadingStaff")}</p>}
 
       <ul className="space-y-2">
         {staff?.map((member) => (
@@ -174,12 +176,12 @@ function Salaries() {
                 <span className="mt-0.5 block text-xs text-slate-500">
                   {member.jobTitle ?? member.roles.join(", ")}
                   {member.bank.hasAccountNumber
-                    ? ` · ${member.bank.bankName ?? "Bank"} ${member.bank.accountNumberMasked}`
+                    ? ` · ${member.bank.bankName ?? t("payroll.bank")} ${member.bank.accountNumberMasked}`
                     : " · no bank account on file"}
                 </span>
               </span>
               <span className="shrink-0 text-xs font-semibold text-brand-600">
-                {open === member.id ? "Close" : "Salary"}
+                {open === member.id ? t("shared.close") : t("payroll.salary")}
               </span>
             </button>
 
@@ -192,12 +194,13 @@ function Salaries() {
         ))}
       </ul>
 
-      {staff?.length === 0 && <p className="text-sm text-slate-500">No staff records yet.</p>}
+      {staff?.length === 0 && <p className="text-sm text-slate-500">{t("payroll.noStaff")}</p>}
     </section>
   );
 }
 
 function RunDetail({ id }: { id: string }) {
+  const { t } = useTranslation();
   const accessToken = useAuthQueryState().accessToken;
   const { data: run, isLoading } = usePayrollRun(id);
   const refresh = useRefreshRun(id);
@@ -232,21 +235,21 @@ function RunDetail({ id }: { id: string }) {
             : `${paidCount} payments in the file. Every disclosure has been recorded in the bank-detail access log.`,
       });
     } catch (err) {
-      setMessage({ tone: "error", text: err instanceof ApiError ? err.message : "Couldn't produce the file." });
+      setMessage({ tone: "error", text: err instanceof ApiError ? err.message : t("payroll.fileFailed") });
     } finally {
       setBusy(false);
     }
   };
 
-  if (isLoading || !run) return <p className="p-4 text-sm text-slate-500">Loading…</p>;
+  if (isLoading || !run) return <p className="p-4 text-sm text-slate-500">{t("common.loading")}</p>;
 
   return (
     <div className="mt-2 space-y-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
       <div className="grid gap-3 sm:grid-cols-4">
-        <Total label="Staff" value={String(run.summary.staffCount)} />
-        <Total label="Gross" value={money(run.summary.grossCents)} />
-        <Total label="Deductions" value={money(run.summary.deductionsCents)} />
-        <Total label="Net" value={money(run.summary.netCents)} emphasis />
+        <Total label={t("payroll.staff")} value={String(run.summary.staffCount)} />
+        <Total label={t("payroll.gross")} value={money(run.summary.grossCents)} />
+        <Total label={t("payroll.deductions")} value={money(run.summary.deductionsCents)} />
+        <Total label={t("payroll.net")} value={money(run.summary.netCents)} emphasis />
       </div>
 
       {/* The checks come before the approve button because that is the order
@@ -266,7 +269,7 @@ function RunDetail({ id }: { id: string }) {
               disabled={busy}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              Recompute from current salaries
+              {t("payroll.recompute")}
             </button>
             <button
               type="button"
@@ -274,7 +277,7 @@ function RunDetail({ id }: { id: string }) {
               disabled={busy}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
             >
-              Approve
+              {t("payroll.approve")}
             </button>
           </>
         )}
@@ -286,7 +289,7 @@ function RunDetail({ id }: { id: string }) {
             disabled={busy}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
           >
-            Download bank file
+            {t("payroll.downloadBankFile")}
           </button>
         )}
 
@@ -297,7 +300,7 @@ function RunDetail({ id }: { id: string }) {
             disabled={busy}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
           >
-            Record as paid
+            {t("payroll.recordAsPaid")}
           </button>
         )}
       </div>
@@ -321,10 +324,10 @@ function RunDetail({ id }: { id: string }) {
         <table className="w-full text-sm">
           <thead className="text-start text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="py-2">Staff</th>
-              <th className="py-2 text-end">Gross</th>
-              <th className="py-2 text-end">Deductions</th>
-              <th className="py-2 text-end">Net</th>
+              <th className="py-2">{t("payroll.staff")}</th>
+              <th className="py-2 text-end">{t("payroll.gross")}</th>
+              <th className="py-2 text-end">{t("payroll.deductions")}</th>
+              <th className="py-2 text-end">{t("payroll.net")}</th>
               <th className="py-2" />
             </tr>
           </thead>
@@ -348,12 +351,12 @@ function RunDetail({ id }: { id: string }) {
                     type="button"
                     onClick={() =>
                       void downloadPayslipPdf(payslip.id, accessToken, payslip.staffName).catch(() =>
-                        setMessage({ tone: "error", text: "Couldn't produce that payslip." }),
+                        setMessage({ tone: "error", text: t("payroll.payslipFailed") }),
                       )
                     }
                     className="text-xs font-semibold text-brand-600 hover:underline"
                   >
-                    Payslip
+                    {t("payroll.payslip")}
                   </button>
                 </td>
               </tr>
