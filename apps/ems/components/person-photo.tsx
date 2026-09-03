@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import clsx from "clsx";
 import { errorMessage } from "@/lib/api";
 import { useAuthQueryState } from "@/lib/api-auth";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const SIZES = {
   sm: "h-8 w-8 text-[10px]",
@@ -81,6 +82,7 @@ export function PersonPhoto({
  * anyway, but offering a button that always fails is its own kind of lie.
  */
 export function PersonPhotoEditor({ userId, name }: { userId: string; name: string }) {
+  const { t } = useTranslation();
   const { accessToken } = useAuthQueryState();
   const fileInput = useRef<HTMLInputElement>(null);
   const [version, setVersion] = useState(() => Date.now());
@@ -101,12 +103,12 @@ export function PersonPhotoEditor({ userId, name }: { userId: string; name: stri
       });
       if (!res.ok) {
         const data = await res.json().catch(() => undefined);
-        throw new Error((data as { message?: string } | undefined)?.message ?? "Couldn't upload that photo.");
+        throw new Error((data as { message?: string } | undefined)?.message ?? t("personPhoto.uploadFailed"));
       }
       // The URL is unchanged, so without this the browser shows the old one.
       setVersion(Date.now());
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't upload that photo."));
+      setProblem(errorMessage(err, t("personPhoto.uploadFailed")));
     } finally {
       setBusy(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -143,7 +145,7 @@ export function PersonPhotoEditor({ userId, name }: { userId: string; name: stri
             disabled={busy}
             className="rounded-full border border-slate-300 px-4 py-1.5 text-sm font-semibold transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
           >
-            {busy ? "Working…" : "Change photo"}
+            {busy ? t("personPhoto.working") : t("personPhoto.change")}
           </button>
           <button
             type="button"
@@ -151,12 +153,12 @@ export function PersonPhotoEditor({ userId, name }: { userId: string; name: stri
             disabled={busy}
             className="rounded-full border border-slate-300 px-4 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-red-950/30"
           >
-            Remove
+            {t("shared.remove")}
           </button>
         </div>
 
         <p className="text-xs text-slate-500">
-          Optional. PNG, JPEG or WebP, up to 2 MB. Only staff, this person, and their classmates can see it.
+          {t("personPhoto.note")}
         </p>
 
         <input

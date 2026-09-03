@@ -2,6 +2,7 @@
 
 import { useClassMembers } from "@/lib/use-class-chat";
 import { PersonPhoto } from "./person-photo";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Who is in the room, above the conversation.
@@ -15,6 +16,7 @@ import { PersonPhoto } from "./person-photo";
  * know whether anyone is about.
  */
 export function ClassPresenceStrip({ classId }: { classId: string }) {
+  const { t } = useTranslation();
   const { data } = useClassMembers(classId);
   if (!data) return null;
 
@@ -32,7 +34,7 @@ export function ClassPresenceStrip({ classId }: { classId: string }) {
     <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-2 dark:border-slate-800">
       <span className="shrink-0 text-xs font-medium text-slate-500">
         {online.length === 0
-          ? "Nobody else here right now"
+          ? t("presence.nobodyElse")
           : `${online.length} here now`}
       </span>
 

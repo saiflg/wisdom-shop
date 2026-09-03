@@ -1586,4 +1586,17 @@ export const tr: Partial<Dictionary> = {
   "gatewayBanner.someArriving": "Ailelere bazı mesajlar ulaşmıyor",
   "gatewayBanner.checkSettings": "Ağ geçidi ayarlarını kontrol edin",
   "gatewayBanner.seeFailures": "Neyin başarısız olduğunu görün",
+
+  // ── Photo, auth guard, lesson board, presence ───────────────────
+  "personPhoto.uploadFailed": "Bu fotoğraf yüklenemedi.",
+  "personPhoto.working": "Çalışıyor…",
+  "personPhoto.change": "Fotoğrafı değiştir",
+  "personPhoto.note": "İsteğe bağlı. PNG, JPEG veya WebP, en fazla 2 MB. Yalnızca personel, bu kişi ve sınıf arkadaşları görebilir.",
+  "requireAuth.signInToContinue": "Devam etmek için giriş yapın",
+  "requireAuth.signIn": "Giriş yap",
+  "lessonBoard.stopReading": "Bu dersi sesli okumayı durdur",
+  "lessonBoard.readAloud": "Bu dersi sesli oku",
+  "lessonBoard.diagram": "Şema",
+  "presence.nobodyElse": "Şu anda başka kimse yok",
+  "header.breadcrumb": "Gezinme yolu",
 };

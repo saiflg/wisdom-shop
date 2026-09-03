@@ -1592,4 +1592,17 @@ export const ar: Partial<Dictionary> = {
   "gatewayBanner.someArriving": "بعض الرسائل إلى الأسر لا تصل",
   "gatewayBanner.checkSettings": "تحقّق من إعدادات البوابة",
   "gatewayBanner.seeFailures": "اطّلع على ما فشل",
+
+  // ── Photo, auth guard, lesson board, presence ───────────────────
+  "personPhoto.uploadFailed": "تعذّر رفع هذه الصورة.",
+  "personPhoto.working": "جارٍ العمل…",
+  "personPhoto.change": "تغيير الصورة",
+  "personPhoto.note": "اختياري. PNG أو JPEG أو WebP، حتى 2 ميجابايت. لا يراها إلا الموظفون وهذا الشخص وزملاؤه في الفصل.",
+  "requireAuth.signInToContinue": "سجّل الدخول للمتابعة",
+  "requireAuth.signIn": "تسجيل الدخول",
+  "lessonBoard.stopReading": "إيقاف قراءة الدرس بصوت عالٍ",
+  "lessonBoard.readAloud": "اقرأ هذا الدرس بصوت عالٍ",
+  "lessonBoard.diagram": "رسم توضيحي",
+  "presence.nobodyElse": "لا أحد آخر هنا الآن",
+  "header.breadcrumb": "مسار التنقل",
 };

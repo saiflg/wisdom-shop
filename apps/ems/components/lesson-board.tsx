@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * The teacher's board.
@@ -73,6 +74,7 @@ export function wordAt(tokens: Token[], charIndex: number): number {
  * simply is not highlighted and the reading still works.
  */
 export function BoardText({ text, alt }: { text: string; alt?: string | null }) {
+  const { t } = useTranslation();
   // What is spoken includes the diagram's description; what is highlighted is
   // only the lesson, because the description is not on screen as words.
   //
@@ -157,7 +159,7 @@ export function BoardText({ text, alt }: { text: string; alt?: string | null }) 
           type="button"
           onClick={speaking ? stop : start}
           className="chalk-button"
-          aria-label={speaking ? "Stop reading this lesson aloud" : "Read this lesson aloud"}
+          aria-label={speaking ? t("lessonBoard.stopReading") : t("lessonBoard.readAloud")}
         >
           {speaking ? "◼ Stop reading" : "▶ Read aloud"}
         </button>
@@ -176,6 +178,7 @@ export function BoardText({ text, alt }: { text: string; alt?: string | null }) 
  * recolour it. A pinned chart is also what a real classroom does.
  */
 export function BoardDiagram({ svg, alt }: { svg: string; alt: string | null }) {
+  const { t } = useTranslation();
   return (
     <figure className="chalk-pin">
       {/* Sanitised server-side before it was ever stored — see
@@ -183,7 +186,7 @@ export function BoardDiagram({ svg, alt }: { svg: string; alt: string | null }) 
           diagram that reached the database is one that passed. */}
       <div
         role="img"
-        aria-label={alt ?? "Diagram"}
+        aria-label={alt ?? t("lessonBoard.diagram")}
         className="overflow-x-auto rounded-md bg-white p-3 [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-w-md"
         dangerouslySetInnerHTML={{ __html: svg }}
       />

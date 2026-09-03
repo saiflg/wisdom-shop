@@ -1592,4 +1592,17 @@ export const ha: Partial<Dictionary> = {
   "gatewayBanner.someArriving": "Wasu saƙonni zuwa ga iyalai ba sa isa",
   "gatewayBanner.checkSettings": "Duba saitunan hanyar sadarwa",
   "gatewayBanner.seeFailures": "Duba abin da bai yi nasara ba",
+
+  // ── Photo, auth guard, lesson board, presence ───────────────────
+  "personPhoto.uploadFailed": "An kasa ɗora wannan hoton.",
+  "personPhoto.working": "Ana aiki…",
+  "personPhoto.change": "Canza hoto",
+  "personPhoto.note": "Na zaɓi. PNG, JPEG ko WebP, har 2 MB. Ma'aikata, wannan mutumin, da abokan ajinsa ne kawai za su gan shi.",
+  "requireAuth.signInToContinue": "Ka shiga don ci gaba",
+  "requireAuth.signIn": "Shiga",
+  "lessonBoard.stopReading": "Daina karanta wannan darasin da ƙarfi",
+  "lessonBoard.readAloud": "Karanta wannan darasin da ƙarfi",
+  "lessonBoard.diagram": "Zane",
+  "presence.nobodyElse": "Babu wani a nan yanzu",
+  "header.breadcrumb": "Hanyar bibiya",
 };

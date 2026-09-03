@@ -1608,6 +1608,19 @@ export const en = {
   "gatewayBanner.someArriving": "Some messages to families are not arriving",
   "gatewayBanner.checkSettings": "Check the gateway settings",
   "gatewayBanner.seeFailures": "See what failed",
+
+  // ── Photo, auth guard, lesson board, presence ───────────────────
+  "personPhoto.uploadFailed": "Couldn't upload that photo.",
+  "personPhoto.working": "Working…",
+  "personPhoto.change": "Change photo",
+  "personPhoto.note": "Optional. PNG, JPEG or WebP, up to 2 MB. Only staff, this person, and their classmates can see it.",
+  "requireAuth.signInToContinue": "Sign in to continue",
+  "requireAuth.signIn": "Sign in",
+  "lessonBoard.stopReading": "Stop reading this lesson aloud",
+  "lessonBoard.readAloud": "Read this lesson aloud",
+  "lessonBoard.diagram": "Diagram",
+  "presence.nobodyElse": "Nobody else here right now",
+  "header.breadcrumb": "Breadcrumb",
 } as const;
 
 /**
