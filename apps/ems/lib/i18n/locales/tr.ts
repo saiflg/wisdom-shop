@@ -1405,4 +1405,16 @@ export const tr: Partial<Dictionary> = {
   "shared.generate": "Üret",
   "shared.wisdomGenerated": "Wisdom üretti",
   "shared.manual": "Elle",
+
+  // ── Scheme and lesson plan editors ──────────────────────────────
+  "shared.publish": "Yayımla",
+  "shared.saveChanges": "Değişiklikleri kaydet",
+  "shared.savedShort": "Kaydedildi.",
+  "schemeEdit.saveFailed": "Bu yıllık plan kaydedilemedi.",
+  "schemeEdit.publishFailed": "Bu yıllık plan yayımlanamadı.",
+  "schemeEdit.removeWeek": "Haftayı kaldır",
+  "schemeEdit.topic": "Konu",
+  "schemeEdit.addWeek": "Hafta ekle",
+  "planEdit.saveFailed": "Bu ders planı kaydedilemedi.",
+  "planEdit.publishFailed": "Bu ders planı yayımlanamadı.",
 };

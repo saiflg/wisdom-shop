@@ -1411,4 +1411,16 @@ export const ar: Partial<Dictionary> = {
   "shared.generate": "توليد",
   "shared.wisdomGenerated": "من توليد Wisdom",
   "shared.manual": "يدوي",
+
+  // ── Scheme and lesson plan editors ──────────────────────────────
+  "shared.publish": "نشر",
+  "shared.saveChanges": "حفظ التغييرات",
+  "shared.savedShort": "تم الحفظ.",
+  "schemeEdit.saveFailed": "تعذّر حفظ خطة المنهج هذه.",
+  "schemeEdit.publishFailed": "تعذّر نشر خطة المنهج هذه.",
+  "schemeEdit.removeWeek": "حذف الأسبوع",
+  "schemeEdit.topic": "الموضوع",
+  "schemeEdit.addWeek": "إضافة أسبوع",
+  "planEdit.saveFailed": "تعذّر حفظ خطة الدرس هذه.",
+  "planEdit.publishFailed": "تعذّر نشر خطة الدرس هذه.",
 };

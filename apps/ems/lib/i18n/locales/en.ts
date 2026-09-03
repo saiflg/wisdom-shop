@@ -1427,6 +1427,18 @@ export const en = {
   "shared.generate": "Generate",
   "shared.wisdomGenerated": "Wisdom generated",
   "shared.manual": "Manual",
+
+  // ── Scheme and lesson plan editors ──────────────────────────────
+  "shared.publish": "Publish",
+  "shared.saveChanges": "Save changes",
+  "shared.savedShort": "Saved.",
+  "schemeEdit.saveFailed": "Couldn't save this scheme of work.",
+  "schemeEdit.publishFailed": "Couldn't publish this scheme of work.",
+  "schemeEdit.removeWeek": "Remove week",
+  "schemeEdit.topic": "Topic",
+  "schemeEdit.addWeek": "Add week",
+  "planEdit.saveFailed": "Couldn't save this lesson plan.",
+  "planEdit.publishFailed": "Couldn't publish this lesson plan.",
 } as const;
 
 /**

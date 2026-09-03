@@ -1411,4 +1411,16 @@ export const ha: Partial<Dictionary> = {
   "shared.generate": "Gina",
   "shared.wisdomGenerated": "Wisdom ya gina",
   "shared.manual": "Da hannu",
+
+  // ── Scheme and lesson plan editors ──────────────────────────────
+  "shared.publish": "Wallafa",
+  "shared.saveChanges": "Ajiye canje-canje",
+  "shared.savedShort": "An ajiye.",
+  "schemeEdit.saveFailed": "An kasa ajiye wannan manhajar.",
+  "schemeEdit.publishFailed": "An kasa wallafa wannan manhajar.",
+  "schemeEdit.removeWeek": "Cire mako",
+  "schemeEdit.topic": "Batu",
+  "schemeEdit.addWeek": "Ƙara mako",
+  "planEdit.saveFailed": "An kasa ajiye wannan shirin darasin.",
+  "planEdit.publishFailed": "An kasa wallafa wannan shirin darasin.",
 };
