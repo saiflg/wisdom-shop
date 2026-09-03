@@ -16,6 +16,7 @@ import {
   type QuestionType,
 } from "@/lib/use-exams";
 import { FormField } from "@/components/form-field";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const INPUT =
   "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900";
@@ -35,6 +36,7 @@ type QuestionValues = z.infer<typeof questionSchema>;
 const CHOICE_TYPES: QuestionType[] = ["SINGLE_CHOICE", "MULTI_CHOICE", "TRUE_FALSE"];
 
 export default function QuestionBankPage() {
+  const { t } = useTranslation();
   const { data: subjects } = useSubjects();
   const [subjectFilter, setSubjectFilter] = useState<string>("");
   const { data: questions, isLoading, error } = useQuestionBank(subjectFilter || undefined);
@@ -90,7 +92,7 @@ export default function QuestionBankPage() {
       resetOptions();
       setOpen(false);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't save that question.");
+      setFormError(err instanceof ApiError ? err.message : t("questionBank.saveFailed"));
     }
   });
 
@@ -109,7 +111,7 @@ export default function QuestionBankPage() {
       const result = await generate.mutateAsync({ subjectId: subjectFilter, topic: genTopic, count: 5 });
       setGenResult({ created: result.created.length, rejected: result.rejected });
     } catch (err) {
-      setGenError(err instanceof ApiError ? err.message : "Couldn't generate questions.");
+      setGenError(err instanceof ApiError ? err.message : t("questionBank.generateFailed"));
     }
   };
 
@@ -117,10 +119,9 @@ export default function QuestionBankPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Question bank</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("questionBank.title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-            Questions you can put on any paper. A paper takes its own copy, so editing a question here
-            never changes an exam somebody has already sat.
+            {t("questionBank.intro")}
           </p>
         </div>
         <button
@@ -128,7 +129,7 @@ export default function QuestionBankPage() {
           onClick={() => setOpen((current) => !current)}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          {open ? "Cancel" : "Add a question"}
+          {open ? t("common.cancel") : t("questionBank.add")}
         </button>
       </div>
 
@@ -136,9 +137,9 @@ export default function QuestionBankPage() {
         <form onSubmit={onCreate} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium">
-              Subject
+              {t("questionBank.subject")}
               <select className={INPUT} {...form.register("subjectId")}>
-                <option value="">Choose…</option>
+                <option value="">{t("shared.choose")}</option>
                 {subjects?.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
@@ -153,7 +154,7 @@ export default function QuestionBankPage() {
             </label>
 
             <label className="text-sm font-medium">
-              Type
+              {t("questionBank.type")}
               <select className={INPUT} {...form.register("type")}>
                 {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((value) => (
                   <option key={value} value={value}>
@@ -163,12 +164,12 @@ export default function QuestionBankPage() {
               </select>
             </label>
 
-            <FormField label="Topic" placeholder="Fractions" {...form.register("topic")} />
-            <FormField label="Marks" placeholder="2" {...form.register("marks")} />
+            <FormField label={t("questionBank.topic")} placeholder={t("questionBank.topicPlaceholder")} {...form.register("topic")} />
+            <FormField label={t("questionBank.marks")} placeholder="2" {...form.register("marks")} />
           </div>
 
           <label className="mt-4 block text-sm font-medium">
-            The question
+            {t("questionBank.theQuestion")}
             <textarea rows={3} className={INPUT} {...form.register("prompt")} />
             {form.formState.errors.prompt && (
               <span className="mt-1 block text-xs text-red-600">{form.formState.errors.prompt.message}</span>
@@ -177,7 +178,7 @@ export default function QuestionBankPage() {
 
           {CHOICE_TYPES.includes(type) && (
             <fieldset className="mt-4">
-              <legend className="text-sm font-medium">Options — tick the correct one</legend>
+              <legend className="text-sm font-medium">{t("questionBank.options")}</legend>
               <div className="mt-2 space-y-2">
                 {options.map((option, index) => (
                   <div key={option.key} className="flex items-center gap-3">
@@ -225,14 +226,14 @@ export default function QuestionBankPage() {
                 }
                 className="mt-2 text-xs font-semibold text-brand-600 hover:underline"
               >
-                Add an option
+                {t("questionBank.addOption")}
               </button>
             </fieldset>
           )}
 
           {type === "SHORT_ANSWER" && (
             <label className="mt-4 block text-sm font-medium">
-              Accepted answers, separated by commas
+              {t("questionBank.acceptedAnswers")}
               <input value={accepted} onChange={(event) => setAccepted(event.target.value)} className={INPUT} />
               <span className="mt-1 block text-xs text-slate-500">
                 List every spelling a marker should accept — &ldquo;3, three&rdquo;. Anything else is marked
@@ -243,8 +244,7 @@ export default function QuestionBankPage() {
 
           {type === "ESSAY" && (
             <p className="mt-4 text-xs text-slate-500">
-              Essays are never marked by the machine. You will mark these yourself, and the paper is not
-              finished until you have.
+              {t("questionBank.essayNote")}
             </p>
           )}
 
@@ -259,22 +259,22 @@ export default function QuestionBankPage() {
             disabled={create.isPending}
             className="mt-4 rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {create.isPending ? "Saving…" : "Save question"}
+            {create.isPending ? t("shared.saving") : t("questionBank.save")}
           </button>
         </form>
       )}
 
       <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Draft with Wisdom</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("questionBank.draftWithWisdom")}</h2>
         <div className="mt-2 flex flex-wrap items-end gap-3">
           <label className="text-sm font-medium">
-            Subject
+            {t("questionBank.subject")}
             <select
               value={subjectFilter}
               onChange={(event) => setSubjectFilter(event.target.value)}
               className={INPUT}
             >
-              <option value="">All subjects</option>
+              <option value="">{t("questionBank.allSubjects")}</option>
               {subjects?.map((subject) => (
                 <option key={subject.id} value={subject.id}>
                   {subject.name}
@@ -283,11 +283,11 @@ export default function QuestionBankPage() {
             </select>
           </label>
           <label className="text-sm font-medium">
-            Topic
+            {t("questionBank.topic")}
             <input
               value={genTopic}
               onChange={(event) => setGenTopic(event.target.value)}
-              placeholder="Fractions"
+              placeholder={t("questionBank.topicPlaceholder")}
               className={INPUT}
             />
           </label>
@@ -297,12 +297,11 @@ export default function QuestionBankPage() {
             disabled={generate.isPending || genTopic.trim().length < 2}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-60 dark:border-slate-700"
           >
-            {generate.isPending ? "Writing…" : "Draft 5 questions"}
+            {generate.isPending ? t("questionBank.writing") : t("questionBank.draftFive")}
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Generated questions land here for you to read and edit. They are never put on a paper
-          automatically — a wrong answer key would mark a whole class wrong.
+          {t("questionBank.generatedNote")}
         </p>
         {genError && (
           <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
@@ -323,15 +322,15 @@ export default function QuestionBankPage() {
         )}
       </div>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {error instanceof ApiError ? error.message : "Couldn't load the question bank."}
+          {error instanceof ApiError ? error.message : t("questionBank.loadFailed")}
         </p>
       )}
 
       {questions && questions.length === 0 && (
-        <p className="text-sm text-slate-500">No questions yet. Add one, or draft some with Wisdom.</p>
+        <p className="text-sm text-slate-500">{t("questionBank.none")}</p>
       )}
 
       <ul className="space-y-3">
@@ -374,7 +373,7 @@ export default function QuestionBankPage() {
                 onClick={() => remove.mutate(question.id)}
                 className="shrink-0 text-xs font-semibold text-red-600 hover:underline"
               >
-                Retire
+                {t("questionBank.retire")}
               </button>
             </div>
           </li>
