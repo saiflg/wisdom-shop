@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useAuthStore } from "@/store/auth-store";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 interface ChannelHealth {
   channel: "EMAIL" | "SMS";
@@ -34,6 +35,7 @@ interface GatewayHealth {
  * wolf is a banner nobody reads.
  */
 export function GatewayHealthBanner() {
+  const { t } = useTranslation();
   const { accessToken, enabled } = useAuthQueryState();
   const isAdmin = useAuthStore((state) => state.user?.roles.includes("SCHOOL_ADMIN")) ?? false;
 
@@ -57,8 +59,8 @@ export function GatewayHealthBanner() {
     >
       <p className="text-sm font-semibold text-red-900 dark:text-red-200">
         {broken.some((c) => c.health === "BROKEN")
-          ? "Messages to families are not arriving"
-          : "Some messages to families are not arriving"}
+          ? t("gatewayBanner.noneArriving")
+          : t("gatewayBanner.someArriving")}
       </p>
 
       <ul className="mt-1 space-y-1">
@@ -71,11 +73,11 @@ export function GatewayHealthBanner() {
 
       <p className="mt-2 text-sm">
         <Link href="/settings/communication" className="font-semibold text-red-900 underline dark:text-red-200">
-          Check the gateway settings
+          {t("gatewayBanner.checkSettings")}
         </Link>
         <span className="text-red-800 dark:text-red-300"> · </span>
         <Link href="/messaging/outbox" className="font-semibold text-red-900 underline dark:text-red-200">
-          See what failed
+          {t("gatewayBanner.seeFailures")}
         </Link>
       </p>
     </div>

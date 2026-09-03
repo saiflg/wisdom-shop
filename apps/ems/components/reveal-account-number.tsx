@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/lib/api";
 import { useAuthQueryState } from "@/lib/api-auth";
 import { revealAccountNumber, type RevealedAccount } from "@/lib/use-staff";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /** How long a revealed number stays on screen before it clears itself. */
 const VISIBLE_SECONDS = 60;
@@ -20,6 +21,7 @@ const VISIBLE_SECONDS = 60;
  * it is a screen left open in a room other people walk through.
  */
 export function RevealAccountNumber({ userId, staffName }: { userId: string; staffName: string }) {
+  const { t } = useTranslation();
   const { accessToken } = useAuthQueryState();
 
   const [reason, setReason] = useState("");
@@ -89,14 +91,14 @@ export function RevealAccountNumber({ userId, staffName }: { userId: string; sta
             onClick={hide}
             className="rounded-lg border border-amber-400 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-100 dark:border-amber-700 dark:text-amber-100 dark:hover:bg-amber-900/40"
           >
-            Hide now
+            {t("reveal.hideNow")}
           </button>
           <span className="text-xs text-amber-800 dark:text-amber-200" aria-live="off">
             Hides itself in {secondsLeft}s
           </span>
         </div>
         <p className="text-xs text-amber-800 dark:text-amber-200">
-          This was recorded in the access log against your name, with the reason you gave.
+          {t("reveal.logged")}
         </p>
       </div>
     );
@@ -105,7 +107,7 @@ export function RevealAccountNumber({ userId, staffName }: { userId: string; sta
   return (
     <div className="space-y-2 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
       <label htmlFor="reveal-reason" className="block text-sm font-medium">
-        Show the full account number
+        {t("reveal.show")}
       </label>
       <p className="text-xs text-slate-500">
         Say why. It goes in the log before the number is shown, so the log answers &ldquo;why&rdquo; and not
@@ -116,7 +118,7 @@ export function RevealAccountNumber({ userId, staffName }: { userId: string; sta
           id="reveal-reason"
           value={reason}
           onChange={(event) => setReason(event.target.value)}
-          placeholder="Preparing the October payroll run"
+          placeholder={t("reveal.reasonPlaceholder")}
           className="min-w-[16rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <button
@@ -125,7 +127,7 @@ export function RevealAccountNumber({ userId, staffName }: { userId: string; sta
           disabled={busy || reason.trim().length < 4}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
-          {busy ? "Reading…" : "Show number"}
+          {busy ? t("reveal.reading") : t("reveal.showNumber")}
         </button>
       </div>
       {error && (

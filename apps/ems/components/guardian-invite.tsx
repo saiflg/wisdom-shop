@@ -9,6 +9,7 @@ import {
   type CreatedInvitation,
   type GuardianEntry,
 } from "@/lib/use-guardians";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Inviting a parent to set up their own portal password.
@@ -19,6 +20,7 @@ import {
  * how to sign in as that family.
  */
 export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [created, setCreated] = useState<CreatedInvitation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
 
   // Nowhere to send it, so the button would only ever produce an error.
   if (!guardian.email) {
-    return <p className="mt-2 text-xs text-slate-500">Add an email address before inviting this parent.</p>;
+    return <p className="mt-2 text-xs text-slate-500">{t("guardianInvite.needEmail")}</p>;
   }
 
   return (
@@ -47,11 +49,11 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
       <div className="flex flex-wrap items-center gap-2">
         {guardian.hasPassword ? (
           <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-            Can sign in
+            {t("guardianInvite.canSignIn")}
           </span>
         ) : (
           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-            Has never signed in
+            {t("guardianInvite.neverSignedIn")}
           </span>
         )}
 
@@ -62,10 +64,10 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
           className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
         >
           {invite.isPending
-            ? "Creating…"
+            ? t("guardianInvite.creating")
             : guardian.hasPassword
-              ? "Send a password reset link"
-              : "Invite to the portal"}
+              ? t("guardianInvite.resetLink")
+              : t("guardianInvite.invite")}
         </button>
 
         <button
@@ -74,7 +76,7 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
           aria-expanded={open}
           className="text-xs font-semibold text-brand-600 hover:underline"
         >
-          {open ? "Hide invitations" : "Invitations"}
+          {open ? t("guardianInvite.hide") : t("guardianInvite.invitations")}
         </button>
       </div>
 
@@ -82,7 +84,7 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
           wondering whether it will wipe the account. */}
       {guardian.hasPassword && (
         <p className="mt-1.5 text-xs text-slate-500">
-          They keep their current password until they follow the new link and choose another.
+          {t("guardianInvite.keepsPassword")}
         </p>
       )}
 
@@ -116,7 +118,7 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
                   onClick={() => void revoke.mutateAsync(invitation.id).catch(() => undefined)}
                   className="font-semibold text-slate-400 transition hover:text-red-600"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               )}
             </li>
@@ -125,7 +127,7 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
       )}
 
       {open && history && history.length === 0 && (
-        <p className="mt-2 text-xs text-slate-500">No invitations sent yet.</p>
+        <p className="mt-2 text-xs text-slate-500">{t("guardianInvite.none")}</p>
       )}
     </div>
   );
@@ -141,6 +143,7 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
  * shown again.
  */
 function InvitationLink({ invitation, onDismiss }: { invitation: CreatedInvitation; onDismiss: () => void }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -169,14 +172,14 @@ function InvitationLink({ invitation, onDismiss }: { invitation: CreatedInvitati
           onClick={() => void copy()}
           className="shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-500"
         >
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("guardianInvite.copied") : t("guardianInvite.copy")}
         </button>
         <button
           type="button"
           onClick={onDismiss}
           className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold transition hover:bg-white dark:border-slate-700"
         >
-          Done
+          {t("guardianInvite.done")}
         </button>
       </div>
 

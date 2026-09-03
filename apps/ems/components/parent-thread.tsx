@@ -7,6 +7,7 @@ import {
   usePostParentMessage,
   useWithdrawParentMessage,
 } from "@/lib/use-parent-messages";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * One conversation between a family and the school.
@@ -16,6 +17,7 @@ import {
  * is how they drift into disagreeing about what was said.
  */
 export function ParentThread({ studentProfileId }: { studentProfileId: string }) {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useParentThread(studentProfileId);
   const post = usePostParentMessage(studentProfileId);
   const withdraw = useWithdrawParentMessage(studentProfileId);
@@ -29,7 +31,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [count]);
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading the conversation…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("parentThread.loading")}</p>;
   if (error || !data) {
     return (
       <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
@@ -57,8 +59,8 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
         {data.messages.length === 0 && (
           <p className="py-6 text-center text-sm text-slate-500">
             {data.youAre === "FAMILY"
-              ? "Nothing yet. Write to the school about your child here — any of their teachers can answer."
-              : "Nothing yet from this family."}
+              ? t("parentThread.emptyFamily")
+              : t("parentThread.emptyStaff")}
           </p>
         )}
 
@@ -96,7 +98,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
                     }
                     className="hover:underline"
                   >
-                    Withdraw
+                    {t("shared.withdraw")}
                   </button>
                 )}
               </div>
@@ -110,7 +112,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
         <div className="space-y-2 border-t border-slate-200 p-4 dark:border-slate-800">
           <div className="flex flex-wrap gap-2">
             <label htmlFor="parent-draft" className="sr-only">
-              Write a message
+              {t("parentThread.write")}
             </label>
             <input
               id="parent-draft"
@@ -119,7 +121,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
               onKeyDown={(event) => {
                 if (event.key === "Enter" && draft.trim()) void send();
               }}
-              placeholder={data.youAre === "FAMILY" ? "Write to the school…" : "Reply to the family…"}
+              placeholder={data.youAre === "FAMILY" ? t("parentThread.placeholderFamily") : t("parentThread.placeholderStaff")}
               maxLength={2000}
               className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
@@ -129,7 +131,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
               disabled={post.isPending || !draft.trim()}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
             >
-              Send
+              {t("parentThread.send")}
             </button>
           </div>
 

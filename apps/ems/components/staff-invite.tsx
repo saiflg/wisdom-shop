@@ -5,6 +5,7 @@ import { apiFetch, errorMessage } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import type { CreatedInvitation } from "@/lib/use-guardians";
 import type { StaffMember } from "@/lib/use-staff";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Inviting a member of staff to set up their own password.
@@ -15,6 +16,7 @@ import type { StaffMember } from "@/lib/use-staff";
  * the school.
  */
 export function StaffInvite({ member }: { member: StaffMember }) {
+  const { t } = useTranslation();
   const { accessToken } = useAuthQueryState();
   const [created, setCreated] = useState<CreatedInvitation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export function StaffInvite({ member }: { member: StaffMember }) {
   };
 
   if (!member.email) {
-    return <span className="text-xs text-slate-500">No email address — cannot be invited.</span>;
+    return <span className="text-xs text-slate-500">{t("staffInvite.noEmail")}</span>;
   }
 
   if (created) {
@@ -63,13 +65,13 @@ export function StaffInvite({ member }: { member: StaffMember }) {
             }}
             className="shrink-0 rounded bg-brand-600 px-3 py-1 text-xs font-semibold text-white"
           >
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("staffInvite.copied") : t("staffInvite.copy")}
           </button>
         </div>
         {/* Said plainly, because there is no way to recover it and somebody
             will otherwise close this expecting to find it again. */}
         <p className="text-xs text-emerald-800 dark:text-emerald-300">
-          This link is shown once and cannot be found again. If it is lost, send another.
+          {t("staffInvite.shownOnce")}
         </p>
       </div>
     );
@@ -83,7 +85,7 @@ export function StaffInvite({ member }: { member: StaffMember }) {
         disabled={sending}
         className="text-xs font-semibold text-brand-600 hover:underline disabled:opacity-50"
       >
-        {sending ? "Creating…" : member.hasPassword ? "Send a password reset link" : "Invite to set a password"}
+        {sending ? t("staffInvite.creating") : member.hasPassword ? t("staffInvite.resetLink") : t("staffInvite.invite")}
       </button>
       {message && <span className="text-xs text-red-600">{message}</span>}
     </span>
