@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -14,24 +15,28 @@ import { useCanAuthor } from "@/lib/use-can-author";
 import { FormField } from "@/components/form-field";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const createSchema = z.object({
-  schemeOfWorkId: z.string().min(1, "Choose a scheme of work"),
-  weekNumber: z.coerce.number().int().min(1, "Week number is required"),
-  objectives: z.string().min(1, "At least one objective"),
-  materials: z.string().min(1, "At least one material"),
-  introduction: z.string().min(1, "Introduction is required"),
-  developmentSteps: z.string().min(1, "At least one step"),
-  conclusion: z.string().min(1, "Conclusion is required"),
-  assessment: z.string().min(1, "Assessment is required"),
-  homework: z.string().min(1, "Homework is required"),
-});
-type CreateValues = z.infer<typeof createSchema>;
+function createSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    schemeOfWorkId: z.string().min(1, t("valid.chooseScheme")),
+    weekNumber: z.coerce.number().int().min(1, t("valid.weekRequired")),
+    objectives: z.string().min(1, t("valid.oneObjective")),
+    materials: z.string().min(1, t("valid.oneMaterial")),
+    introduction: z.string().min(1, t("valid.introRequired")),
+    developmentSteps: z.string().min(1, t("valid.oneStep")),
+    conclusion: z.string().min(1, t("valid.conclusionRequired")),
+    assessment: z.string().min(1, t("valid.assessmentRequired")),
+    homework: z.string().min(1, t("valid.homeworkRequired")),
+  });
+}
+type CreateValues = z.infer<ReturnType<typeof createSchemaFor>>;
 
-const generateSchema = z.object({
-  schemeOfWorkId: z.string().min(1, "Choose a scheme of work"),
-  weekNumber: z.coerce.number().int().min(1, "Week number is required"),
-});
-type GenerateValues = z.infer<typeof generateSchema>;
+function generateSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    schemeOfWorkId: z.string().min(1, t("valid.chooseScheme")),
+    weekNumber: z.coerce.number().int().min(1, t("valid.weekRequired")),
+  });
+}
+type GenerateValues = z.infer<ReturnType<typeof generateSchemaFor>>;
 
 function linesToList(value: string): string[] {
   return value
@@ -42,6 +47,8 @@ function linesToList(value: string): string[] {
 
 export default function LessonPlansPage() {
   const { t } = useTranslation();
+  const createSchema = useMemo(() => createSchemaFor(t), [t]);
+  const generateSchema = useMemo(() => generateSchemaFor(t), [t]);
   const searchParams = useSearchParams();
   const schemeOfWorkId = searchParams.get("schemeOfWorkId") ?? undefined;
   const weekNumberParam = searchParams.get("weekNumber") ?? undefined;

@@ -46,7 +46,7 @@ export default function StaffFeesPage() {
       setResult(await apply.mutateAsync(runId));
       setConfirming(false);
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't settle those fees."));
+      setProblem(errorMessage(err, t("errs.settleFees")));
     }
   };
 
@@ -116,7 +116,7 @@ export default function StaffFeesPage() {
       {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't work out what would be recovered.")}
+          {errorMessage(error, t("errs.previewRecovery"))}
         </p>
       )}
 

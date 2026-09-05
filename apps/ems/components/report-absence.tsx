@@ -61,7 +61,7 @@ export function ReportAbsence({ studentProfileId, childName }: { studentProfileI
       setFrom(today());
       setTo(today());
     } catch (err) {
-      setError(errorMessage(err, "Couldn't send that to the school."));
+      setError(errorMessage(err, t("errs.reportAbsence")));
     }
   };
 

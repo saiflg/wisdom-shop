@@ -46,7 +46,7 @@ export function GuardianContact({ guardian }: { guardian: GuardianEntry }) {
       setEditing(false);
       setSaved(result.changed.length === 0 ? t("guardianContact.nothingChanged") : t("guardianContact.saved"));
     } catch (err) {
-      setMessage(errorMessage(err, "Couldn't save those details."));
+      setMessage(errorMessage(err, t("errs.saveContact")));
     }
   };
 

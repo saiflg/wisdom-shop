@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch, errorMessage } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 interface CheckResult {
   valid: boolean;
@@ -27,6 +28,7 @@ const RULES = [
 ];
 
 export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; token: string }) {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [checking, setChecking] = useState(true);
@@ -65,7 +67,7 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
       // Straight to the sign-in page, with the school already filled in.
       setTimeout(() => router.push(`/login?schoolSlug=${encodeURIComponent(schoolSlug)}`), 2500);
     } catch (err) {
-      setError(errorMessage(err, "We couldn't set your password. Please try again."));
+      setError(errorMessage(err, t("errs.setPassword")));
     } finally {
       setSaving(false);
     }

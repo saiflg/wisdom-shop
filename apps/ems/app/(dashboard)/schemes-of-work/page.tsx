@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -15,22 +16,26 @@ import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const createSchema = z.object({
-  subjectId: z.string().min(1, "Choose a subject"),
-  academicYear: z.string().min(1, "Academic year is required"),
-  term: z.string().min(1, "Term is required"),
-  topic: z.string().min(1, "Give week 1 a topic"),
-  objectives: z.string().min(1, "At least one objective"),
-  activities: z.string().min(1, "At least one activity"),
-});
-type CreateValues = z.infer<typeof createSchema>;
+function createSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    subjectId: z.string().min(1, t("valid.chooseSubject")),
+    academicYear: z.string().min(1, t("valid.yearRequired")),
+    term: z.string().min(1, t("valid.termRequired")),
+    topic: z.string().min(1, t("valid.firstWeekTopic")),
+    objectives: z.string().min(1, t("valid.oneObjective")),
+    activities: z.string().min(1, t("valid.oneActivity")),
+  });
+}
+type CreateValues = z.infer<ReturnType<typeof createSchemaFor>>;
 
-const generateSchema = z.object({
-  subjectId: z.string().min(1, "Choose a subject"),
-  academicYear: z.string().min(1, "Academic year is required"),
-  term: z.string().min(1, "Term is required"),
-});
-type GenerateValues = z.infer<typeof generateSchema>;
+function generateSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    subjectId: z.string().min(1, t("valid.chooseSubject")),
+    academicYear: z.string().min(1, t("valid.yearRequired")),
+    term: z.string().min(1, t("valid.termRequired")),
+  });
+}
+type GenerateValues = z.infer<ReturnType<typeof generateSchemaFor>>;
 
 function linesToList(value: string): string[] {
   return value
@@ -41,6 +46,8 @@ function linesToList(value: string): string[] {
 
 export default function SchemesOfWorkPage() {
   const { t } = useTranslation();
+  const createSchema = useMemo(() => createSchemaFor(t), [t]);
+  const generateSchema = useMemo(() => generateSchemaFor(t), [t]);
   const searchParams = useSearchParams();
   const subjectId = searchParams.get("subjectId") ?? undefined;
 

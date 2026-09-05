@@ -82,7 +82,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
           {exam.status === "DRAFT" && (
             <button
               type="button"
-              onClick={() => run(() => update.mutateAsync({ status: "PUBLISHED" }), "Couldn't publish it.")}
+              onClick={() => run(() => update.mutateAsync({ status: "PUBLISHED" }), t("errs.publishExam"))}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
             >
               {t("examBuilder.publish")}
@@ -91,7 +91,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
           {exam.status === "PUBLISHED" && (
             <button
               type="button"
-              onClick={() => run(() => update.mutateAsync({ status: "CLOSED" }), "Couldn't close it.")}
+              onClick={() => run(() => update.mutateAsync({ status: "CLOSED" }), t("errs.closeExam"))}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
             >
               {t("examBuilder.close")}
@@ -109,7 +109,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                         ? t("examBuilder.noneLeftRunning")
                         : `Marked ${result.collected} paper(s) whose time had run out.`,
                     );
-                  }, "Couldn't collect them.")
+                  }, t("errs.collectScripts"))
                 }
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
               >
@@ -125,7 +125,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                         ? `Released ${result.released}. ${result.heldForReview} still need marking by you.`
                         : `Released ${result.released} result(s).`,
                     );
-                  }, "Couldn't release the results.")
+                  }, t("errs.releaseResults"))
                 }
                 className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
               >

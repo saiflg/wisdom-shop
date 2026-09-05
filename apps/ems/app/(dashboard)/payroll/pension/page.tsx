@@ -62,7 +62,7 @@ export default function PensionRegisterPage() {
     setProblem(null);
     const percent = Number(form.employerMatchPercent);
     if (!Number.isFinite(percent) || percent < 0) {
-      setProblem("The employer share must be a percentage, e.g. 100 or 125.");
+      setProblem(t("errs.employerPercent"));
       return;
     }
     try {
@@ -74,7 +74,7 @@ export default function PensionRegisterPage() {
       });
       setEditing(false);
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't save the pension details."));
+      setProblem(errorMessage(err, t("errs.savePension")));
     }
   };
 
@@ -180,7 +180,7 @@ export default function PensionRegisterPage() {
       {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't load the pension schedule.")}
+          {errorMessage(error, t("errs.loadPension"))}
         </p>
       )}
 

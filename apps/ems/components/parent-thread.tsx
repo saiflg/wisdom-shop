@@ -35,7 +35,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
   if (error || !data) {
     return (
       <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-        {errorMessage(error, "Couldn't open that conversation.")}
+        {errorMessage(error, t("errs.openConversation"))}
       </p>
     );
   }
@@ -49,7 +49,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
       // The API's wording is written for a person — "Slow down a moment
       // before sending another message" — and replacing it would be a
       // downgrade.
-      setProblem(errorMessage(err, "Couldn't send that."));
+      setProblem(errorMessage(err, t("errs.sendThat")));
     }
   };
 
@@ -94,7 +94,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
                     onClick={() =>
                       void withdraw
                         .mutateAsync(message.id)
-                        .catch((err) => setProblem(errorMessage(err, "Couldn't withdraw that.")))
+                        .catch((err) => setProblem(errorMessage(err, t("errs.withdrawThat"))))
                     }
                     className="hover:underline"
                   >

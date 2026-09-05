@@ -66,7 +66,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
   if (error || !drafts) {
     return (
       <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-        {errorMessage(error, "Couldn't load this salary.")}
+        {errorMessage(error, t("errs.loadSalary"))}
       </p>
     );
   }
@@ -93,7 +93,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
       );
       setMessage({ tone: "ok", text: `Saved. Net pay is ${money(result.preview.netCents)} a month.` });
     } catch (err) {
-      setMessage({ tone: "error", text: errorMessage(err, "Couldn't save that salary.") });
+      setMessage({ tone: "error", text: errorMessage(err, t("errs.saveSalary")) });
     }
   };
 

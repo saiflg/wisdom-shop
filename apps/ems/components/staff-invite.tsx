@@ -34,7 +34,7 @@ export function StaffInvite({ member }: { member: StaffMember }) {
         }),
       );
     } catch (err) {
-      setMessage(errorMessage(err, "Couldn't create an invitation."));
+      setMessage(errorMessage(err, t("errs.createInvitation")));
     } finally {
       setSending(false);
     }

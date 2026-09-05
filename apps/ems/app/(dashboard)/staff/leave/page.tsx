@@ -122,7 +122,7 @@ export default function LeavePage() {
       setTo("");
       setReason("");
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't send that request."));
+      setProblem(errorMessage(err, t("errs.sendLeaveRequest")));
     }
   };
 

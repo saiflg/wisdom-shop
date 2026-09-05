@@ -142,7 +142,7 @@ function DocumentRow({ document: doc }: { document: Document }) {
       const response = await fetch(`/v1/documents/${doc.id}/file`, {
         headers: authHeaders(accessToken) as HeadersInit,
       });
-      if (!response.ok) throw new Error("Could not fetch that document");
+      if (!response.ok) throw new Error(t("errs.fetchDocument"));
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const anchor = window.document.createElement("a");

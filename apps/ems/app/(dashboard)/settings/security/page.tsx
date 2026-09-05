@@ -94,7 +94,7 @@ function SessionRow({ session }: { session: Session }) {
       // Told, not treated as a failure: somebody clicking twice because the
       // first click seemed not to work should not be left wondering whether
       // their account is still reachable.
-      if (result.alreadyEnded) setNote("That one had already ended.");
+      if (result.alreadyEnded) setNote(t("errs.sessionAlreadyEnded"));
     } catch (err) {
       setNote(err instanceof ApiError ? err.message : t("security.endSessionFailed"));
     }

@@ -75,7 +75,7 @@ export default function PromotionPage() {
     try {
       await preview.mutateAsync(request());
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't work out the plan."));
+      setProblem(errorMessage(err, t("errs.promotionPlan")));
     }
   };
 
@@ -85,7 +85,7 @@ export default function PromotionPage() {
       setResult(await apply.mutateAsync(request()));
       await preview.mutateAsync(request());
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't move the students."));
+      setProblem(errorMessage(err, t("errs.promoteStudents")));
     }
   };
 

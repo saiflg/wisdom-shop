@@ -124,10 +124,10 @@ export function PersonPhotoEditor({ userId, name }: { userId: string; name: stri
         credentials: "include",
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       });
-      if (!res.ok) throw new Error("Couldn't remove that photo.");
+      if (!res.ok) throw new Error(t("errs.removePhoto"));
       setVersion(Date.now());
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't remove that photo."));
+      setProblem(errorMessage(err, t("errs.removePhoto")));
     } finally {
       setBusy(false);
     }

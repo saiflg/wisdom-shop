@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,22 +22,25 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
 const INPUT =
   "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900";
 
-const questionSchema = z.object({
-  subjectId: z.string().min(1, "Choose a subject"),
-  topic: z.string().optional(),
-  type: z.string().min(1),
-  prompt: z.string().min(1, "Write the question"),
-  // Marks are typed as text and converted at submit, for the same reason as
-  // the AI Teacher's week number: an untouched number input submits "",
-  // which z.coerce.number() turns into 0, which then fails .min(1).
-  marks: z.string().optional(),
-});
-type QuestionValues = z.infer<typeof questionSchema>;
+function questionSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    subjectId: z.string().min(1, t("valid.chooseSubject")),
+    topic: z.string().optional(),
+    type: z.string().min(1),
+    prompt: z.string().min(1, t("valid.writeQuestion")),
+    // Marks are typed as text and converted at submit, for the same reason as
+    // the AI Teacher's week number: an untouched number input submits "",
+    // which z.coerce.number() turns into 0, which then fails .min(1).
+    marks: z.string().optional(),
+  });
+}
+type QuestionValues = z.infer<ReturnType<typeof questionSchemaFor>>;
 
 const CHOICE_TYPES: QuestionType[] = ["SINGLE_CHOICE", "MULTI_CHOICE", "TRUE_FALSE"];
 
 export default function QuestionBankPage() {
   const { t } = useTranslation();
+  const schema = useMemo(() => questionSchemaFor(t), [t]);
   const { data: subjects } = useSubjects();
   const [subjectFilter, setSubjectFilter] = useState<string>("");
   const { data: questions, isLoading, error } = useQuestionBank(subjectFilter || undefined);
@@ -58,7 +62,7 @@ export default function QuestionBankPage() {
   const [accepted, setAccepted] = useState("");
 
   const form = useForm<QuestionValues>({
-    resolver: zodResolver(questionSchema),
+    resolver: zodResolver(schema),
     defaultValues: { type: "SINGLE_CHOICE" },
   });
   const type = form.watch("type") as QuestionType;
@@ -104,7 +108,7 @@ export default function QuestionBankPage() {
     setGenError(null);
     setGenResult(null);
     if (!subjectFilter) {
-      setGenError("Choose a subject first, so the questions land somewhere.");
+      setGenError(t("errs.chooseSubjectFirst"));
       return;
     }
     try {

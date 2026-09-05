@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -15,23 +15,25 @@ import { FormField } from "@/components/form-field";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
 
-const startSchema = z.object({
-  subjectId: z.string().min(1, "Choose a subject"),
-  topic: z.string().min(3, "What would you like to learn?"),
-  mode: z.enum(["ASK", "AUTO"]),
-  schemeOfWorkId: z.string().optional(),
-  // Kept a string on purpose. An untouched number input submits "", which
-  // `z.coerce.number()` turns into 0 — and 0 then fails a `.min(1)`, so the
-  // optional field rejects being left alone. `z.preprocess` fixes that but
-  // makes the schema's input type diverge from its output, which the
-  // resolver won't accept. Validating the text and converting at submit is
-  // the version that stays simple.
-  weekNumber: z
-    .string()
-    .optional()
-    .refine((value) => !value || (/^\d+$/.test(value) && Number(value) >= 1), "Week number must be 1 or more"),
-});
-type StartValues = z.infer<typeof startSchema>;
+function startSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    subjectId: z.string().min(1, t("valid.chooseSubject")),
+    topic: z.string().min(3, t("valid.whatToLearn")),
+    mode: z.enum(["ASK", "AUTO"]),
+    schemeOfWorkId: z.string().optional(),
+    // Kept a string on purpose. An untouched number input submits "", which
+    // `z.coerce.number()` turns into 0 — and 0 then fails a `.min(1)`, so the
+    // optional field rejects being left alone. `z.preprocess` fixes that but
+    // makes the schema's input type diverge from its output, which the
+    // resolver won't accept. Validating the text and converting at submit is
+    // the version that stays simple.
+    weekNumber: z
+      .string()
+      .optional()
+      .refine((value) => !value || (/^\d+$/.test(value) && Number(value) >= 1), t("valid.weekAtLeastOne")),
+  });
+}
+type StartValues = z.infer<ReturnType<typeof startSchemaFor>>;
 
 const SELECT =
   "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900";
@@ -50,6 +52,7 @@ const STATUS_LABEL: Record<TutorSessionStatus, TranslationKey> = {
 
 export default function AiTeacherPage() {
   const { t, tPlural } = useTranslation();
+  const schema = useMemo(() => startSchemaFor(t), [t]);
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { data: subjects } = useSubjects();
@@ -65,7 +68,7 @@ export default function AiTeacherPage() {
   const isGuardian = Boolean(user?.roles.includes("GUARDIAN")) && !user?.roles.some((r) => r === "SCHOOL_ADMIN" || r === "TEACHER");
 
   const form = useForm<StartValues>({
-    resolver: zodResolver(startSchema),
+    resolver: zodResolver(schema),
     defaultValues: { mode: "AUTO" },
   });
 

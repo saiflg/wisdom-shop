@@ -67,7 +67,7 @@ export function RevealAccountNumber({ userId, staffName }: { userId: string; sta
         });
       }, 1000);
     } catch (err) {
-      setError(errorMessage(err, "Couldn't read that account number."));
+      setError(errorMessage(err, t("errs.readAccountNumber")));
     } finally {
       setBusy(false);
     }

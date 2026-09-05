@@ -217,7 +217,7 @@ function NewRecord({ studentProfileId }: { studentProfileId: string }) {
       setCategory("");
       setDescription("");
       setOccurredAt("");
-      setNote("Written down.");
+      setNote(t("errs.writtenDown"));
     } catch (err) {
       setNote(err instanceof ApiError ? err.message : t("behaviour.saveFailed"));
     }

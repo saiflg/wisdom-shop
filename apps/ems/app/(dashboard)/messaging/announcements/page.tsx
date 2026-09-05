@@ -57,7 +57,7 @@ export default function AnnouncementsPage() {
       setChecked(await preview.mutateAsync(input));
     } catch (err) {
       setChecked(null);
-      setProblem(errorMessage(err, "Couldn't work out who this would reach."));
+      setProblem(errorMessage(err, t("errs.audienceUnknown")));
     }
   };
 
@@ -70,7 +70,7 @@ export default function AnnouncementsPage() {
       setTitle("");
       setBody("");
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't send that."));
+      setProblem(errorMessage(err, t("errs.sendThat")));
     }
   };
 
@@ -315,7 +315,7 @@ function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
       const result = await send.mutateAsync();
       setNote(`Sent to ${result.reached}.`);
     } catch (err) {
-      setNote(errorMessage(err, "Could not send that draft"));
+      setNote(errorMessage(err, t("errs.sendDraft")));
     }
   };
 

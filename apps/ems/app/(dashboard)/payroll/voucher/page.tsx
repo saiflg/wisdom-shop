@@ -73,7 +73,7 @@ export default function VoucherPage() {
             setProblem(null);
             download
               .mutateAsync({ runId: runId!, includeAccountNumbers: includeAccounts })
-              .catch((err) => setProblem(errorMessage(err, "Couldn't build the voucher.")));
+              .catch((err) => setProblem(errorMessage(err, t("errs.buildVoucher"))));
           }}
           className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
         >
@@ -110,7 +110,7 @@ export default function VoucherPage() {
       {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't load the voucher.")}
+          {errorMessage(error, t("errs.loadVoucher"))}
         </p>
       )}
 

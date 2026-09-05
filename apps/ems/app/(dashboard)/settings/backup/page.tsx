@@ -57,7 +57,7 @@ export default function BackupPage() {
       anchor.download = `school-records-${new Date().toISOString().slice(0, 10)}.xlsx`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setNote("Downloaded. Keep it somewhere that is not this system.");
+      setNote(t("errs.downloaded"));
     } catch (err) {
       setNote(err instanceof Error ? err.message : t("backup.failed"));
     } finally {

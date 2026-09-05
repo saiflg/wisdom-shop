@@ -43,7 +43,7 @@ export default function TurnoverPage() {
       {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't load the turnover register.")}
+          {errorMessage(error, t("errs.loadTurnover"))}
         </p>
       )}
 

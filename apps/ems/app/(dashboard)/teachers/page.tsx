@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,26 +11,29 @@ import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const createTeacherSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Enter a valid email address"),
-  password: z
-    .string()
-    .min(10, "At least 10 characters")
-    .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/, "Needs an uppercase letter, lowercase letter, number, and symbol"),
-});
+function createTeacherSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    firstName: z.string().min(1, t("valid.firstNameRequired")),
+    lastName: z.string().min(1, t("valid.lastNameRequired")),
+    email: z.string().email(t("valid.emailInvalid")),
+    password: z
+      .string()
+      .min(10, t("valid.passwordLength"))
+      .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/, t("valid.passwordStrength")),
+  });
+}
 
-type CreateTeacherValues = z.infer<typeof createTeacherSchema>;
+type CreateTeacherValues = z.infer<ReturnType<typeof createTeacherSchemaFor>>;
 
 export default function TeachersPage() {
   const { t } = useTranslation();
+  const schema = useMemo(() => createTeacherSchemaFor(t), [t]);
   const { data: teachers, isLoading, error } = useTeachers();
   const createTeacher = useCreateTeacher();
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const form = useForm<CreateTeacherValues>({ resolver: zodResolver(createTeacherSchema) });
+  const form = useForm<CreateTeacherValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);

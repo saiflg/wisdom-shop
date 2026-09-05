@@ -41,7 +41,7 @@ export function MyContactDetails() {
       setEditing(false);
       setSaved(true);
     } catch (err) {
-      setMessage(errorMessage(err, "Couldn't save your number."));
+      setMessage(errorMessage(err, t("errs.saveNumber")));
     }
   };
 

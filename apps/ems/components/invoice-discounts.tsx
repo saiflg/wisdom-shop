@@ -72,7 +72,7 @@ export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
       setValue("");
       setReason("");
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't apply that discount."));
+      setProblem(errorMessage(err, t("errs.applyDiscount")));
     }
   };
 

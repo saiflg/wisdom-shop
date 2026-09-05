@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,23 +13,26 @@ import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const createClassSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  gradeLevel: z.string().optional(),
-  academicYear: z.string().min(1, "Academic year is required"),
-});
+function createClassSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    name: z.string().min(1, t("valid.nameRequired")),
+    gradeLevel: z.string().optional(),
+    academicYear: z.string().min(1, t("valid.yearRequired")),
+  });
+}
 
-type CreateClassValues = z.infer<typeof createClassSchema>;
+type CreateClassValues = z.infer<ReturnType<typeof createClassSchemaFor>>;
 
 export default function ClassesPage() {
   const { t } = useTranslation();
+  const schema = useMemo(() => createClassSchemaFor(t), [t]);
   const { data: classes, isLoading, error } = useClasses();
   const createClass = useCreateClass();
   const isSchoolAdmin = useIsSchoolAdmin();
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const form = useForm<CreateClassValues>({ resolver: zodResolver(createClassSchema) });
+  const form = useForm<CreateClassValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);

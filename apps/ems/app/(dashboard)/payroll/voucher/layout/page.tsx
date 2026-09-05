@@ -116,7 +116,7 @@ export default function VoucherLayoutPage() {
 
     if (newKind === "COMPONENT") {
       if (!label) {
-        setProblem("Give the pay item a name — it must match the name on the salary, e.g. Pension.");
+        setProblem(t("errs.payItemName"));
         return;
       }
       source = { kind: "COMPONENT", label };
@@ -154,7 +154,7 @@ export default function VoucherLayoutPage() {
     } catch (err) {
       // The API returns every problem at once; showing them all beats fixing
       // one per attempt.
-      setProblem(errorMessage(err, "Couldn't save the layout."));
+      setProblem(errorMessage(err, t("errs.saveLayout")));
     }
   };
 
@@ -178,7 +178,7 @@ export default function VoucherLayoutPage() {
       {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't load the layout.")}
+          {errorMessage(error, t("errs.loadLayout"))}
         </p>
       )}
 

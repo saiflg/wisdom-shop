@@ -265,7 +265,7 @@ function RunDetail({ id }: { id: string }) {
           <>
             <button
               type="button"
-              onClick={() => void run_(() => refresh.mutateAsync(), "Couldn't recompute.")}
+              onClick={() => void run_(() => refresh.mutateAsync(), t("errs.recompute"))}
               disabled={busy}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
@@ -273,7 +273,7 @@ function RunDetail({ id }: { id: string }) {
             </button>
             <button
               type="button"
-              onClick={() => void run_(() => approve.mutateAsync(), "Couldn't approve.")}
+              onClick={() => void run_(() => approve.mutateAsync(), t("errs.approve"))}
               disabled={busy}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
             >
@@ -296,7 +296,7 @@ function RunDetail({ id }: { id: string }) {
         {run.status === "APPROVED" && (
           <button
             type="button"
-            onClick={() => void run_(() => markPaid.mutateAsync(), "Couldn't record payment.")}
+            onClick={() => void run_(() => markPaid.mutateAsync(), t("errs.recordPayment"))}
             disabled={busy}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
           >

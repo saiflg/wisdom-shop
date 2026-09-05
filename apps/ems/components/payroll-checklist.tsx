@@ -123,7 +123,7 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
             {!readOnly && (
               <button
                 type="button"
-                onClick={() => void attempt(() => removeItem.mutateAsync(item.id), "Couldn't remove that check.")}
+                onClick={() => void attempt(() => removeItem.mutateAsync(item.id), t("errs.removeCheck"))}
                 aria-label={`Remove "${item.label}" from the list`}
                 className="shrink-0 rounded px-1.5 text-xs font-semibold text-slate-400 opacity-0 transition hover:text-red-600 focus:opacity-100 group-hover:opacity-100"
               >

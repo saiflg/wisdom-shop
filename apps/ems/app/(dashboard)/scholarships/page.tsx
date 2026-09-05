@@ -61,7 +61,7 @@ export default function ScholarshipsPage() {
       setValue("");
       setStudent("");
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't award that scholarship."));
+      setProblem(errorMessage(err, t("errs.awardScholarship")));
     }
   };
 

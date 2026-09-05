@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,15 +24,17 @@ import {
 import { FormField } from "@/components/form-field";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const setSchema = z.object({
-  classId: z.string().min(1, "Choose a class"),
-  subjectId: z.string().min(1, "Choose a subject"),
-  title: z.string().min(2, "Give it a title"),
-  instructions: z.string().min(1, "Say what to do"),
-  dueAt: z.string().optional(),
-  maxMarks: z.string().optional(),
-});
-type SetValues = z.infer<typeof setSchema>;
+function setSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    classId: z.string().min(1, t("valid.chooseClass")),
+    subjectId: z.string().min(1, t("valid.chooseSubject")),
+    title: z.string().min(2, t("valid.giveItATitle")),
+    instructions: z.string().min(1, t("valid.sayWhatToDo")),
+    dueAt: z.string().optional(),
+    maxMarks: z.string().optional(),
+  });
+}
+type SetValues = z.infer<ReturnType<typeof setSchemaFor>>;
 
 const INPUT =
   "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900";
@@ -44,6 +47,7 @@ const STATUS_BADGE: Record<AssignmentStatus, string> = {
 
 export default function HomeworkPage() {
   const { t } = useTranslation();
+  const schema = useMemo(() => setSchemaFor(t), [t]);
   const user = useAuthStore((s) => s.user);
   const isStaff = Boolean(user?.roles.some((r) => r === "SCHOOL_ADMIN" || r === "TEACHER"));
 
@@ -56,7 +60,7 @@ export default function HomeworkPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const form = useForm<SetValues>({ resolver: zodResolver(setSchema) });
+  const form = useForm<SetValues>({ resolver: zodResolver(schema) });
 
   const onSet = form.handleSubmit(async (values) => {
     setFormError(null);
@@ -286,7 +290,7 @@ function Detail({
             {summary.status === "DRAFT" && (
               <button
                 type="button"
-                onClick={() => void act(() => update.mutateAsync({ status: "SET" }), "Couldn't set that.")}
+                onClick={() => void act(() => update.mutateAsync({ status: "SET" }), t("errs.setHomework"))}
                 className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500"
               >
                 {t("homework.setForClass")}
@@ -295,7 +299,7 @@ function Detail({
             {summary.status === "SET" && (
               <button
                 type="button"
-                onClick={() => void act(() => update.mutateAsync({ status: "CLOSED" }), "Couldn't close that.")}
+                onClick={() => void act(() => update.mutateAsync({ status: "CLOSED" }), t("errs.closeHomework"))}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
               >
                 {t("homework.closeSubmissions")}
@@ -315,7 +319,7 @@ function Detail({
                           : `Released ${released} mark${released === 1 ? "" : "s"}.`,
                     });
                   },
-                  "Couldn't release those marks.",
+                  t("errs.releaseMarks"),
                 )
               }
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
@@ -358,7 +362,7 @@ function Detail({
                   maxScoreHundredths={assignment.maxScoreHundredths}
                   current={submission.scoreHundredths ?? null}
                   onMark={(input) =>
-                    act(() => mark.mutateAsync({ submissionId: submission.id, ...input }), "Couldn't save that mark.", "Marked.")
+                    act(() => mark.mutateAsync({ submissionId: submission.id, ...input }), t("errs.saveMark"), "Marked.")
                   }
                 />
               </li>
@@ -416,8 +420,8 @@ function Detail({
                       await submit.mutateAsync(content.trim());
                       setContent("");
                     },
-                    "Couldn't hand that in.",
-                    "Handed in.",
+                    t("errs.handIn"),
+                    t("errs.handedIn"),
                   )
                 }
                 className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"

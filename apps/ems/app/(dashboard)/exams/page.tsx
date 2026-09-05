@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,24 +24,27 @@ const STATUS_BADGE: Record<ExamStatus, string> = {
   CLOSED: `${BADGE} bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300`,
 };
 
-const examSchema = z.object({
-  classId: z.string().min(1, "Choose a class"),
-  subjectId: z.string().min(1, "Choose a subject"),
-  title: z.string().min(2, "Give it a title"),
-  academicYear: z.string().min(1, "Which year?"),
-  term: z.string().min(1, "Which term?"),
-  // Kept a string and converted at submit: an untouched number input
-  // submits "", which z.coerce.number() turns into 0 and then fails .min(1).
-  durationMinutes: z
-    .string()
-    .refine((value) => /^\d+$/.test(value) && Number(value) >= 1, "How many minutes?"),
-  instructions: z.string().optional(),
-  assessmentId: z.string().optional(),
-});
-type ExamValues = z.infer<typeof examSchema>;
+function examSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    classId: z.string().min(1, t("valid.chooseClass")),
+    subjectId: z.string().min(1, t("valid.chooseSubject")),
+    title: z.string().min(2, t("valid.giveItATitle")),
+    academicYear: z.string().min(1, t("valid.whichYear")),
+    term: z.string().min(1, t("valid.whichTerm")),
+    // Kept a string and converted at submit: an untouched number input
+    // submits "", which z.coerce.number() turns into 0 and then fails .min(1).
+    durationMinutes: z
+      .string()
+      .refine((value) => /^\d+$/.test(value) && Number(value) >= 1, t("valid.howManyMinutes")),
+    instructions: z.string().optional(),
+    assessmentId: z.string().optional(),
+  });
+}
+type ExamValues = z.infer<ReturnType<typeof examSchemaFor>>;
 
 export default function ExamsPage() {
   const { t } = useTranslation();
+  const schema = useMemo(() => examSchemaFor(t), [t]);
   const user = useAuthStore((s) => s.user);
   const isStaff = Boolean(user?.roles.some((r) => r === "SCHOOL_ADMIN" || r === "TEACHER"));
 
@@ -53,7 +57,7 @@ export default function ExamsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm<ExamValues>({
-    resolver: zodResolver(examSchema),
+    resolver: zodResolver(schema),
     defaultValues: { academicYear: "2026-2027", term: "Term 1", durationMinutes: "45" },
   });
 

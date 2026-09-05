@@ -35,7 +35,7 @@ export function GuardianInvite({ guardian }: { guardian: GuardianEntry }) {
       setCreated(await invite.mutateAsync(guardian.guardianUserId));
       setOpen(true);
     } catch (err) {
-      setMessage(errorMessage(err, "Couldn't create an invitation."));
+      setMessage(errorMessage(err, t("errs.createInvitation")));
     }
   };
 

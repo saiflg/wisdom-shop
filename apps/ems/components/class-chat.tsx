@@ -54,7 +54,7 @@ export function ClassChat({ classId }: { classId: string }) {
   if (error || !data) {
     return (
       <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-        {errorMessage(error, "Couldn't open the class chat.")}
+        {errorMessage(error, t("errs.openClassChat"))}
       </p>
     );
   }
@@ -83,7 +83,7 @@ export function ClassChat({ classId }: { classId: string }) {
       // The API's own wording — "Slow down a moment before sending another
       // message" — is written for a child. Replacing it with "failed" would
       // be a downgrade.
-      setProblem(errorMessage(err, "Couldn't send that."));
+      setProblem(errorMessage(err, t("errs.sendThat")));
     }
   };
 
@@ -97,7 +97,7 @@ export function ClassChat({ classId }: { classId: string }) {
             onClick={() =>
               void lock
                 .mutateAsync({ locked: !data.locked, reason: data.locked ? undefined : t("classChat.paused") })
-                .catch((err) => setProblem(errorMessage(err, "Couldn't change that.")))
+                .catch((err) => setProblem(errorMessage(err, t("errs.changeThat"))))
             }
             className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
           >
@@ -126,7 +126,7 @@ export function ClassChat({ classId }: { classId: string }) {
             onRemove={() =>
               void remove
                 .mutateAsync(message.id)
-                .catch((err) => setProblem(errorMessage(err, "Couldn't remove that.")))
+                .catch((err) => setProblem(errorMessage(err, t("errs.removeThat"))))
             }
             onReport={async (reason) => {
               setProblem(null);
@@ -134,7 +134,7 @@ export function ClassChat({ classId }: { classId: string }) {
                 const result = await report.mutateAsync({ messageId: message.id, reason });
                 setNote(result.message);
               } catch (err) {
-                setProblem(errorMessage(err, "Couldn't report that."));
+                setProblem(errorMessage(err, t("errs.reportThat")));
               }
             }}
           />

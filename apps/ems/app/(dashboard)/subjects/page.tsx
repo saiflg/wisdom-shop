@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,22 +13,25 @@ import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const createSubjectSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  gradeLevel: z.string().optional(),
-});
+function createSubjectSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    name: z.string().min(1, t("valid.nameRequired")),
+    gradeLevel: z.string().optional(),
+  });
+}
 
-type CreateSubjectValues = z.infer<typeof createSubjectSchema>;
+type CreateSubjectValues = z.infer<ReturnType<typeof createSubjectSchemaFor>>;
 
 export default function SubjectsPage() {
   const { t } = useTranslation();
+  const schema = useMemo(() => createSubjectSchemaFor(t), [t]);
   const { data: subjects, isLoading, error } = useSubjects();
   const createSubject = useCreateSubject();
   const isSchoolAdmin = useIsSchoolAdmin();
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const form = useForm<CreateSubjectValues>({ resolver: zodResolver(createSubjectSchema) });
+  const form = useForm<CreateSubjectValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -13,25 +13,27 @@ import { FormField } from "@/components/form-field";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
 
-const schema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Enter a valid email address"),
-  password: z
-    .string()
-    .min(10, "At least 10 characters")
-    .regex(
-      /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/,
-      "Needs an uppercase letter, lowercase letter, number, and symbol",
-    ),
-  role: z.enum(["TEACHER", "SCHOOL_ADMIN"]),
-  staffNumber: z.string().max(40).optional(),
-  jobTitle: z.string().max(120).optional(),
-  employmentType: z.enum(EMPLOYMENT_TYPES).optional().or(z.literal("")),
-  startDate: z.string().optional(),
-});
+function schemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    firstName: z.string().min(1, t("valid.firstNameRequired")),
+    lastName: z.string().min(1, t("valid.lastNameRequired")),
+    email: z.string().email(t("valid.emailInvalid")),
+    password: z
+      .string()
+      .min(10, t("valid.passwordLength"))
+      .regex(
+        /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/,
+        t("valid.passwordStrength"),
+      ),
+    role: z.enum(["TEACHER", "SCHOOL_ADMIN"]),
+    staffNumber: z.string().max(40).optional(),
+    jobTitle: z.string().max(120).optional(),
+    employmentType: z.enum(EMPLOYMENT_TYPES).optional().or(z.literal("")),
+    startDate: z.string().optional(),
+  });
+}
 
-type Values = z.infer<typeof schema>;
+type Values = z.infer<ReturnType<typeof schemaFor>>;
 
 /** Empty strings are how a browser reports an untouched field; the API wants them gone. */
 function toInput(values: Values): RegisterStaffInput {
@@ -50,6 +52,7 @@ function toInput(values: Values): RegisterStaffInput {
 
 export default function RegisterStaffPage() {
   const { t } = useTranslation();
+  const schema = useMemo(() => schemaFor(t), [t]);
   const router = useRouter();
   const register = useRegisterStaff();
   const [formError, setFormError] = useState<string | null>(null);
@@ -69,7 +72,7 @@ export default function RegisterStaffPage() {
       // wants, and they are deliberately not on this form.
       router.push(`/staff/${member.id}`);
     } catch (err) {
-      setFormError(errorMessage(err, "Couldn't register that staff member."));
+      setFormError(errorMessage(err, t("errs.registerStaff")));
     }
   });
 

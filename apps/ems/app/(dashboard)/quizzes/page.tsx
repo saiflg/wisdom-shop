@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -14,25 +15,31 @@ import { useCanAuthor } from "@/lib/use-can-author";
 import { FormField } from "@/components/form-field";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const createSchema = z.object({
-  schemeOfWorkId: z.string().min(1, "Choose a scheme of work"),
-  weekNumber: z.coerce.number().int().min(1, "Week number is required"),
-  title: z.string().min(1, "Title is required"),
-  prompt: z.string().min(1, "Give question 1 a prompt"),
-  correctAnswer: z.string().min(1, "An answer is required"),
-  marks: z.coerce.number().int().min(1, "Marks are required"),
-});
-type CreateValues = z.infer<typeof createSchema>;
+function createSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    schemeOfWorkId: z.string().min(1, t("valid.chooseScheme")),
+    weekNumber: z.coerce.number().int().min(1, t("valid.weekRequired")),
+    title: z.string().min(1, t("valid.titleRequired")),
+    prompt: z.string().min(1, t("valid.firstQuestionPrompt")),
+    correctAnswer: z.string().min(1, t("valid.answerRequired")),
+    marks: z.coerce.number().int().min(1, t("valid.marksRequired")),
+  });
+}
+type CreateValues = z.infer<ReturnType<typeof createSchemaFor>>;
 
-const generateSchema = z.object({
-  schemeOfWorkId: z.string().min(1, "Choose a scheme of work"),
-  weekNumber: z.coerce.number().int().min(1, "Week number is required"),
-  title: z.string().min(1, "Title is required"),
-});
-type GenerateValues = z.infer<typeof generateSchema>;
+function generateSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    schemeOfWorkId: z.string().min(1, t("valid.chooseScheme")),
+    weekNumber: z.coerce.number().int().min(1, t("valid.weekRequired")),
+    title: z.string().min(1, t("valid.titleRequired")),
+  });
+}
+type GenerateValues = z.infer<ReturnType<typeof generateSchemaFor>>;
 
 export default function QuizzesPage() {
   const { t, tPlural } = useTranslation();
+  const createSchema = useMemo(() => createSchemaFor(t), [t]);
+  const generateSchema = useMemo(() => generateSchemaFor(t), [t]);
   const searchParams = useSearchParams();
   const schemeOfWorkId = searchParams.get("schemeOfWorkId") ?? undefined;
   const weekNumberParam = searchParams.get("weekNumber") ?? undefined;

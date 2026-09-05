@@ -182,7 +182,7 @@ function PayOnline({ invoice }: { invoice: FeeInvoice }) {
       // blocked on the phone most of them will use.
       window.location.href = url;
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't start that payment."));
+      setProblem(errorMessage(err, t("errs.startPayment")));
     }
   };
 

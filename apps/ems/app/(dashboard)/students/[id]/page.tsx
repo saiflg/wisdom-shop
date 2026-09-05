@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,18 +12,21 @@ import { FormField } from "@/components/form-field";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
 
-const linkGuardianSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  relationship: z.string().min(1, "Relationship is required"),
-  password: z.string().optional(),
-});
+function linkGuardianSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    email: z.string().email(t("valid.emailInvalid")),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    relationship: z.string().min(1, t("valid.relationshipRequired")),
+    password: z.string().optional(),
+  });
+}
 
-type LinkGuardianValues = z.infer<typeof linkGuardianSchema>;
+type LinkGuardianValues = z.infer<ReturnType<typeof linkGuardianSchemaFor>>;
 
 export default function StudentDetailPage() {
   const { t } = useTranslation();
+  const schema = useMemo(() => linkGuardianSchemaFor(t), [t]);
   const params = useParams<{ id: string }>();
   const { data: student, isLoading, error } = useStudent(params.id);
   const linkGuardian = useLinkGuardian();
@@ -31,7 +34,7 @@ export default function StudentDetailPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const form = useForm<LinkGuardianValues>({ resolver: zodResolver(linkGuardianSchema) });
+  const form = useForm<LinkGuardianValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
