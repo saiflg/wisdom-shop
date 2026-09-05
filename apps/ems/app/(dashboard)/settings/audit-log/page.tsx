@@ -127,7 +127,7 @@ export default function AuditLogPage() {
           />
         </label>
         <label className="text-xs font-medium">
-          To
+          {t("audit.to")}
           <input
             type="date"
             value={to}

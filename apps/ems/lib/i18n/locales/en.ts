@@ -2153,6 +2153,38 @@ export const en = {
   "languages.saveFailed": "Couldn't save the school's language.",
   "languages.noOverride": "Changing this does not override anybody who has already picked a language for themselves.",
   "languages.unknownDefault": "This school is set to a language this version no longer ships. Everyone is seeing English until it is changed.",
+
+  // ── Voucher layout, payment gateways, medical ───────────────────
+  "voucher.addColumn": "Add",
+  "settings.merchantId": "Merchant ID",
+  "settings.merchantIdPlaceholder": "e.g. 281822xxxxxxxxx",
+  "settings.testMode": "Test mode",
+  "settings.testModeHint": "Sandbox keys take real-looking payments that are not real. Parents are shown a “test mode” label.",
+  "settings.opayNoCheck": "OPay has no read-only credential check. Save the details and take one sandbox payment to confirm them.",
+  "medical.intro": "Allergies, conditions and medication. Staff and the child's own family only — and never sent to the AI.",
+  "medical.emptyNotNothing": "Nothing has been recorded for this child. That is not the same as there being nothing to record — nobody has been asked.",
+  "medical.noLongerCurrent": "no longer current",
+  "medical.severityNeeded": "An allergy or condition needs a severity — nobody can judge that from the name alone.",
+
+  // ── Audit log, live classroom, invoices, tutor leftovers ────────
+  "audit.to": "To",
+  "liveClassroom.intro": "Scheduled online lessons. The school runs the meeting itself on Zoom, Meet or Teams — this is where the time and the link live, so a class can find them in one place.",
+  "liveClassroom.urlRules": "Zoom, Google Meet, Teams, Whereby or Jitsi, over https. Other addresses are refused — children click whatever is put in front of them.",
+  "invoices.checkingPayment": "Checking how this can be paid…",
+  "invoices.noOnlinePayment": "This school does not take online payments yet. Please pay the school office directly.",
+  "invoices.howPay": "How would you like to pay?",
+  "invoices.testMode": "test mode",
+  "invoices.openingPayment": "Opening the payment page…",
+  "invoices.payOnline": "Pay {amount} online",
+  "invoices.willBeTakenTo": "You will be taken to {provider}.",
+  "invoices.theProvider": "the payment provider",
+  "invoices.chooseMethod": "Choose a payment method to continue.",
+  "aiTeacher.youAskedTopic": "You asked about",
+  "aiTeacher.schemeExplains": ". This class follows your school's scheme of work, so it starts where your class is up to — your question is covered as the course reaches it, and you can ask about it any time in the box below.",
+  "aiTeacher.endFailed": "Couldn't end the lesson.",
+  "aiTeacher.end": "End",
+  "aiTeacher.ask": "Ask",
+  "aiTeacher.drawing": "Drawing a picture for this…",
 } as const;
 
 /**

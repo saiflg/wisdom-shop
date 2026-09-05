@@ -344,7 +344,7 @@ export default function VoucherLayoutPage() {
                 onClick={addColumn}
                 className="rounded-full border border-slate-300 px-4 py-1.5 text-sm dark:border-slate-700"
               >
-                Add
+                {t("voucher.addColumn")}
               </button>
             </div>
           </div>

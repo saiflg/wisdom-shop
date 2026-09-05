@@ -73,8 +73,7 @@ export default function LiveClassroomPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("liveClassroom.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Scheduled online lessons. The school runs the meeting itself on Zoom, Meet or Teams — this is where
-          the time and the link live, so a class can find them in one place.
+          {t("liveClassroom.intro")}
         </p>
       </div>
 
@@ -260,8 +259,7 @@ function ScheduleLesson({ classId }: { classId: string }) {
         className="mt-2 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
       />
       <p className="mt-2 text-xs text-slate-500">
-        Zoom, Google Meet, Teams, Whereby or Jitsi, over https. Other addresses are refused — children click
-        whatever is put in front of them.
+        {t("liveClassroom.urlRules")}
       </p>
       <button
         type="submit"

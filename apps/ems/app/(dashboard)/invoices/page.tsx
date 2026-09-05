@@ -60,7 +60,7 @@ export default function InvoicesPage() {
         </section>
       )}
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {data?.invoices.length === 0 && (
         <p className="text-sm text-slate-600 dark:text-slate-400">{t("fees.invoices.none")}</p>
       )}
@@ -161,6 +161,7 @@ function InvoiceCard({ invoice, open, onToggle }: { invoice: FeeInvoice; open: b
  * set up, pay the office" is useful, "payment failed" is not.
  */
 function PayOnline({ invoice }: { invoice: FeeInvoice }) {
+  const { t } = useTranslation();
   const startCheckout = useStartCheckout(invoice.id);
   const { data, isLoading } = usePaymentOptions(invoice.id);
   const [chosen, setChosen] = useState<FeeProvider | null>(null);
@@ -186,7 +187,7 @@ function PayOnline({ invoice }: { invoice: FeeInvoice }) {
   };
 
   if (isLoading) {
-    return <p className="px-4 py-3 text-sm text-slate-500">Checking how this can be paid…</p>;
+    return <p className="px-4 py-3 text-sm text-slate-500">{t("invoices.checkingPayment")}</p>;
   }
 
   // Said plainly and without a dead button. A school that takes only cash is
@@ -194,7 +195,7 @@ function PayOnline({ invoice }: { invoice: FeeInvoice }) {
   if (options.length === 0) {
     return (
       <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-900 dark:text-slate-400">
-        This school does not take online payments yet. Please pay the school office directly.
+        {t("invoices.noOnlinePayment")}
       </p>
     );
   }
@@ -203,7 +204,7 @@ function PayOnline({ invoice }: { invoice: FeeInvoice }) {
     <div className="space-y-3 rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-900">
       {!onlyOne && (
         <fieldset>
-          <legend className="text-sm font-semibold">How would you like to pay?</legend>
+          <legend className="text-sm font-semibold">{t("invoices.howPay")}</legend>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {options.map((option) => (
               <label
@@ -227,7 +228,7 @@ function PayOnline({ invoice }: { invoice: FeeInvoice }) {
                     real. Nobody should discover that afterwards. */}
                 {option.sandbox && (
                   <span className="ms-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                    test mode
+                    {t("invoices.testMode")}
                   </span>
                 )}
               </label>
@@ -244,13 +245,19 @@ function PayOnline({ invoice }: { invoice: FeeInvoice }) {
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
           {startCheckout.isPending
-            ? "Opening the payment page…"
-            : `Pay ${formatMoney(invoice.balanceCents, invoice.currency)} online`}
+            ? t("invoices.openingPayment")
+            : t("invoices.payOnline", {
+                amount: formatMoney(invoice.balanceCents, invoice.currency),
+              })}
         </button>
         <span className="text-xs text-slate-500">
           {provider
-            ? `You will be taken to ${options.find((o) => o.provider === provider)?.label ?? "the payment provider"}.`
-            : "Choose a payment method to continue."}
+            ? t("invoices.willBeTakenTo", {
+                provider:
+                  options.find((o) => o.provider === provider)?.label ??
+                  t("invoices.theProvider"),
+              })
+            : t("invoices.chooseMethod")}
         </span>
       </div>
 

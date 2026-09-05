@@ -87,8 +87,7 @@ export default function MedicalPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("medical.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Allergies, conditions and medication. Staff and the child&rsquo;s own family only — and never sent
-          to the AI.
+          {t("medical.intro")}
         </p>
       </div>
 
@@ -144,8 +143,7 @@ function Record({ studentProfileId, isStaff }: { studentProfileId: string; isSta
       {/* "Nothing recorded" is not "nothing to worry about". */}
       {data.summary.empty && (
         <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-900 dark:text-slate-400">
-          Nothing has been recorded for this child. That is not the same as there being nothing to record —
-          nobody has been asked.
+          {t("medical.emptyNotNothing")}
         </p>
       )}
 
@@ -165,7 +163,9 @@ function Record({ studentProfileId, isStaff }: { studentProfileId: string; isSta
                   {entry.title}
                   <span className="ms-2 text-xs font-normal text-slate-500">{t(KIND_KEY[entry.kind])}</span>
                   {entry.archivedAt && (
-                    <span className="ms-2 text-xs font-normal italic text-slate-500">no longer current</span>
+                    <span className="ms-2 text-xs font-normal italic text-slate-500">
+                      {t("medical.noLongerCurrent")}
+                    </span>
                   )}
                 </p>
                 {entry.detail && <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{entry.detail}</p>}
@@ -288,7 +288,7 @@ function AddEntry({ studentProfileId }: { studentProfileId: string }) {
       />
       {needsSeverity && (
         <p className="mt-2 text-xs text-slate-500">
-          An allergy or condition needs a severity — nobody can judge that from the name alone.
+          {t("medical.severityNeeded")}
         </p>
       )}
       <button

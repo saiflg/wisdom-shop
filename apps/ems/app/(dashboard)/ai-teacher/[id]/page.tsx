@@ -246,9 +246,9 @@ export default function TutorLessonPage() {
               looks deliberate. */}
           {session.followsScheme && (
             <p className="mt-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-900 dark:bg-brand-950/40 dark:text-brand-200">
-              You asked about <span className="font-semibold">{session.topic}</span>. This class follows your
-              school&apos;s scheme of work, so it starts where your class is up to — your question is covered as
-              the course reaches it, and you can ask about it any time in the box below.
+              {t("aiTeacher.youAskedTopic")}{" "}
+              <span className="font-semibold">{session.topic}</span>
+              {t("aiTeacher.schemeExplains")}
             </p>
           )}
 
@@ -330,11 +330,11 @@ export default function TutorLessonPage() {
           {session.status !== "ENDED" && isOwner && (
             <button
               type="button"
-              onClick={() => void run(() => endSession.mutateAsync(), "Couldn't end the lesson.")}
+              onClick={() => void run(() => endSession.mutateAsync(), t("aiTeacher.endFailed"))}
               disabled={endSession.isPending}
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              End
+              {t("aiTeacher.end")}
             </button>
           )}
         </div>
@@ -556,7 +556,7 @@ export default function TutorLessonPage() {
               disabled={busy || question.trim().length === 0}
               className="rounded-lg border border-slate-300 px-5 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              Ask
+              {t("aiTeacher.ask")}
             </button>
           </div>
           {isClass && (
@@ -702,7 +702,7 @@ function Turn({ turn }: { turn: TutorTurn }) {
         {turn.diagramPending && !turn.diagram && (
           <p className="mt-3 flex items-center gap-2 text-xs italic text-white/70" role="status">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-white/70" />
-            Drawing a picture for this…
+            {t("aiTeacher.drawing")}
           </p>
         )}
       </div>
