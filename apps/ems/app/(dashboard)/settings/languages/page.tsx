@@ -20,6 +20,7 @@ interface BrandingSettings {
  * wins — is most of the work.
  */
 export default function LanguagesPage() {
+  const { t } = useTranslation();
   const { accessToken, enabled } = useAuthQueryState();
   const { locale, setLocale, chosenByUser } = useTranslation();
   const queryClient = useQueryClient();
@@ -58,25 +59,24 @@ export default function LanguagesPage() {
     try {
       await save.mutateAsync(next);
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't save the school's language."));
+      setProblem(errorMessage(err, t("languages.saveFailed")));
     }
   };
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Languages</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("languages.title")}</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          {LOCALES.length} languages are available. Anybody can pick their own; the school&apos;s choice is what
-          everyone else sees.
+          {t("languages.intro", { count: LOCALES.length })}
         </p>
       </div>
 
       <section className="space-y-3 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
         <div>
-          <h2 className="font-semibold">My language</h2>
+          <h2 className="font-semibold">{t("languages.mine")}</h2>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Applies to you on this device only.
+            {t("languages.mineHint")}
           </p>
         </div>
 
@@ -103,21 +103,21 @@ export default function LanguagesPage() {
             the setting is broken. */}
         <p className="text-xs text-slate-500">
           {chosenByUser
-            ? "You have chosen this yourself, so changing the school's language below will not affect you."
-            : "You are following the school's language. Choosing one here will keep it for you."}
+            ? t("languages.chosenByYou")
+            : t("languages.followingSchool")}
         </p>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
         <div>
-          <h2 className="font-semibold">The school&apos;s language</h2>
+          <h2 className="font-semibold">{t("languages.schoolTitle")}</h2>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            What the console and the login page open in for anybody who has not chosen their own.
+            {t("languages.schoolHint")}
           </p>
         </div>
 
         <label className="block text-sm font-medium">
-          <span className="sr-only">The school&apos;s default language</span>
+          <span className="sr-only">{t("languages.schoolDefaultLabel")}</span>
           <select
             value={schoolDefault}
             onChange={(event) => void saveSchoolDefault(event.target.value)}
@@ -132,8 +132,8 @@ export default function LanguagesPage() {
           </select>
         </label>
 
-        {save.isPending && <p className="text-xs text-slate-500">Saving…</p>}
-        {saved && !save.isPending && <p className="text-xs text-emerald-600">Saved.</p>}
+        {save.isPending && <p className="text-xs text-slate-500">{t("shared.saving")}</p>}
+        {saved && !save.isPending && <p className="text-xs text-emerald-600">{t("common.saved")}</p>}
         {problem && (
           <p role="alert" className="text-sm text-red-600 dark:text-red-400">
             {problem}
@@ -141,14 +141,13 @@ export default function LanguagesPage() {
         )}
 
         <p className="text-xs text-slate-500">
-          Changing this does not override anybody who has already picked a language for themselves.
+          {t("languages.noOverride")}
         </p>
       </section>
 
       {!isLocale(schoolDefault) && (
         <p className="text-sm text-amber-700 dark:text-amber-400">
-          This school is set to a language this version no longer ships. Everyone is seeing English until it is
-          changed.
+          {t("languages.unknownDefault")}
         </p>
       )}
     </div>
