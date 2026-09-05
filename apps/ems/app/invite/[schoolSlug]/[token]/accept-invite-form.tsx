@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch, errorMessage } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
+
+/** Our own failure, as opposed to a reason the API worded. */
+const CHECK_FAILED = "__check_failed__";
 
 interface CheckResult {
   valid: boolean;
@@ -19,12 +23,12 @@ interface CheckResult {
  * parent setting this up on a phone, possibly once ever, should not have to
  * discover the requirements by failing.
  */
-const RULES = [
-  { label: "At least 10 characters", test: (v: string) => v.length >= 10 },
-  { label: "A capital letter", test: (v: string) => /[A-Z]/.test(v) },
-  { label: "A small letter", test: (v: string) => /[a-z]/.test(v) },
-  { label: "A number", test: (v: string) => /\d/.test(v) },
-  { label: "A symbol, like ! or #", test: (v: string) => /[^A-Za-z0-9]/.test(v) },
+const RULES: { label: TranslationKey; test: (value: string) => boolean }[] = [
+  { label: "invite.ruleLength", test: (v: string) => v.length >= 10 },
+  { label: "invite.ruleUpper", test: (v: string) => /[A-Z]/.test(v) },
+  { label: "invite.ruleLower", test: (v: string) => /[a-z]/.test(v) },
+  { label: "invite.ruleDigit", test: (v: string) => /\d/.test(v) },
+  { label: "invite.ruleSymbol", test: (v: string) => /[^A-Za-z0-9]/.test(v) },
 ];
 
 export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; token: string }) {
@@ -46,7 +50,7 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
     let cancelled = false;
     apiFetch<CheckResult>("/v1/invitations/check", { method: "POST", body: { schoolSlug, token } })
       .then((result) => !cancelled && setCheck(result))
-      .catch(() => !cancelled && setCheck({ valid: false, reason: "We couldn't check that link.", name: null }))
+      .catch(() => !cancelled && setCheck({ valid: false, reason: CHECK_FAILED, name: null }))
       .finally(() => !cancelled && setChecking(false));
     return () => {
       cancelled = true;
@@ -73,18 +77,18 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
     }
   };
 
-  if (checking) return <p className="mt-8 text-sm text-slate-500">Checking your link…</p>;
+  if (checking) return <p className="mt-8 text-sm text-slate-500">{t("invite.checking")}</p>;
 
   if (!check?.valid) {
     return (
       <div className="mt-8 space-y-4">
-        <h2 className="text-lg font-semibold">This link cannot be used</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">{check?.reason}</p>
+        <h2 className="text-lg font-semibold">{t("invite.linkUnusable")}</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{check?.reason === CHECK_FAILED ? t("invite.checkFailed") : check?.reason}</p>
         <Link
           href={`/login?schoolSlug=${encodeURIComponent(schoolSlug)}`}
           className="inline-block text-sm font-semibold text-brand-600 hover:underline"
         >
-          Go to sign in
+          {t("invite.goToSignIn")}
         </Link>
       </div>
     );
@@ -93,15 +97,15 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
   if (done) {
     return (
       <div className="mt-8 space-y-3">
-        <h2 className="text-lg font-semibold text-emerald-600">Your account is ready</h2>
+        <h2 className="text-lg font-semibold text-emerald-600">{t("invite.ready")}</h2>
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Taking you to sign in. Use your email address and the password you just chose.
+          {t("invite.takingYou")}
         </p>
         <Link
           href={`/login?schoolSlug=${encodeURIComponent(schoolSlug)}`}
           className="inline-block text-sm font-semibold text-brand-600 hover:underline"
         >
-          Sign in now
+          {t("invite.signInNow")}
         </Link>
       </div>
     );
@@ -110,11 +114,10 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
   return (
     <div className="mt-8">
       <h2 className="text-lg font-semibold">
-        {check.name ? `Welcome, ${check.name}` : "Set up your account"}
+        {check.name ? t("invite.welcomeName", { name: check.name }) : t("invite.setUpAccount")}
       </h2>
       <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Choose a password to see your child&apos;s attendance, homework, results and fees. The school never sees
-        it.
+        {t("invite.choosePassword")}
       </p>
 
       <form
@@ -126,7 +129,7 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
       >
         <div>
           <label htmlFor="password" className="block text-sm font-medium">
-            New password
+            {t("invite.newPassword")}
           </label>
           <input
             id="password"
@@ -141,7 +144,7 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
 
         <div>
           <label htmlFor="confirm" className="block text-sm font-medium">
-            Type it again
+            {t("invite.typeAgain")}
           </label>
           <input
             id="confirm"
@@ -152,7 +155,7 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
             aria-invalid={mismatch}
             className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
-          {mismatch && <p className="mt-1 text-xs text-red-600">These two do not match.</p>}
+          {mismatch && <p className="mt-1 text-xs text-red-600">{t("invite.noMatch")}</p>}
         </div>
 
         {/* Shown rather than hidden behind an eye icon only: a parent typing a
@@ -165,7 +168,7 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
             onChange={(event) => setShow(event.target.checked)}
             className="h-4 w-4 rounded border-slate-300 text-brand-600 dark:border-slate-600"
           />
-          Show what I am typing
+          {t("invite.showTyping")}
         </label>
 
         <ul className="space-y-1">
@@ -177,8 +180,8 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
                 className={`flex items-center gap-2 text-xs ${met ? "text-emerald-600" : "text-slate-500"}`}
               >
                 <span aria-hidden>{met ? "✓" : "○"}</span>
-                <span>{rule.label}</span>
-                <span className="sr-only">{met ? " — done" : " — still needed"}</span>
+                <span>{t(rule.label)}</span>
+                <span className="sr-only">{met ? t("invite.ruleDone") : t("invite.ruleNeeded")}</span>
               </li>
             );
           })}
@@ -195,7 +198,7 @@ export function AcceptInviteForm({ schoolSlug, token }: { schoolSlug: string; to
           disabled={!ready}
           className="w-full rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
-          {saving ? "Setting your password…" : "Set my password"}
+          {saving ? t("invite.saving") : t("invite.setPassword")}
         </button>
       </form>
     </div>

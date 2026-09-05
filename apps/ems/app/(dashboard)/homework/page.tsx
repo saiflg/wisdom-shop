@@ -362,7 +362,7 @@ function Detail({
                   maxScoreHundredths={assignment.maxScoreHundredths}
                   current={submission.scoreHundredths ?? null}
                   onMark={(input) =>
-                    act(() => mark.mutateAsync({ submissionId: submission.id, ...input }), t("errs.saveMark"), "Marked.")
+                    act(() => mark.mutateAsync({ submissionId: submission.id, ...input }), t("errs.saveMark"), t("homework.marked"))
                   }
                 />
               </li>

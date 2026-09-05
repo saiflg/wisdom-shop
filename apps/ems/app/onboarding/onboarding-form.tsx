@@ -101,7 +101,7 @@ export function OnboardingForm() {
       router.refresh();
     } catch (error) {
       setFormError(
-        error instanceof ApiError ? error.message : "Couldn't set up your school. Please try again.",
+        error instanceof ApiError ? error.message : t("errs.setUpSchool"),
       );
     }
   });

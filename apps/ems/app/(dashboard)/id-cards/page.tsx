@@ -42,7 +42,7 @@ export default function IdCardsPage() {
       anchor.download = `id-cards-${classes?.find((c) => c.id === classId)?.name ?? "class"}.pdf`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setNote("Downloaded.");
+      setNote(t("idCards.downloaded"));
     } catch (err) {
       setNote(err instanceof Error ? err.message : t("idCards.failed"));
     } finally {

@@ -4,6 +4,7 @@ import { getBranding } from "@/lib/branding-server";
 import { LoginForm } from "./login-form";
 import { SchoolMark } from "@/components/school-mark";
 import { LoginHeading } from "./login-heading";
+import { LoginTagline } from "./login-tagline";
 
 export const metadata: Metadata = {
   title: "Sign in — Wisdom Campus",
@@ -34,9 +35,7 @@ export default async function LoginPage({
         <>
           <SchoolMark branding={branding} size="lg" />
           <h1 className="mt-6 text-3xl font-bold tracking-tight">{branding.schoolName}</h1>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            {branding.tagline ?? "Sign in to your school's dashboard."}
-          </p>
+          <LoginTagline tagline={branding.tagline} />
         </>
       ) : (
         <LoginHeading />
