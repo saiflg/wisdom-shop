@@ -2221,6 +2221,24 @@ export const en = {
   "behaviour.pointsNote": "Points are always positive — whether they count for or against is decided by the kind. This child and their family can read this.",
   "transport.intro": "Routes, stops and who rides. Morning and afternoon are counted separately — a bus doing both runs carries its seats twice.",
   "transport.add": "Add",
+
+  // ── Turnover, access log, result templates, guardians ───────────
+  "turnover.intro": "Everyone who has left, by section. Somebody whose last day is still ahead is not here yet — their post is not vacant and the school is still paying them.",
+  "turnover.nobodyLeft": "Nobody has left. A staff member is recorded as leaving by setting their end date on their staff record.",
+  "turnover.staffRecordLink": "staff record",
+  "turnover.notKnown": "not known",
+  "accessLog.intro": "Every time a full account number has been read — on a staff record or by producing a payroll bank file — with the reason given at the time. The log records that a number was read, never the number.",
+  "accessLog.writeFirst": "The most recent 200 entries. Entries are written before the number is returned — if recording the access fails, the number is not disclosed.",
+  "resultTemplates.intro": "How a term is marked — the tests, what each is out of, and what each is worth. Apply one to a class and it creates those assessments for every subject you choose.",
+  "resultTemplates.componentName": "Component {number} name",
+  "resultTemplates.outOf": "out of",
+  "guardians.intro": "Search by a parent's name or by their child's — somebody ringing about a pupil rarely gives their own name first.",
+  "guardians.noEmail_one": "{count} family has no email address on file — an emailed announcement will not reach them.",
+  "guardians.noEmail_other": "{count} families have no email address on file — an emailed announcement will not reach them.",
+  "guardians.noPhoneEitherAll": "{count} of those have no phone number either, so there is no way to reach them at all.",
+  "guardians.noPhoneEitherSome": "{count} of them have no phone number either, so there is no way to reach them at all.",
+  "guardians.neverSignedIn_one": "{count} parent has never signed in. Invite them below so they can see attendance, homework and results.",
+  "guardians.neverSignedIn_other": "{count} parents have never signed in. Invite them below so they can see attendance, homework and results.",
 } as const;
 
 /**

@@ -34,8 +34,7 @@ export default function ResultTemplatesPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("resultTemplates.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          How a term is marked — the tests, what each is out of, and what each is worth. Apply one to a class
-          and it creates those assessments for every subject you choose.
+          {t("resultTemplates.intro")}
         </p>
       </div>
 
@@ -123,11 +122,11 @@ function NewTemplate() {
             <input
               value={row.name}
               onChange={(event) => setRow(index, { name: event.target.value })}
-              aria-label={`Component ${index + 1} name`}
+              aria-label={t("resultTemplates.componentName", { number: index + 1 })}
               className="w-32 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
             <label className="text-xs text-slate-500">
-              out of
+              {t("resultTemplates.outOf")}
               <input
                 type="number"
                 min={1}

@@ -18,7 +18,7 @@ import type { TranslationKey } from "@/lib/i18n";
  * three children on it rather than three near-identical rows.
  */
 export default function GuardiansPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: guardians, isLoading, error } = useGuardianDirectory();
   const [query, setQuery] = useState("");
 
@@ -32,8 +32,7 @@ export default function GuardiansPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("guardians.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Search by a parent&apos;s name or by their child&apos;s — somebody ringing about a pupil rarely gives
-          their own name first.
+          {t("guardians.intro")}
         </p>
       </div>
 
@@ -60,14 +59,14 @@ export default function GuardiansPage() {
           arrived. These parents need a phone call or a letter home. */}
       {noEmail.length > 0 && (
         <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          {noEmail.length} {noEmail.length === 1 ? "family has" : "families have"} no email address on file — an
-          emailed announcement will not reach them.
+          {tPlural("guardians.noEmail", noEmail.length)}
           {cannotReach.length > 0 && (
             <>
               {" "}
               <strong>
-                {cannotReach.length} of {noEmail.length === cannotReach.length ? "those" : "them"} have no phone
-                number either, so there is no way to reach them at all.
+                {noEmail.length === cannotReach.length
+                  ? t("guardians.noPhoneEitherAll", { count: cannotReach.length })
+                  : t("guardians.noPhoneEitherSome", { count: cannotReach.length })}
               </strong>
             </>
           )}
@@ -78,8 +77,7 @@ export default function GuardiansPage() {
           families can see their child's marks, and they cannot. */}
       {waiting.length > 0 && (
         <p className="rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300">
-          {waiting.length} {waiting.length === 1 ? "parent has" : "parents have"} never signed in. Invite them
-          below so they can see attendance, homework and results.
+          {tPlural("guardians.neverSignedIn", waiting.length)}
         </p>
       )}
 

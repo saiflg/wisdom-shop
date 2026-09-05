@@ -2199,4 +2199,22 @@ export const tr: Partial<Dictionary> = {
   "behaviour.pointsNote": "Puanlar her zaman pozitiftir — lehte mi aleyhte mi sayılacağına türü karar verir. Bu çocuk ve ailesi bunu okuyabilir.",
   "transport.intro": "Güzergâhlar, duraklar ve binenler. Sabah ve öğleden sonra ayrı sayılır — her iki seferi de yapan bir otobüs koltuklarını iki kez taşır.",
   "transport.add": "Ekle",
+
+  // ── Turnover, access log, result templates, guardians ───────────
+  "turnover.intro": "Ayrılmış olan herkes, bölüme göre. Son günü henüz gelmemiş biri burada yer almaz — görevi boşalmamıştır ve okul ona hâlâ ödeme yapmaktadır.",
+  "turnover.nobodyLeft": "Kimse ayrılmadı. Bir personelin ayrılışı, personel kaydındaki bitiş tarihi girilerek kaydedilir.",
+  "turnover.staffRecordLink": "personel kaydı",
+  "turnover.notKnown": "bilinmiyor",
+  "accessLog.intro": "Tam bir hesap numarasının her okunuşu — bir personel kaydında ya da bordro banka dosyası üretilirken — o anda verilen gerekçeyle birlikte. Günlük, bir numaranın okunduğunu kaydeder, numaranın kendisini asla.",
+  "accessLog.writeFirst": "En son 200 kayıt. Kayıtlar numara döndürülmeden önce yazılır — erişimin kaydı başarısız olursa numara açıklanmaz.",
+  "resultTemplates.intro": "Bir dönemin nasıl değerlendirildiği — sınavlar, her birinin kaç üzerinden olduğu ve ağırlığı. Bir sınıfa uyguladığınızda seçtiğiniz her ders için bu değerlendirmeleri oluşturur.",
+  "resultTemplates.componentName": "{number}. bileşenin adı",
+  "resultTemplates.outOf": "üzerinden",
+  "guardians.intro": "Bir velinin adıyla ya da çocuğunun adıyla arayın — bir öğrenci hakkında telefon eden biri nadiren önce kendi adını verir.",
+  "guardians.noEmail_one": "{count} ailenin kayıtlı e-posta adresi yok — e-postayla gönderilen bir duyuru onlara ulaşmaz.",
+  "guardians.noEmail_other": "{count} ailenin kayıtlı e-posta adresi yok — e-postayla gönderilen bir duyuru onlara ulaşmaz.",
+  "guardians.noPhoneEitherAll": "Bunlardan {count} tanesinin telefon numarası da yok, dolayısıyla onlara ulaşmanın hiçbir yolu yok.",
+  "guardians.noPhoneEitherSome": "Onlardan {count} tanesinin telefon numarası da yok, dolayısıyla onlara ulaşmanın hiçbir yolu yok.",
+  "guardians.neverSignedIn_one": "{count} veli hiç oturum açmadı. Devam, ödev ve sonuçları görebilmesi için aşağıdan davet edin.",
+  "guardians.neverSignedIn_other": "{count} veli hiç oturum açmadı. Devam, ödev ve sonuçları görebilmeleri için aşağıdan davet edin.",
 };

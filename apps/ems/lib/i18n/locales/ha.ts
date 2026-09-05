@@ -2205,4 +2205,22 @@ export const ha: Partial<Dictionary> = {
   "behaviour.pointsNote": "Maki koyaushe tabbatacce ne — ko suna ƙidaya masa ko a kansa, nau'in ne ke yanke shawara. Wannan yaron da iyalinsa za su iya karanta wannan.",
   "transport.intro": "Hanyoyi, tsayawa da masu hawa. Ana ƙidaya safe da yamma daban — bas ɗin da ke yin dukansu yana ɗaukar kujerunsa sau biyu.",
   "transport.add": "Ƙara",
+
+  // ── Turnover, access log, result templates, guardians ───────────
+  "turnover.intro": "Duk wanda ya bar aiki, bisa sashe. Wanda ranarsa ta ƙarshe ba ta zo ba tukuna ba ya nan — matsayinsa bai kwance ba kuma makarantar na ci gaba da biyan sa.",
+  "turnover.nobodyLeft": "Babu wanda ya bar aiki. Ana rikodin barin ma'aikaci ta hanyar sanya ranar ƙarshensa a rikodin ma'aikacin.",
+  "turnover.staffRecordLink": "rikodin ma'aikaci",
+  "turnover.notKnown": "ba a sani ba",
+  "accessLog.intro": "Duk lokacin da aka karanta cikakkiyar lambar asusu — a rikodin ma'aikaci ko lokacin fitar da fayil ɗin banki na albashi — tare da dalilin da aka bayar a lokacin. Log ɗin yana rikodin cewa an karanta lamba, ba lambar kanta ba.",
+  "accessLog.writeFirst": "Rubuce-rubuce 200 na ƙarshe. Ana rubuta su kafin a mayar da lambar — idan rikodin dubawar ya gaza, ba a bayyana lambar ba.",
+  "resultTemplates.intro": "Yadda ake gyara zango — jarrabawoyi, adadin makin kowanne, da nauyin kowanne. Ka yi amfani da ɗaya a aji sai ya ƙirƙiri waɗannan kimantawa ga kowane darasi da ka zaɓa.",
+  "resultTemplates.componentName": "Sunan sashe na {number}",
+  "resultTemplates.outOf": "daga cikin",
+  "guardians.intro": "Ka nemo da sunan iyaye ko sunan ɗansu — wanda ke kira game da ɗalibi ba safai yake fara ba da sunansa ba.",
+  "guardians.noEmail_one": "Iyali {count} ba shi da adireshin imel a rikodin — sanarwar imel ba za ta kai gare shi ba.",
+  "guardians.noEmail_other": "Iyalai {count} ba su da adireshin imel a rikodin — sanarwar imel ba za ta kai gare su ba.",
+  "guardians.noPhoneEitherAll": "{count} daga cikinsu ba su da lambar waya ma, don haka babu yadda za a iske su ko kaɗan.",
+  "guardians.noPhoneEitherSome": "{count} daga cikinsu ba su da lambar waya ma, don haka babu yadda za a iske su ko kaɗan.",
+  "guardians.neverSignedIn_one": "Iyaye {count} bai taɓa shiga ba. Ka gayyace shi a ƙasa don ya ga halarta, aikin gida da sakamako.",
+  "guardians.neverSignedIn_other": "Iyaye {count} ba su taɓa shiga ba. Ka gayyace su a ƙasa don su ga halarta, aikin gida da sakamako.",
 };

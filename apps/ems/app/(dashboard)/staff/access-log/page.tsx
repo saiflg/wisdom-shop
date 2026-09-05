@@ -43,8 +43,7 @@ export default function BankAccessLogPage() {
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">{t("accessLog.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Every time a full account number has been read — on a staff record or by producing a payroll bank
-          file — with the reason given at the time. The log records that a number was read, never the number.
+          {t("accessLog.intro")}
         </p>
       </div>
 
@@ -102,8 +101,7 @@ export default function BankAccessLogPage() {
       )}
 
       <p className="text-xs text-slate-500">
-        The most recent 200 entries. Entries are written before the number is returned — if recording the access
-        fails, the number is not disclosed.
+        {t("accessLog.writeFirst")}
       </p>
     </div>
   );

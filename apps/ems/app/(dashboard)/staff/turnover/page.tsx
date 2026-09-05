@@ -36,8 +36,7 @@ export default function TurnoverPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("turnover.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Everyone who has left, by section. Somebody whose last day is still ahead is not here yet —
-          their post is not vacant and the school is still paying them.
+          {t("turnover.intro")}
         </p>
       </div>
 
@@ -50,11 +49,10 @@ export default function TurnoverPage() {
 
       {data && data.total === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          Nobody has left. A staff member is recorded as leaving by setting their end date on their{" "}
+          {t("turnover.nobodyLeft")}{" "}
           <Link href="/staff" className="underline">
-            staff record
+            {t("turnover.staffRecordLink")}
           </Link>
-          .
         </p>
       )}
 
@@ -118,7 +116,7 @@ export default function TurnoverPage() {
                         <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{row.jobTitle ?? "—"}</td>
                         <td className="px-3 py-2 text-end tabular-nums">
                           {row.lastMonthlyCents === null ? (
-                            <span className="text-slate-400">not known</span>
+                            <span className="text-slate-400">{t("turnover.notKnown")}</span>
                           ) : (
                             money(row.lastMonthlyCents)
                           )}
