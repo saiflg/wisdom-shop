@@ -13,6 +13,7 @@ import { useTutorSessions, useStartTutorSession, type TutorSessionStatus } from 
 import { useAuthStore } from "@/store/auth-store";
 import { FormField } from "@/components/form-field";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 const startSchema = z.object({
   subjectId: z.string().min(1, "Choose a subject"),
@@ -41,14 +42,14 @@ const STATUS_BADGE: Record<TutorSessionStatus, string> = {
   PAUSED: `${BADGE} bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300`,
   ENDED: `${BADGE} bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400`,
 };
-const STATUS_LABEL: Record<TutorSessionStatus, string> = {
-  ACTIVE: "Open",
-  PAUSED: "Paused",
-  ENDED: "Ended",
+const STATUS_LABEL: Record<TutorSessionStatus, TranslationKey> = {
+  ACTIVE: "aiTeacher.statusACTIVE",
+  PAUSED: "aiTeacher.statusPAUSED",
+  ENDED: "aiTeacher.statusENDED",
 };
 
 export default function AiTeacherPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { data: subjects } = useSubjects();
@@ -80,7 +81,7 @@ export default function AiTeacherPage() {
       });
       router.push(`/ai-teacher/${session.id}`);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't start that lesson.");
+      setFormError(err instanceof ApiError ? err.message : t("aiTeacher.startFailed"));
     }
   });
 
@@ -88,11 +89,11 @@ export default function AiTeacherPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Wisdom Teacher</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.academics.aiTeaching")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             {isGuardian
-              ? "Every lesson your child holds with Wisdom Teacher is kept here in full, so you can read exactly what was said."
-              : "Ask about anything you are studying. Lessons are kept so your teachers and parents can see what was taught."}
+              ? t("aiTeacher.guardianIntro")
+              : t("aiTeacher.studentIntro")}
           </p>
         </div>
         {!isGuardian && (
@@ -104,7 +105,7 @@ export default function AiTeacherPage() {
             }}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500"
           >
-            {open ? "Cancel" : "Start a lesson"}
+            {open ? t("common.cancel") : t("aiTeacher.startLesson")}
           </button>
         )}
       </div>
@@ -115,18 +116,18 @@ export default function AiTeacherPage() {
           className="space-y-4 rounded-xl border border-slate-200 p-5 dark:border-slate-800"
         >
           <fieldset className="grid gap-3 sm:grid-cols-2">
-            <legend className="mb-1.5 text-sm font-medium">How would you like to learn?</legend>
+            <legend className="mb-1.5 text-sm font-medium">{t("aiTeacher.howLearn")}</legend>
             {(
               [
                 {
                   value: "AUTO" as const,
-                  title: "Take the class",
-                  blurb: "A course is planned for you and taught one lesson at a time. Pause any time and pick up where you left off.",
+                  title: t("aiTeacher.modeAutoTitle"),
+                  blurb: t("aiTeacher.modeAutoBlurb"),
                 },
                 {
                   value: "ASK" as const,
-                  title: "Just ask questions",
-                  blurb: "No course — ask whatever you like about the topic and get an answer.",
+                  title: t("aiTeacher.modeAskTitle"),
+                  blurb: t("aiTeacher.modeAskBlurb"),
                 },
               ]
             ).map((option) => (
@@ -146,11 +147,11 @@ export default function AiTeacherPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="subjectId" className="block text-sm font-medium">
-                Subject
+                {t("aiTeacher.subject")}
               </label>
               <select id="subjectId" {...form.register("subjectId")} defaultValue="" className={SELECT}>
                 <option value="" disabled>
-                  Choose a subject
+                  {t("aiTeacher.chooseSubject")}
                 </option>
                 {subjects?.map((subject) => (
                   <option key={subject.id} value={subject.id}>
@@ -167,8 +168,8 @@ export default function AiTeacherPage() {
             </div>
 
             <FormField
-              label="What do you want to learn?"
-              placeholder="Adding fractions with different denominators"
+              label={t("aiTeacher.whatLearn")}
+              placeholder={t("aiTeacher.topicPlaceholder")}
               error={form.formState.errors.topic?.message}
               {...form.register("topic")}
             />
@@ -177,13 +178,14 @@ export default function AiTeacherPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="schemeOfWorkId" className="block text-sm font-medium">
-                Follow a scheme of work <span className="font-normal text-slate-500">(optional)</span>
+                {t("aiTeacher.followScheme")}{" "}
+                <span className="font-normal text-slate-500">{t("aiTeacher.optional")}</span>
               </label>
               <select id="schemeOfWorkId" {...form.register("schemeOfWorkId")} defaultValue="" className={SELECT}>
-                <option value="">Just the topic above</option>
+                <option value="">{t("aiTeacher.justTopic")}</option>
                 {schemesOfWork?.map((sow) => (
                   <option key={sow.id} value={sow.id}>
-                    {sow.subject?.name ?? "Subject"} · {sow.academicYear} · {sow.term}
+                    {sow.subject?.name ?? t("shared.subjectFallback")} · {sow.academicYear} · {sow.term}
                   </option>
                 ))}
               </select>
@@ -196,7 +198,7 @@ export default function AiTeacherPage() {
             </div>
 
             <FormField
-              label="Week number (optional)"
+              label={t("aiTeacher.weekNumber")}
               type="number"
               min={1}
               placeholder="1"
@@ -212,17 +214,17 @@ export default function AiTeacherPage() {
             disabled={startSession.isPending}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
           >
-            {startSession.isPending ? "Starting…" : "Start"}
+            {startSession.isPending ? t("aiTeacher.starting") : t("aiTeacher.start")}
           </button>
         </form>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading lessons…</p>}
-      {error && <p className="text-sm text-red-600 dark:text-red-400">Couldn&apos;t load lessons.</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("aiTeacher.loadingLessons")}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{t("aiTeacher.lessonsFailed")}</p>}
 
       {sessions && sessions.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          No lessons yet.
+          {t("aiTeacher.noLessons")}
         </p>
       )}
 
@@ -240,7 +242,9 @@ export default function AiTeacherPage() {
                     speech, which looks like a broken product to a parent. */}
                 <p className="truncate font-semibold">{session.displayTitle ?? session.topic}</p>
                 {session.followsScheme && (
-                  <p className="truncate text-xs text-slate-500">you asked about {session.topic}</p>
+                  <p className="truncate text-xs text-slate-500">
+                    {t("aiTeacher.youAskedAbout", { topic: session.topic })}
+                  </p>
                 )}
                 <p className="mt-0.5 truncate text-xs text-slate-500">
                   {session.subject?.name}
@@ -248,9 +252,9 @@ export default function AiTeacherPage() {
                     ? ` · ${session.startedByUser.firstName} ${session.startedByUser.lastName}`
                     : ""}
                   {session.mode === "AUTO"
-                    ? ` · ${session.percent}% through the course`
+                    ? ` · ${t("aiTeacher.percentThrough", { percent: session.percent })}`
                     : typeof session._count?.turns === "number"
-                      ? ` · ${session._count.turns} messages`
+                      ? ` · ${tPlural("aiTeacher.messageCount", session._count.turns)}`
                       : ""}
                 </p>
                 {session.mode === "AUTO" && (
@@ -260,13 +264,15 @@ export default function AiTeacherPage() {
                     aria-valuenow={session.percent}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-label={`${session.displayTitle ?? session.topic} progress`}
+                    aria-label={t("aiTeacher.progressOf", {
+                      title: session.displayTitle ?? session.topic,
+                    })}
                   >
                     <div className="h-full bg-brand-600" style={{ width: `${session.percent}%` }} />
                   </div>
                 )}
               </div>
-              <span className={STATUS_BADGE[session.status]}>{STATUS_LABEL[session.status]}</span>
+              <span className={STATUS_BADGE[session.status]}>{t(STATUS_LABEL[session.status])}</span>
             </Link>
           </li>
         ))}

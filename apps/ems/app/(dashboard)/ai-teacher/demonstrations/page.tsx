@@ -9,12 +9,14 @@ import {
   useRemoveLessonResource,
   type LessonResourceRow,
 } from "@/lib/use-lesson-resources";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 const KINDS = [
-  { value: "VIDEO", label: "Video" },
-  { value: "DOCUMENT", label: "Document" },
-  { value: "LINK", label: "Web page" },
-] as const;
+  { value: "VIDEO", label: "demos.kindVIDEO" },
+  { value: "DOCUMENT", label: "demos.kindDOCUMENT" },
+  { value: "LINK", label: "demos.kindLINK" },
+] as const satisfies readonly { value: string; label: TranslationKey }[];
 
 /**
  * The videos and documents the AI Teacher is allowed to offer a student.
@@ -32,6 +34,7 @@ const KINDS = [
  * could use it.
  */
 export default function DemonstrationsPage() {
+  const { t } = useTranslation();
   const subjects = useSubjects();
   const [subjectFilter, setSubjectFilter] = useState<string>("");
   const resources = useLessonResources(subjectFilter || undefined);
@@ -65,7 +68,7 @@ export default function DemonstrationsPage() {
       setForm({ ...form, title: "", url: "", keywords: "", hasCaptions: false });
       setSaved(true);
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't add that demonstration."));
+      setProblem(errorMessage(err, t("demos.addFailed")));
     }
   };
 
@@ -75,25 +78,23 @@ export default function DemonstrationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Demonstrations</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("demos.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Videos and documents Wisdom Teacher may offer a student mid-lesson. It never invents one — it only
-          chooses from what you add here, and students watch inside the lesson rather than being sent off to
-          another site.
+          {t("demos.intro")}
         </p>
       </div>
 
       <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-medium">
-            Subject
+            {t("demos.subject")}
             <select
               required
               value={form.subjectId}
               onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
               className={field}
             >
-              <option value="">Choose a subject…</option>
+              <option value="">{t("demos.chooseSubject")}</option>
               {subjects.data?.map((subject) => (
                 <option key={subject.id} value={subject.id}>
                   {subject.name}
@@ -104,7 +105,7 @@ export default function DemonstrationsPage() {
           </label>
 
           <label className="text-sm font-medium">
-            Kind
+            {t("demos.kind")}
             <select
               value={form.kind}
               onChange={(e) => setForm({ ...form, kind: e.target.value as LessonResourceRow["kind"] })}
@@ -112,7 +113,7 @@ export default function DemonstrationsPage() {
             >
               {KINDS.map((k) => (
                 <option key={k.value} value={k.value}>
-                  {k.label}
+                  {t(k.label)}
                 </option>
               ))}
             </select>
@@ -120,18 +121,18 @@ export default function DemonstrationsPage() {
         </div>
 
         <label className="block text-sm font-medium">
-          Title
+          {t("demos.workTitle")}
           <input
             required
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder="Adding fractions — worked example"
+            placeholder={t("demos.titlePlaceholder")}
             className={field}
           />
         </label>
 
         <label className="block text-sm font-medium">
-          Link
+          {t("demos.link")}
           <input
             required
             type="url"
@@ -145,21 +146,20 @@ export default function DemonstrationsPage() {
               arbitrary origin in an iframe hands it a frame in a child's
               session. */}
           <span className="mt-1 block text-xs text-slate-500">
-            YouTube and Vimeo links play inside the lesson. Anything else opens in a new tab instead.
+            {t("demos.linkHint")}
           </span>
         </label>
 
         <label className="block text-sm font-medium">
-          Words to match on <span className="font-normal text-slate-500">(optional)</span>
+          {t("demos.keywords")} <span className="font-normal text-slate-500">{t("demos.optional")}</span>
           <input
             value={form.keywords}
             onChange={(e) => setForm({ ...form, keywords: e.target.value })}
-            placeholder="fractions denominators halves quarters"
+            placeholder={t("demos.keywordsPlaceholder")}
             className={field}
           />
           <span className="mt-1 block text-xs text-slate-500">
-            Matched against what the student asked and the lesson being taught, so one demonstration can serve
-            several lessons.
+            {t("demos.keywordsHint")}
           </span>
         </label>
 
@@ -171,10 +171,9 @@ export default function DemonstrationsPage() {
             className="mt-0.5 h-4 w-4"
           />
           <span>
-            This one is captioned
+            {t("demos.captioned")}
             <span className="block text-xs text-slate-500">
-              A student whose record asks for captions is shown only captioned demonstrations. Offering one they
-              cannot follow is worse than offering nothing.
+              {t("demos.captionedHint")}
             </span>
           </span>
         </label>
@@ -184,28 +183,28 @@ export default function DemonstrationsPage() {
             {problem}
           </p>
         )}
-        {saved && <p className="text-sm text-emerald-600 dark:text-emerald-400">Added.</p>}
+        {saved && <p className="text-sm text-emerald-600 dark:text-emerald-400">{t("demos.added")}</p>}
 
         <button
           type="submit"
           disabled={add.isPending}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
-          {add.isPending ? "Adding…" : "Add demonstration"}
+          {add.isPending ? t("demos.adding") : t("demos.add")}
         </button>
       </form>
 
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            What Wisdom Teacher can offer
+            {t("demos.whatOnOffer")}
           </h2>
           <select
             value={subjectFilter}
             onChange={(e) => setSubjectFilter(e.target.value)}
             className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">All subjects</option>
+            <option value="">{t("demos.allSubjects")}</option>
             {subjects.data?.map((subject) => (
               <option key={subject.id} value={subject.id}>
                 {subject.name}
@@ -215,11 +214,10 @@ export default function DemonstrationsPage() {
         </div>
 
         {resources.isLoading ? (
-          <p className="mt-2 text-sm text-slate-500">Loading…</p>
+          <p className="mt-2 text-sm text-slate-500">{t("common.loading")}</p>
         ) : (resources.data?.length ?? 0) === 0 ? (
           <p className="mt-2 text-sm text-slate-500">
-            Nothing added yet. Until something is here, Wisdom Teacher has nothing to offer and the panel in a
-            lesson stays empty.
+            {t("demos.none")}
           </p>
         ) : (
           <ul className="mt-2 space-y-2">
@@ -231,13 +229,17 @@ export default function DemonstrationsPage() {
                 <div className="min-w-0">
                   <p className="font-semibold">{resource.title}</p>
                   <p className="text-xs text-slate-500">
-                    {resource.subject?.name ?? "—"} · {resource.kind.toLowerCase()}
-                    {resource.hasCaptions ? " · captioned" : ""}
-                    {resource.embedUrl ? " · plays in the lesson" : " · opens in a new tab"}
+                    {resource.subject?.name ?? "—"} · {t(`demos.kind${resource.kind}`)}
+                    {resource.hasCaptions ? ` · ${t("demos.hasCaptions")}` : ""}
+                    {resource.embedUrl
+                      ? ` · ${t("demos.playsInLesson")}`
+                      : ` · ${t("demos.opensNewTab")}`}
                   </p>
                   <p className="mt-1 truncate text-xs text-slate-500">{resource.url}</p>
                   {resource.keywords && (
-                    <p className="text-xs italic text-slate-500">matches: {resource.keywords}</p>
+                    <p className="text-xs italic text-slate-500">
+                      {t("demos.matches", { keywords: resource.keywords })}
+                    </p>
                   )}
                 </div>
                 <button
@@ -245,7 +247,7 @@ export default function DemonstrationsPage() {
                   onClick={() => void remove.mutateAsync(resource.id).catch(() => undefined)}
                   className="shrink-0 text-xs font-semibold text-red-600 hover:underline"
                 >
-                  Withdraw
+                  {t("demos.withdraw")}
                 </button>
               </li>
             ))}
