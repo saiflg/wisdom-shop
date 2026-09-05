@@ -152,6 +152,7 @@ function Totals({ comparison }: { comparison: BudgetComparison }) {
 }
 
 function Row({ row }: { row: BudgetComparisonRow }) {
+  const { t } = useTranslation();
   const percent = usedPercent(row);
 
   return (
@@ -160,7 +161,9 @@ function Row({ row }: { row: BudgetComparisonRow }) {
         <p className="text-sm font-medium">
           {row.category}
           {row.unbudgeted && (
-            <span className="ms-2 text-xs font-normal text-amber-600">not budgeted for</span>
+            <span className="ms-2 text-xs font-normal text-amber-600">
+              {t("budget.notBudgeted")}
+            </span>
           )}
         </p>
         <p className="text-sm tabular-nums">
@@ -295,7 +298,7 @@ function NewBudget() {
           />
         </label>
         <label className="text-xs text-slate-500">
-          To
+          {t("budget.to")}
           <input
             type="date"
             value={toDate}

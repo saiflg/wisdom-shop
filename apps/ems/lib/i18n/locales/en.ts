@@ -2207,6 +2207,20 @@ export const en = {
   "staff.accessLogLink": "That is the bank-detail access log.",
   "promotion.leavingCount": "leaving",
   "hostel.bedsTaken": "{taken}/{beds} beds",
+
+  // ── Roles, budget, behaviour, transport ─────────────────────────
+  "roles.openRoutes_one": "{count} endpoint is open to everyone signed in. Each one is a deliberate decision — mostly things a family needs about their own child, narrowed inside the service rather than by role.",
+  "roles.openRoutes_other": "{count} endpoints are open to everyone signed in. Each one is a deliberate decision — mostly things a family needs about their own child, narrowed inside the service rather than by role.",
+  "roles.publicRoutesPre_one": "{count} endpoint is reachable",
+  "roles.publicRoutesPre_other": "{count} endpoints are reachable",
+  "roles.withoutSigningIn": "without signing in",
+  "roles.publicRoutesPost": " — payment webhooks, the login and invitation pages. These are the ones worth reviewing first.",
+  "budget.notBudgeted": "not budgeted for",
+  "budget.to": "To",
+  "behaviour.intro": "Merits and concerns, one child at a time. A concern is not a punishment — most of what a school writes down is a child who needs help rather than a child in trouble.",
+  "behaviour.pointsNote": "Points are always positive — whether they count for or against is decided by the kind. This child and their family can read this.",
+  "transport.intro": "Routes, stops and who rides. Morning and afternoon are counted separately — a bus doing both runs carries its seats twice.",
+  "transport.add": "Add",
 } as const;
 
 /**

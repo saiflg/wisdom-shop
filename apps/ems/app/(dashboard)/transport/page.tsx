@@ -40,8 +40,7 @@ export default function TransportPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("transport.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Routes, stops and who rides. Morning and afternoon are counted separately — a bus doing both runs
-          carries its seats twice.
+          {t("transport.intro")}
         </p>
       </div>
 
@@ -122,7 +121,7 @@ function Setup() {
             disabled={addVehicle.isPending || !vehicle.label.trim()}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            Add
+            {t("transport.add")}
           </button>
         </div>
       </form>
@@ -171,7 +170,7 @@ function Setup() {
             disabled={addRoute.isPending || !route.name.trim()}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            Add
+            {t("transport.add")}
           </button>
         </div>
         {note && <p className="mt-2 text-xs text-red-600">{note}</p>}

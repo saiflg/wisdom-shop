@@ -2191,4 +2191,18 @@ export const ha: Partial<Dictionary> = {
   "staff.accessLogLink": "Wannan shi ne log ɗin duba bayanan banki.",
   "promotion.leavingCount": "suna barin",
   "hostel.bedsTaken": "gadaje {taken}/{beds}",
+
+  // ── Roles, budget, behaviour, transport ─────────────────────────
+  "roles.openRoutes_one": "Wuri {count} yana buɗe ga duk wanda ya shiga. Kowanne shawara ce da aka yanke da gangan — galibi abubuwan da iyali ke buƙata game da ɗansu, an taƙaita su cikin sabis ba ta matsayi ba.",
+  "roles.openRoutes_other": "Wurare {count} suna buɗe ga duk wanda ya shiga. Kowanne shawara ce da aka yanke da gangan — galibi abubuwan da iyali ke buƙata game da ɗansu, an taƙaita su cikin sabis ba ta matsayi ba.",
+  "roles.publicRoutesPre_one": "Ana iya kai wa wuri {count}",
+  "roles.publicRoutesPre_other": "Ana iya kai wa wurare {count}",
+  "roles.withoutSigningIn": "ba tare da shiga ba",
+  "roles.publicRoutesPost": " — webhooks na biya, shafukan shiga da gayyata. Waɗannan ne suka cancanci a duba tukuna.",
+  "budget.notBudgeted": "ba a sanya shi cikin kasafi ba",
+  "budget.to": "Zuwa",
+  "behaviour.intro": "Yabo da damuwa, yaro ɗaya a lokaci guda. Damuwa ba hukunci ba ce — galibin abin da makaranta ke rubutawa yaro ne mai buƙatar taimako, ba yaro cikin matsala ba.",
+  "behaviour.pointsNote": "Maki koyaushe tabbatacce ne — ko suna ƙidaya masa ko a kansa, nau'in ne ke yanke shawara. Wannan yaron da iyalinsa za su iya karanta wannan.",
+  "transport.intro": "Hanyoyi, tsayawa da masu hawa. Ana ƙidaya safe da yamma daban — bas ɗin da ke yin dukansu yana ɗaukar kujerunsa sau biyu.",
+  "transport.add": "Ƙara",
 };

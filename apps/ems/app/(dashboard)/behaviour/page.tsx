@@ -44,8 +44,7 @@ export default function BehaviourPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("behaviour.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Merits and concerns, one child at a time. A concern is not a punishment — most of what a school
-          writes down is a child who needs help rather than a child in trouble.
+          {t("behaviour.intro")}
         </p>
       </div>
 
@@ -288,8 +287,7 @@ function NewRecord({ studentProfileId }: { studentProfileId: string }) {
       </label>
 
       <p className="mt-2 text-xs text-slate-500">
-        Points are always positive — whether they count for or against is decided by the kind. This child and
-        their family can read this.
+        {t("behaviour.pointsNote")}
       </p>
 
       <button

@@ -2185,4 +2185,18 @@ export const tr: Partial<Dictionary> = {
   "staff.accessLogLink": "Bu, banka bilgisi erişim günlüğüdür.",
   "promotion.leavingCount": "ayrılıyor",
   "hostel.bedsTaken": "{taken}/{beds} yatak",
+
+  // ── Roles, budget, behaviour, transport ─────────────────────────
+  "roles.openRoutes_one": "{count} uç nokta, oturum açan herkese açık. Her biri bilinçli bir karardır — çoğu, bir ailenin kendi çocuğu hakkında ihtiyaç duyduğu şeylerdir ve role göre değil, servisin içinde daraltılır.",
+  "roles.openRoutes_other": "{count} uç nokta, oturum açan herkese açık. Her biri bilinçli bir karardır — çoğu, bir ailenin kendi çocuğu hakkında ihtiyaç duyduğu şeylerdir ve role göre değil, servisin içinde daraltılır.",
+  "roles.publicRoutesPre_one": "{count} uç noktaya erişilebiliyor:",
+  "roles.publicRoutesPre_other": "{count} uç noktaya erişilebiliyor:",
+  "roles.withoutSigningIn": "oturum açmadan",
+  "roles.publicRoutesPost": " — ödeme webhook'ları, giriş ve davet sayfaları. Önce gözden geçirilmesi gerekenler bunlardır.",
+  "budget.notBudgeted": "bütçelenmemiş",
+  "budget.to": "Bitiş",
+  "behaviour.intro": "Takdirler ve endişeler, her seferinde bir çocuk. Bir endişe ceza değildir — okulun yazdıklarının çoğu, başı dertte bir çocuk değil, yardıma ihtiyacı olan bir çocuktur.",
+  "behaviour.pointsNote": "Puanlar her zaman pozitiftir — lehte mi aleyhte mi sayılacağına türü karar verir. Bu çocuk ve ailesi bunu okuyabilir.",
+  "transport.intro": "Güzergâhlar, duraklar ve binenler. Sabah ve öğleden sonra ayrı sayılır — her iki seferi de yapan bir otobüs koltuklarını iki kez taşır.",
+  "transport.add": "Ekle",
 };

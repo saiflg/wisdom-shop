@@ -68,7 +68,7 @@ function useCapabilities() {
  * administrator about restrictions that were removed months ago.
  */
 export default function RolesPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data, isLoading } = useCapabilities();
   const [role, setRole] = useState<RoleName | "ALL">("ALL");
 
@@ -106,9 +106,7 @@ export default function RolesPage() {
                 than have to add it up. */}
             {data.openRoutes > 0 && (
               <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-400">
-                {data.openRoutes} endpoint{data.openRoutes === 1 ? " is" : "s are"} open to everyone signed
-                in. Each one is a deliberate decision — mostly things a family needs about their own child,
-                narrowed inside the service rather than by role.
+                {tPlural("roles.openRoutes", data.openRoutes)}
               </p>
             )}
 
@@ -117,9 +115,9 @@ export default function RolesPage() {
                 screen did until 28 Aug 2026 — understated them. */}
             {data.publicRoutes > 0 && (
               <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                {data.publicRoutes} endpoint{data.publicRoutes === 1 ? " is" : "s are"} reachable{" "}
-                <strong>without signing in</strong> — payment webhooks, the login and invitation pages. These
-                are the ones worth reviewing first.
+                {tPlural("roles.publicRoutesPre", data.publicRoutes)}{" "}
+                <strong>{t("roles.withoutSigningIn")}</strong>
+                {t("roles.publicRoutesPost")}
               </p>
             )}
 
