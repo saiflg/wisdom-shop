@@ -2294,6 +2294,13 @@ export const en = {
   "payrollChecklist.add": "Add",
   "settings.encryptionNone": "None",
   "library.to": "To",
+
+  // ── Last three ──────────────────────────────────────────────────
+  "studentOverview.intro": "Where one child stands — attendance, fees, behaviour, books, bus and bed, in one place.",
+  "announcements.stillNeeds": "Still needs {missing}.",
+  "announcements.needsBody": "something written",
+  "announcements.needsAudience": "an audience",
+  "announcements.needsChannel": "a way to send it",
 } as const;
 
 /**

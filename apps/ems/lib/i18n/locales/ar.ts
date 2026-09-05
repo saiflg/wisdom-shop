@@ -2278,4 +2278,11 @@ export const ar: Partial<Dictionary> = {
   "payrollChecklist.add": "إضافة",
   "settings.encryptionNone": "بلا",
   "library.to": "إلى",
+
+  // ── Last three ──────────────────────────────────────────────────
+  "studentOverview.intro": "أين يقف طفل واحد — الحضور والرسوم والسلوك والكتب والحافلة والسرير، في مكان واحد.",
+  "announcements.stillNeeds": "ما زال يحتاج إلى {missing}.",
+  "announcements.needsBody": "نصًا مكتوبًا",
+  "announcements.needsAudience": "جمهورًا",
+  "announcements.needsChannel": "طريقة لإرساله",
 };

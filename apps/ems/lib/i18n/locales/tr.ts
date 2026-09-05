@@ -2272,4 +2272,11 @@ export const tr: Partial<Dictionary> = {
   "payrollChecklist.add": "Ekle",
   "settings.encryptionNone": "Yok",
   "library.to": "Kime",
+
+  // ── Last three ──────────────────────────────────────────────────
+  "studentOverview.intro": "Bir çocuğun durumu — devam, ücretler, davranış, kitaplar, servis ve yatak, tek bir yerde.",
+  "announcements.stillNeeds": "Hâlâ şunlar gerekiyor: {missing}.",
+  "announcements.needsBody": "yazılmış bir metin",
+  "announcements.needsAudience": "bir hedef kitle",
+  "announcements.needsChannel": "gönderme yolu",
 };

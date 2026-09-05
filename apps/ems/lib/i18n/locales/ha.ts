@@ -2278,4 +2278,11 @@ export const ha: Partial<Dictionary> = {
   "payrollChecklist.add": "Ƙara",
   "settings.encryptionNone": "Babu",
   "library.to": "Zuwa",
+
+  // ── Last three ──────────────────────────────────────────────────
+  "studentOverview.intro": "Inda yaro ɗaya yake — halarta, kuɗi, ɗabi'a, littattafai, bas da gado, a wuri ɗaya.",
+  "announcements.stillNeeds": "Har yanzu yana buƙatar {missing}.",
+  "announcements.needsBody": "wani abu a rubuce",
+  "announcements.needsAudience": "masu sauraro",
+  "announcements.needsChannel": "hanyar aika shi",
 };

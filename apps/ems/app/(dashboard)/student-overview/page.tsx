@@ -38,7 +38,7 @@ export default function StudentOverviewPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("studentOverview.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Where one child stands — attendance, fees, behaviour, books, bus and bed, in one place.
+          {t("studentOverview.intro")}
         </p>
       </div>
 

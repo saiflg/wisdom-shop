@@ -324,14 +324,15 @@ function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
       {!ready && (
         // Said before the button is pressed rather than as an error after.
         <p className="text-xs text-slate-500">
-          Still needs {[
-            announcement.body?.trim() ? null : "something written",
-            announcement.audience ? null : "an audience",
-            announcement.channels.length ? null : "a way to send it",
-          ]
-            .filter(Boolean)
-            .join(", ")}
-          .
+          {t("announcements.stillNeeds", {
+            missing: [
+              announcement.body?.trim() ? null : t("announcements.needsBody"),
+              announcement.audience ? null : t("announcements.needsAudience"),
+              announcement.channels.length ? null : t("announcements.needsChannel"),
+            ]
+              .filter(Boolean)
+              .join(", "),
+          })}
         </p>
       )}
 
