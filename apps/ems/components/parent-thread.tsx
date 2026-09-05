@@ -137,8 +137,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
 
           {data.youAre === "FAMILY" && (
             <p className="text-xs text-slate-500">
-              This goes to your child&apos;s teachers and the school office, not to one person — so somebody can
-              always answer.
+              {t("parentThread.goesToAll")}
             </p>
           )}
 

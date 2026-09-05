@@ -2223,4 +2223,18 @@ export const ar: Partial<Dictionary> = {
   "guardians.noPhoneEitherSome": "{count} منهم بلا رقم هاتف أيضًا، فلا سبيل للوصول إليهم إطلاقًا.",
   "guardians.neverSignedIn_one": "ولي أمر واحد لم يسجّل الدخول قط. ادعُه أدناه ليتمكن من رؤية الحضور والواجبات والنتائج.",
   "guardians.neverSignedIn_other": "{count} من أولياء الأمور لم يسجّلوا الدخول قط. ادعُهم أدناه ليتمكنوا من رؤية الحضور والواجبات والنتائج.",
+
+  // ── Expenses, documents, exam player, parent thread, wallet ─────
+  "expenses.approvedAndPaid": "معتمد ومدفوع",
+  "expenses.approvedNotPaid": "معتمد، لم يُدفع بعد",
+  "expenses.notSpendingYet": "ليس إنفاقًا بعد",
+  "documents.intro": "الأوراق التي تحتفظ بها المدرسة عن الطفل — شهادات الميلاد، وسجلات التطعيم، وخطابات النقل.",
+  "documents.uploadRules": "PDF أو JPEG أو PNG أو WebP، حتى 10 ميغابايت. تُخزَّن حيث لا يصل إليها إلا الموظفون المسجّلون وأسرة هذا الطفل — ولا يوجد رابط عام.",
+  "examPlayer.chooseAllCorrect": "اختر كل إجابة صحيحة — لا تُمنح درجات جزئية.",
+  "examPlayer.savingShort": "جارٍ الحفظ…",
+  "examPlayer.savedShort": "تم الحفظ",
+  "examPlayer.notSaved": "لم يُحفظ — تحقق من اتصالك وغيّره مرة أخرى.",
+  "parentThread.goesToAll": "يذهب هذا إلى معلمي طفلك وإلى مكتب المدرسة، لا إلى شخص واحد — حتى يستطيع أحدهم الرد دائمًا.",
+  "wallet.intro": "أموال محفوظة ليسحب منها الطفل — الغداء والكتب والمواصلات. كل حركة تُدوَّن ولا يمكن تعديل شيء هنا لاحقًا؛ التصحيح قيد جديد.",
+  "wallet.kindDecides": ". المبالغ دائمًا موجبة — والنوع هو ما يحدد اتجاه المال. المرجع المستخدَم من قبل لن يحرّك المال مرة ثانية.",
 };

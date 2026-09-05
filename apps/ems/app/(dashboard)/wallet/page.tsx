@@ -44,8 +44,7 @@ export default function WalletPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("wallet.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Money held for a child to draw on — lunch, books, transport. Every movement is written down and
-          nothing here can be edited afterwards; a correction is a new entry.
+          {t("wallet.intro")}
         </p>
       </div>
 
@@ -234,8 +233,8 @@ function RecordEntry({ studentProfileId }: { studentProfileId: string }) {
       </div>
 
       <p className="mt-2 text-xs text-slate-500">
-        {ENTRY_KINDS.find((option) => option.value === kind)?.hint}. Amounts are always positive — the kind
-        decides which way the money goes. A reference used before will not move money a second time.
+        {ENTRY_KINDS.find((option) => option.value === kind)?.hint}
+        {t("wallet.kindDecides")}
       </p>
 
       <button

@@ -2239,6 +2239,20 @@ export const en = {
   "guardians.noPhoneEitherSome": "{count} of them have no phone number either, so there is no way to reach them at all.",
   "guardians.neverSignedIn_one": "{count} parent has never signed in. Invite them below so they can see attendance, homework and results.",
   "guardians.neverSignedIn_other": "{count} parents have never signed in. Invite them below so they can see attendance, homework and results.",
+
+  // ── Expenses, documents, exam player, parent thread, wallet ─────
+  "expenses.approvedAndPaid": "approved and paid",
+  "expenses.approvedNotPaid": "approved, not yet paid",
+  "expenses.notSpendingYet": "not spending yet",
+  "documents.intro": "Papers the school holds for a child — birth certificates, immunisation records, transfer letters.",
+  "documents.uploadRules": "PDF, JPEG, PNG or WebP, up to 10 MB. Stored where only signed-in staff and this child's own family can reach it — there is no public link.",
+  "examPlayer.chooseAllCorrect": "Choose every correct answer — part marks are not given.",
+  "examPlayer.savingShort": "Saving…",
+  "examPlayer.savedShort": "Saved",
+  "examPlayer.notSaved": "Not saved — check your connection and change it again.",
+  "parentThread.goesToAll": "This goes to your child's teachers and the school office, not to one person — so somebody can always answer.",
+  "wallet.intro": "Money held for a child to draw on — lunch, books, transport. Every movement is written down and nothing here can be edited afterwards; a correction is a new entry.",
+  "wallet.kindDecides": ". Amounts are always positive — the kind decides which way the money goes. A reference used before will not move money a second time.",
 } as const;
 
 /**

@@ -2223,4 +2223,18 @@ export const ha: Partial<Dictionary> = {
   "guardians.noPhoneEitherSome": "{count} daga cikinsu ba su da lambar waya ma, don haka babu yadda za a iske su ko kaɗan.",
   "guardians.neverSignedIn_one": "Iyaye {count} bai taɓa shiga ba. Ka gayyace shi a ƙasa don ya ga halarta, aikin gida da sakamako.",
   "guardians.neverSignedIn_other": "Iyaye {count} ba su taɓa shiga ba. Ka gayyace su a ƙasa don su ga halarta, aikin gida da sakamako.",
+
+  // ── Expenses, documents, exam player, parent thread, wallet ─────
+  "expenses.approvedAndPaid": "an amince kuma an biya",
+  "expenses.approvedNotPaid": "an amince, ba a biya ba tukuna",
+  "expenses.notSpendingYet": "ba kashe kuɗi ba tukuna",
+  "documents.intro": "Takardun da makarantar ke riƙe wa yaro — takardun haihuwa, rikodin rigakafi, wasiƙun canja wuri.",
+  "documents.uploadRules": "PDF, JPEG, PNG ko WebP, har zuwa 10 MB. Ana ajiye su inda ma'aikatan da suka shiga da iyalin wannan yaron kaɗai za su iya kai wa — babu hanyar haɗi ta jama'a.",
+  "examPlayer.chooseAllCorrect": "Ka zaɓi kowace amsa daidai — ba a ba da maki na ɓangare ba.",
+  "examPlayer.savingShort": "Ana ajiyewa…",
+  "examPlayer.savedShort": "An ajiye",
+  "examPlayer.notSaved": "Ba a ajiye ba — ka duba haɗin kanka sannan ka sake canza shi.",
+  "parentThread.goesToAll": "Wannan yana zuwa ga malaman ɗanka da ofishin makarantar, ba ga mutum ɗaya ba — don koyaushe wani ya iya amsawa.",
+  "wallet.intro": "Kuɗin da ake riƙe wa yaro ya ciro — abincin rana, littattafai, sufuri. Ana rubuta kowane motsi kuma ba a iya gyara kome a nan bayan haka; gyara sabon shigarwa ne.",
+  "wallet.kindDecides": ". Adadi koyaushe tabbatacce ne — nau'in ne ke yanke shawara inda kuɗin za su tafi. Lambar da aka yi amfani da ita a baya ba za ta motsa kuɗi sau na biyu ba.",
 };

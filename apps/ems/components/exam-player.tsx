@@ -232,7 +232,7 @@ export function ExamPlayer({ examId }: { examId: string }) {
               {question.type === "MULTI_CHOICE" && (
                 <fieldset className="space-y-2">
                   <legend className="text-xs text-slate-500">
-                    Choose every correct answer — part marks are not given.
+                    {t("examPlayer.chooseAllCorrect")}
                   </legend>
                   {question.options.map((option) => (
                     <label key={option.key} className="flex items-center gap-3 text-sm">
@@ -275,11 +275,11 @@ export function ExamPlayer({ examId }: { examId: string }) {
             </div>
 
             <p className="mt-2 h-4 text-xs text-slate-500" aria-live="polite">
-              {saving[question.id] === "saving" && "Saving…"}
-              {saving[question.id] === "saved" && "Saved"}
+              {saving[question.id] === "saving" && t("examPlayer.savingShort")}
+              {saving[question.id] === "saved" && t("examPlayer.savedShort")}
               {saving[question.id] === "failed" && (
                 <span className="text-red-600 dark:text-red-400">
-                  Not saved — check your connection and change it again.
+                  {t("examPlayer.notSaved")}
                 </span>
               )}
             </p>

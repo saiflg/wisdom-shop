@@ -95,7 +95,7 @@ function Summary({ summary }: { summary: ExpenseSummary }) {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("expenses.committed")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums">{formatAmount(summary.committedCents)}</p>
-          <p className="text-xs text-slate-500">approved and paid</p>
+          <p className="text-xs text-slate-500">{t("expenses.approvedAndPaid")}</p>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("expenses.paid")}</p>
@@ -108,7 +108,7 @@ function Summary({ summary }: { summary: ExpenseSummary }) {
           <p className="mt-1 text-2xl font-bold tabular-nums text-amber-600">
             {formatAmount(summary.outstandingCents)}
           </p>
-          <p className="text-xs text-slate-500">approved, not yet paid</p>
+          <p className="text-xs text-slate-500">{t("expenses.approvedNotPaid")}</p>
         </div>
         <div>
           {/* Kept out of every other figure. A request nobody approved is
@@ -119,7 +119,7 @@ function Summary({ summary }: { summary: ExpenseSummary }) {
           <p className="mt-1 text-2xl font-bold tabular-nums text-slate-500">
             {formatAmount(summary.pendingCents)}
           </p>
-          <p className="text-xs text-slate-500">not spending yet</p>
+          <p className="text-xs text-slate-500">{t("expenses.notSpendingYet")}</p>
         </div>
       </div>
 

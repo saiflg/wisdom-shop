@@ -2217,4 +2217,18 @@ export const tr: Partial<Dictionary> = {
   "guardians.noPhoneEitherSome": "Onlardan {count} tanesinin telefon numarası da yok, dolayısıyla onlara ulaşmanın hiçbir yolu yok.",
   "guardians.neverSignedIn_one": "{count} veli hiç oturum açmadı. Devam, ödev ve sonuçları görebilmesi için aşağıdan davet edin.",
   "guardians.neverSignedIn_other": "{count} veli hiç oturum açmadı. Devam, ödev ve sonuçları görebilmeleri için aşağıdan davet edin.",
+
+  // ── Expenses, documents, exam player, parent thread, wallet ─────
+  "expenses.approvedAndPaid": "onaylandı ve ödendi",
+  "expenses.approvedNotPaid": "onaylandı, henüz ödenmedi",
+  "expenses.notSpendingYet": "henüz harcama değil",
+  "documents.intro": "Okulun bir çocuk için tuttuğu evraklar — doğum belgeleri, aşı kayıtları, nakil yazıları.",
+  "documents.uploadRules": "PDF, JPEG, PNG veya WebP, en fazla 10 MB. Yalnızca oturum açmış personelin ve bu çocuğun kendi ailesinin erişebileceği bir yerde saklanır — herkese açık bir bağlantı yoktur.",
+  "examPlayer.chooseAllCorrect": "Doğru olan her cevabı seçin — kısmi puan verilmez.",
+  "examPlayer.savingShort": "Kaydediliyor…",
+  "examPlayer.savedShort": "Kaydedildi",
+  "examPlayer.notSaved": "Kaydedilmedi — bağlantınızı kontrol edip yeniden değiştirin.",
+  "parentThread.goesToAll": "Bu, tek bir kişiye değil, çocuğunuzun öğretmenlerine ve okul ofisine gider — böylece her zaman biri yanıt verebilir.",
+  "wallet.intro": "Bir çocuğun kullanması için tutulan para — öğle yemeği, kitaplar, ulaşım. Her hareket yazılır ve buradaki hiçbir şey sonradan düzenlenemez; bir düzeltme yeni bir kayıttır.",
+  "wallet.kindDecides": ". Tutarlar her zaman pozitiftir — paranın hangi yöne gideceğine tür karar verir. Daha önce kullanılmış bir referans parayı ikinci kez hareket ettirmez.",
 };

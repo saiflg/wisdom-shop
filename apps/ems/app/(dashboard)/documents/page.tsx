@@ -65,7 +65,7 @@ export default function DocumentsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("documents.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Papers the school holds for a child — birth certificates, immunisation records, transfer letters.
+          {t("documents.intro")}
         </p>
       </div>
 
@@ -264,8 +264,7 @@ function Upload({ studentProfileId }: { studentProfileId: string }) {
         </button>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        PDF, JPEG, PNG or WebP, up to 10 MB. Stored where only signed-in staff and this child&rsquo;s own
-        family can reach it — there is no public link.
+        {t("documents.uploadRules")}
       </p>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </form>
