@@ -21,6 +21,7 @@ import {
   type AssignmentStatus,
 } from "@/lib/use-homework";
 import { FormField } from "@/components/form-field";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const setSchema = z.object({
   classId: z.string().min(1, "Choose a class"),
@@ -42,6 +43,7 @@ const STATUS_BADGE: Record<AssignmentStatus, string> = {
 };
 
 export default function HomeworkPage() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const isStaff = Boolean(user?.roles.some((r) => r === "SCHOOL_ADMIN" || r === "TEACHER"));
 
@@ -72,7 +74,7 @@ export default function HomeworkPage() {
       form.reset();
       setOpen(false);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't set that work.");
+      setFormError(err instanceof ApiError ? err.message : t("homework.setFailed"));
     }
   });
 
@@ -80,11 +82,11 @@ export default function HomeworkPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Homework</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("homework.title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             {isStaff
-              ? "Set work, see who has handed in, mark it, and release the marks when the whole class is done."
-              : "What you have been set, and what you have handed in."}
+              ? t("homework.staffIntro")
+              : t("homework.studentIntro")}
           </p>
         </div>
         {isStaff && (
@@ -96,7 +98,7 @@ export default function HomeworkPage() {
             }}
             className="shrink-0 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500"
           >
-            {open ? "Cancel" : "Set work"}
+            {open ? t("common.cancel") : t("homework.setWork")}
           </button>
         )}
       </div>
@@ -106,11 +108,11 @@ export default function HomeworkPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="classId" className="block text-sm font-medium">
-                Class
+                {t("homework.class")}
               </label>
               <select id="classId" {...form.register("classId")} defaultValue="" className={INPUT}>
                 <option value="" disabled>
-                  Choose a class
+                  {t("homework.chooseClass")}
                 </option>
                 {classes?.map((klass) => (
                   <option key={klass.id} value={klass.id}>
@@ -125,11 +127,11 @@ export default function HomeworkPage() {
 
             <div>
               <label htmlFor="subjectId" className="block text-sm font-medium">
-                Subject
+                {t("homework.subject")}
               </label>
               <select id="subjectId" {...form.register("subjectId")} defaultValue="" className={INPUT}>
                 <option value="" disabled>
-                  Choose a subject
+                  {t("homework.chooseSubject")}
                 </option>
                 {subjects?.map((subject) => (
                   <option key={subject.id} value={subject.id}>
@@ -144,20 +146,20 @@ export default function HomeworkPage() {
           </div>
 
           <FormField
-            label="Title"
-            placeholder="Fractions worksheet"
+            label={t("homework.workTitle")}
+            placeholder={t("homework.titlePlaceholder")}
             error={form.formState.errors.title?.message}
             {...form.register("title")}
           />
 
           <div>
             <label htmlFor="instructions" className="block text-sm font-medium">
-              What to do
+              {t("homework.whatToDo")}
             </label>
             <textarea
               id="instructions"
               rows={3}
-              placeholder="Questions 1 to 12 on page 43."
+              placeholder={t("homework.bodyPlaceholder")}
               {...form.register("instructions")}
               className={INPUT}
             />
@@ -168,12 +170,12 @@ export default function HomeworkPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
-              label="Due (optional)"
+              label={t("homework.due")}
               type="datetime-local"
-              hint="Leave blank for 'before next lesson' — work is then never counted late."
+              hint={t("homework.dueHint")}
               {...form.register("dueAt")}
             />
-            <FormField label="Out of (optional)" type="number" placeholder="10" {...form.register("maxMarks")} />
+            <FormField label={t("homework.outOf")} type="number" placeholder="10" {...form.register("maxMarks")} />
           </div>
 
           {formError && <p className="text-sm text-red-600">{formError}</p>}
@@ -183,20 +185,20 @@ export default function HomeworkPage() {
             disabled={create.isPending}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
           >
-            {create.isPending ? "Saving…" : "Save as draft"}
+            {create.isPending ? t("shared.saving") : t("homework.saveDraft")}
           </button>
           <p className="text-xs text-slate-500">
-            Saved as a draft. Students see nothing until you set it.
+            {t("homework.savedDraft")}
           </p>
         </form>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading homework…</p>}
-      {error && <p className="text-sm text-red-600">Couldn&apos;t load homework.</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("homework.loading")}</p>}
+      {error && <p className="text-sm text-red-600">{t("homework.loadFailed")}</p>}
 
       {assignments && assignments.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          {isStaff ? "No work set yet." : "Nothing has been set for you yet."}
+          {isStaff ? t("homework.noneStaff") : t("homework.noneStudent")}
         </p>
       )}
 
@@ -242,6 +244,7 @@ function Detail({
   isStaff: boolean;
   summary: Assignment;
 }) {
+  const { t } = useTranslation();
   const { data: assignment, isLoading, error } = useAssignment(id);
   const update = useUpdateAssignment(id);
   const release = useReleaseMarks(id);
@@ -261,7 +264,7 @@ function Detail({
     }
   };
 
-  if (isLoading) return <p className="p-4 text-sm text-slate-500">Loading…</p>;
+  if (isLoading) return <p className="p-4 text-sm text-slate-500">{t("common.loading")}</p>;
   if (error || !assignment) {
     return (
       <p role="alert" className="p-4 text-sm text-red-600">
@@ -286,7 +289,7 @@ function Detail({
                 onClick={() => void act(() => update.mutateAsync({ status: "SET" }), "Couldn't set that.")}
                 className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500"
               >
-                Set for the class
+                {t("homework.setForClass")}
               </button>
             )}
             {summary.status === "SET" && (
@@ -295,7 +298,7 @@ function Detail({
                 onClick={() => void act(() => update.mutateAsync({ status: "CLOSED" }), "Couldn't close that.")}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
               >
-                Close to new submissions
+                {t("homework.closeSubmissions")}
               </button>
             )}
             <button
@@ -308,7 +311,7 @@ function Detail({
                       tone: "ok",
                       text:
                         released === 0
-                          ? "Nothing to release — mark some work first."
+                          ? t("homework.nothingToRelease")
                           : `Released ${released} mark${released === 1 ? "" : "s"}.`,
                     });
                   },
@@ -317,7 +320,7 @@ function Detail({
               }
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              Release marks
+              {t("homework.releaseMarks")}
             </button>
           </div>
 
@@ -363,7 +366,7 @@ function Detail({
           </ul>
 
           {assignment.submissions?.length === 0 && (
-            <p className="text-sm text-slate-500">Nobody has handed in yet.</p>
+            <p className="text-sm text-slate-500">{t("homework.nobodyHandedIn")}</p>
           )}
         </>
       ) : (
@@ -371,7 +374,7 @@ function Detail({
           {mine ? (
             <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                What you handed in
+                {t("homework.whatYouHandedIn")}
                 {mine.isLate && <span className="ms-2 text-amber-600">late</span>}
               </p>
               <p className="whitespace-pre-wrap text-sm">{mine.content}</p>
@@ -385,7 +388,7 @@ function Detail({
                 </div>
               ) : (
                 <p className="text-xs text-slate-500">
-                  {mine.status === "MARKED" ? "Marked — your teacher will release it soon." : "Not marked yet."}
+                  {mine.status === "MARKED" ? t("homework.markedSoon") : t("homework.notMarked")}
                 </p>
               )}
             </div>
@@ -394,14 +397,14 @@ function Detail({
           {summary.status === "SET" && (!mine || mine.status === "SUBMITTED") && (
             <div className="space-y-2">
               <label htmlFor="work" className="block text-sm font-medium">
-                {mine ? "Change what you handed in" : "Your answer"}
+                {mine ? t("homework.changeAnswer") : t("homework.yourAnswer")}
               </label>
               <textarea
                 id="work"
                 rows={4}
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
-                placeholder="Type your answer here…"
+                placeholder={t("homework.answerPlaceholder")}
                 className={INPUT}
               />
               <button
@@ -419,7 +422,7 @@ function Detail({
                 }
                 className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
               >
-                {submit.isPending ? "Handing in…" : "Hand in"}
+                {submit.isPending ? t("homework.handingIn") : t("homework.handIn")}
               </button>
             </div>
           )}
@@ -446,13 +449,14 @@ function MarkRow({
   current: number | null;
   onMark: (input: { scoreHundredths?: number; feedback?: string }) => Promise<void>;
   }) {
+  const { t } = useTranslation();
   const [score, setScore] = useState(current === null ? "" : String(current / 100));
   const [feedback, setFeedback] = useState("");
 
   return (
     <div className="mt-3 flex flex-wrap items-end gap-2">
       <label className="text-xs font-medium">
-        Mark
+        {t("homework.mark")}
         <input
           value={score}
           onChange={(event) => setScore(event.target.value)}
@@ -462,11 +466,11 @@ function MarkRow({
         />
       </label>
       <label className="min-w-0 flex-1 text-xs font-medium">
-        Feedback
+        {t("homework.feedback")}
         <input
           value={feedback}
           onChange={(event) => setFeedback(event.target.value)}
-          placeholder="Good work, check question 7."
+          placeholder={t("homework.feedbackPlaceholder")}
           className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </label>
@@ -481,7 +485,7 @@ function MarkRow({
         aria-label={`Save mark for submission ${submissionId}`}
         className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
       >
-        Save mark
+        {t("homework.saveMark")}
       </button>
     </div>
   );
