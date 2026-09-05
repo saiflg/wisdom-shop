@@ -763,7 +763,7 @@ export const en = {
 
   // ── Backfill: prose and buttons the first extractor missed ──────
   "library.takeBack": "Take back",
-  "staff.intro": "Everyone with a staff login, teaching and non-teaching. Bank details are shown here only as whether",
+  "staff.intro": "Everyone with a staff login, teaching and non-teaching. Bank details are shown here only as whether an account is on file — the number itself lives behind a reason and a log entry.",
   "staff.register": "Register staff",
   "staff.noneYet": "Nobody has a staff record yet. Register the first one to get started.",
   "medical.readBefore": "Read before taking this child anywhere",
@@ -811,10 +811,10 @@ export const en = {
   "budget.from": "From",
   "budget.categoryPlaceholder": "Category",
   "budget.addLine": "Add line",
-  "budget.matchNote": "Categories are matched to expenses by name, ignoring capitals. Spending under a category with no line",
+  "budget.matchNote": "Categories are matched to expenses by name, ignoring capitals. Spending under a category with no line here still shows up — it is not hidden.",
   "budget.save": "Save budget",
   "expenses.title": "Expenses",
-  "expenses.intro": "What the school spends. A request nobody has approved is not spending yet, and is counted",
+  "expenses.intro": "What the school spends. A request nobody has approved is not spending yet, and is counted separately.",
   "expenses.all": "All",
   "expenses.noneForChoice": "Nothing here for that choice.",
   "expenses.committed": "Committed",
@@ -2185,6 +2185,28 @@ export const en = {
   "aiTeacher.end": "End",
   "aiTeacher.ask": "Ask",
   "aiTeacher.drawing": "Drawing a picture for this…",
+
+  // ── Promotion, hostel, salary, exams, welfare, staff, roles ─────
+  "promotion.intro": "Move every student into next year's classes. Choose where each class goes, read the plan, then apply it. Nothing changes until you do — and running it twice is safe.",
+  "promotion.movingUp": "moving up",
+  "promotion.repeating": "repeating",
+  "promotion.alreadyDone": "already done",
+  "promotion.nowhereToGo": "with nowhere to go",
+  "promotion.blocked": "{count} student(s) have nowhere to go. Choose a destination for every class above — leaving them out would enrol them nowhere at all.",
+  "hostel.familyIntro": "Ask the school office about boarding arrangements — where your child sleeps will appear here once they have been given a bed.",
+  "hostel.add": "Add",
+  "hostel.overfull": "more children than beds",
+  "salary.percentBasis": "Percentages are taken from whichever earning is marked basic, never from gross — a deduction that depended on gross, which depends on the deductions, would have no answer.",
+  "salary.basicWord": "basic",
+  "examBuilder.noQuestions": "No questions yet. Add some from the bank below — an empty paper cannot be published.",
+  "welfare.intro": "Asking the school for help — medical bills, hardship, bereavement, a loan.",
+  "welfare.adminScope": " You can see every request, and you cannot decide your own.",
+  "welfare.staffScope": " Only you and the school administrators can see what you write here.",
+  "staff.notStarted": "not started",
+  "staff.accessLogQuestion": "Looking for who has read someone's bank details?",
+  "staff.accessLogLink": "That is the bank-detail access log.",
+  "promotion.leavingCount": "leaving",
+  "hostel.bedsTaken": "{taken}/{beds} beds",
 } as const;
 
 /**

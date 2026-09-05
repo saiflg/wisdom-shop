@@ -149,7 +149,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
         </h2>
         {(exam.questions ?? []).length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">
-            No questions yet. Add some from the bank below — an empty paper cannot be published.
+            {t("examBuilder.noQuestions")}
           </p>
         ) : (
           <ol className="mt-2 space-y-2">

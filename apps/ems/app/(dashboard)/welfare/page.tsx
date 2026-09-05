@@ -128,10 +128,8 @@ export default function WelfarePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("welfare.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Asking the school for help — medical bills, hardship, bereavement, a loan.
-          {isAdmin
-            ? " You can see every request, and you cannot decide your own."
-            : " Only you and the school administrators can see what you write here."}
+          {t("welfare.intro")}
+          {isAdmin ? t("welfare.adminScope") : t("welfare.staffScope")}
         </p>
       </div>
 

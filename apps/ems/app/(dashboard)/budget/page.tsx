@@ -349,7 +349,6 @@ function NewBudget() {
 
       <p className="mt-3 text-xs text-slate-500">
         {t("budget.matchNote")}
-        here still shows up — it is not hidden.
       </p>
 
       <div className="mt-3 flex gap-2">

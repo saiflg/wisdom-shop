@@ -52,7 +52,6 @@ export default function StaffDirectoryPage() {
           <h1 className="text-2xl font-bold tracking-tight">{t("staff.directory")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
             {t("staff.intro")}
-            an account is on file — the number itself lives behind a reason and a log entry.
           </p>
         </div>
         <Link
@@ -146,12 +145,12 @@ export default function StaffDirectoryPage() {
                     )}
                     {state === "FUTURE" && (
                       <span className={`${BADGE} bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300`}>
-                        not started
+                        {t("staff.notStarted")}
                       </span>
                     )}
                     {!isTeaching(member) && (
                       <span className={`${BADGE} bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300`}>
-                        non-teaching
+                        {t("staff.nonTeaching")}
                       </span>
                     )}
                   </span>
@@ -186,11 +185,10 @@ export default function StaffDirectoryPage() {
       </ul>
 
       <p className="text-xs text-slate-500">
-        Looking for who has read someone&apos;s bank details? That is the{" "}
+        {t("staff.accessLogQuestion")}{" "}
         <Link href="/staff/access-log" className="font-semibold text-brand-600 hover:underline">
-          bank-detail access log
+          {t("staff.accessLogLink")}
         </Link>
-        .
       </p>
     </div>
   );

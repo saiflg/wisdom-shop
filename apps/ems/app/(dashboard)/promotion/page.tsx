@@ -98,8 +98,7 @@ export default function PromotionPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("promotion.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Move every student into next year&apos;s classes. Choose where each class goes, read the plan,
-          then apply it. Nothing changes until you do — and running it twice is safe.
+          {t("promotion.intro")}
         </p>
       </div>
 
@@ -220,21 +219,28 @@ export default function PromotionPage() {
       {plan && (
         <div className="space-y-3">
           <div className="flex flex-wrap gap-4 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-800">
-            <span><strong>{plan.summary.promote}</strong> moving up</span>
-            <span><strong>{plan.summary.repeat}</strong> repeating</span>
-            <span><strong>{plan.summary.graduate}</strong> leaving</span>
-            <span className="text-slate-500"><strong>{plan.summary.alreadyDone}</strong> already done</span>
+            <span>
+              <strong>{plan.summary.promote}</strong> {t("promotion.movingUp")}
+            </span>
+            <span>
+              <strong>{plan.summary.repeat}</strong> {t("promotion.repeating")}
+            </span>
+            <span>
+              <strong>{plan.summary.graduate}</strong> {t("promotion.leavingCount")}
+            </span>
+            <span className="text-slate-500">
+              <strong>{plan.summary.alreadyDone}</strong> {t("promotion.alreadyDone")}
+            </span>
             {plan.summary.problems > 0 && (
               <span className="text-red-700 dark:text-red-400">
-                <strong>{plan.summary.problems}</strong> with nowhere to go
+                <strong>{plan.summary.problems}</strong> {t("promotion.nowhereToGo")}
               </span>
             )}
           </div>
 
           {blocked && (
             <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-300">
-              {plan.blockers.length} student(s) have nowhere to go. Choose a destination for every class
-              above — leaving them out would enrol them nowhere at all.
+              {t("promotion.blocked", { count: plan.blockers.length })}
             </p>
           )}
 
@@ -274,7 +280,7 @@ export default function PromotionPage() {
                           <option value="">{t("promotion.asClass")}</option>
                           <option value="PROMOTE">{t("promotion.moveUp")}</option>
                           <option value="REPEAT">{t("promotion.repeat")}</option>
-                          <option value="GRADUATE">{t("promotion.leaving")}</option>
+                          <option value="GRADUATE">{t("promotion.leavingCount")}</option>
                         </select>
                       )}
                     </td>

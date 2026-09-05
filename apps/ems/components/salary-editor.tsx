@@ -202,8 +202,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
       )}
 
       <p className="text-xs text-slate-500">
-        Percentages are taken from whichever earning is marked <em>basic</em>, never from gross — a deduction
-        that depended on gross, which depends on the deductions, would have no answer.
+        {t("salary.percentBasis")}
       </p>
     </section>
   );

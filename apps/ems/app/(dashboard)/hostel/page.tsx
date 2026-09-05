@@ -34,8 +34,7 @@ export default function HostelPage() {
       <div className="space-y-4">
         <h1 className="text-2xl font-bold tracking-tight">{t("hostel.title")}</h1>
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Ask the school office about boarding arrangements — where your child sleeps will appear here once
-          they have been given a bed.
+          {t("hostel.familyIntro")}
         </p>
       </div>
     );
@@ -114,7 +113,7 @@ function Setup({ blocks }: { blocks: HostelBlock[] }) {
             disabled={addBlock.isPending || !house.name.trim()}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            Add
+            {t("hostel.add")}
           </button>
         </div>
       </form>
@@ -173,7 +172,7 @@ function Setup({ blocks }: { blocks: HostelBlock[] }) {
             disabled={addRoom.isPending || !room.blockId || !room.name.trim()}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            Add
+            {t("hostel.add")}
           </button>
         </div>
         {note && <p className="mt-2 text-xs text-red-600">{note}</p>}
@@ -254,11 +253,11 @@ function RoomRow({ room }: { room: HostelRoom }) {
         <p className="text-sm font-medium">
           {room.name}
           <span className="ms-2 text-xs tabular-nums font-normal text-slate-500">
-            {room.taken}/{room.beds} beds
+            {t("hostel.bedsTaken", { taken: room.taken, beds: room.beds })}
           </span>
           {room.overfull && (
             <span className="ms-2 text-xs font-normal text-red-600">
-              more children than beds
+              {t("hostel.overfull")}
             </span>
           )}
         </p>
