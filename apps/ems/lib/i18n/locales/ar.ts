@@ -2409,4 +2409,9 @@ export const ar: Partial<Dictionary> = {
   "onboarding.passwordHint": "10 أحرف على الأقل، كبيرة/صغيرة/رقم/رمز",
   "onboarding.settingUp": "جارٍ إعداد مدرستك…",
   "onboarding.completeSetup": "إكمال الإعداد",
+
+  // ── What the buttons ask the tutor ──────────────────────────────
+  "aiTeacher.askExplainAgain": "من فضلك اشرح ذلك الجزء الأخير مرة أخرى، ببطء أكثر وبمثال أبسط.",
+  "aiTeacher.askAnotherExample": "هل يمكنك أن تعطيني مثالًا آخر على ذلك، من فضلك؟",
+  "documents.chooseFile": "اختر ملفًا",
 };

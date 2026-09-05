@@ -480,7 +480,7 @@ export default function TutorLessonPage() {
                   type="button"
                   onClick={() =>
                     void run(
-                      () => ask.mutateAsync("Please explain that last part again, more slowly and with a simpler example."),
+                      () => ask.mutateAsync(t("aiTeacher.askExplainAgain")),
                       t("aiTeacher.explainFailed"),
                     )
                   }
@@ -493,7 +493,7 @@ export default function TutorLessonPage() {
                   type="button"
                   onClick={() =>
                     void run(
-                      () => ask.mutateAsync("Can you give me one more example of that, please?"),
+                      () => ask.mutateAsync(t("aiTeacher.askAnotherExample")),
                       t("aiTeacher.exampleFailed"),
                     )
                   }

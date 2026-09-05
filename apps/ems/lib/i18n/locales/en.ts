@@ -2425,6 +2425,11 @@ export const en = {
   "onboarding.passwordHint": "Min 10 chars, upper/lower/number/symbol",
   "onboarding.settingUp": "Setting up your school…",
   "onboarding.completeSetup": "Complete setup",
+
+  // ── What the buttons ask the tutor ──────────────────────────────
+  "aiTeacher.askExplainAgain": "Please explain that last part again, more slowly and with a simpler example.",
+  "aiTeacher.askAnotherExample": "Can you give me one more example of that, please?",
+  "documents.chooseFile": "Choose a file",
 } as const;
 
 /**

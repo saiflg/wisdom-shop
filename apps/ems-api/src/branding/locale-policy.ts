@@ -37,6 +37,25 @@ export function localeName(locale: string): string {
   return LOCALE_NAMES[locale as Locale] ?? locale;
 }
 
+/**
+ * The English name, which is what a prompt needs.
+ *
+ * localeName returns the endonym, so telling a model to "write in العربية"
+ * means asking it in one language to answer in another. Models handle the
+ * English name far more reliably, and this is never shown to anybody.
+ */
+const LOCALE_ENGLISH_NAMES: Record<Locale, string> = {
+  en: "English",
+  ar: "Arabic",
+  fr: "French",
+  ha: "Hausa",
+  tr: "Turkish",
+};
+
+export function localeEnglishName(locale: string): string {
+  return LOCALE_ENGLISH_NAMES[locale as Locale] ?? "English";
+}
+
 export function isSupportedLocale(value: string | null | undefined): value is Locale {
   return typeof value === "string" && (SUPPORTED_LOCALES as readonly string[]).includes(value);
 }

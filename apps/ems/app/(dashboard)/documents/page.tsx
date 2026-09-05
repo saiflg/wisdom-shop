@@ -205,7 +205,7 @@ function Upload({ studentProfileId }: { studentProfileId: string }) {
     setError(null);
     const file = input.current?.files?.[0];
     if (!file) {
-      setError("Choose a file");
+      setError(t("documents.chooseFile"));
       return;
     }
 

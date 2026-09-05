@@ -2403,4 +2403,9 @@ export const tr: Partial<Dictionary> = {
   "onboarding.passwordHint": "En az 10 karakter, büyük/küçük/rakam/sembol",
   "onboarding.settingUp": "Okulunuz kuruluyor…",
   "onboarding.completeSetup": "Kurulumu tamamla",
+
+  // ── What the buttons ask the tutor ──────────────────────────────
+  "aiTeacher.askExplainAgain": "Lütfen son kısmı daha yavaş ve daha basit bir örnekle tekrar açıklayın.",
+  "aiTeacher.askAnotherExample": "Bunun için bir örnek daha verebilir misiniz, lütfen?",
+  "documents.chooseFile": "Bir dosya seçin",
 };

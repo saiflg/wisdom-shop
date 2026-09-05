@@ -2409,4 +2409,9 @@ export const ha: Partial<Dictionary> = {
   "onboarding.passwordHint": "Aƙalla haruffa 10, babba/ƙarami/lamba/alama",
   "onboarding.settingUp": "Ana kafa makarantarka…",
   "onboarding.completeSetup": "Kammala kafawa",
+
+  // ── What the buttons ask the tutor ──────────────────────────────
+  "aiTeacher.askExplainAgain": "Don Allah ka sake bayyana wancan sashe na ƙarshe, a hankali da misali mafi sauƙi.",
+  "aiTeacher.askAnotherExample": "Ko za ka iya ba ni wani misali guda ɗaya kuma, don Allah?",
+  "documents.chooseFile": "Zaɓi fayil",
 };

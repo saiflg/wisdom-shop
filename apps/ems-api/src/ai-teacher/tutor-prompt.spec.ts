@@ -339,3 +339,41 @@ describe("buildLessonPrompt", () => {
     expect(prompt).not.toContain("turn 20");
   });
 });
+
+describe("the language a lesson is taught in", () => {
+  // A school running the portal in Arabic was getting English lessons. The
+  // model answers in the language it was asked in, and the "Explain it again"
+  // button asks in whatever language that button was written in - so the
+  // language has to be stated, not inferred.
+  const arabic = { ...CONTEXT, language: "Arabic" };
+
+  it("tells the tutor which language to answer a question in", () => {
+    expect(buildTutorPrompt(arabic, [], "why?")).toMatch(/Write every reply in Arabic/);
+  });
+
+  it("tells it for a taught lesson too", () => {
+    const lesson = { title: "Halves and quarters", objectives: ["Add halves"] };
+    expect(buildLessonPrompt(arabic, lesson, { index: 0, total: 3 }, [])).toMatch(
+      /Write every reply in Arabic/,
+    );
+  });
+
+  it("plans the course in that language, so the lesson titles match the lessons", () => {
+    expect(buildCoursePrompt(arabic, { min: 3, max: 6 })).toMatch(/Write every reply in Arabic/);
+  });
+
+  it("labels the picture in that language as well", () => {
+    expect(buildDiagramPrompt(arabic, "Half of eight is four.")).toMatch(/Write every reply in Arabic/);
+  });
+
+  // Saying "write in English" to a model that already answers in English is
+  // noise in a prompt where every line is billed on every turn.
+  it("says nothing at all when the school is in English", () => {
+    const prompt = buildTutorPrompt({ ...CONTEXT, language: "English" }, [], "why?");
+    expect(prompt).not.toMatch(/Write every reply in/);
+  });
+
+  it("says nothing when no language is set", () => {
+    expect(buildTutorPrompt(CONTEXT, [], "why?")).not.toMatch(/Write every reply in/);
+  });
+});

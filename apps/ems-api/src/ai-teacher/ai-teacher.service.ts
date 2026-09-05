@@ -11,6 +11,8 @@ import type { AuthenticatedUser } from "@/auth/interfaces/jwt-payload.interface"
 import { CurriculumSettingsService } from "@/curriculum-settings/curriculum-settings.service";
 import { AccessibilityService } from "@/accessibility/accessibility.service";
 import { AiService } from "@/ai/ai.service";
+import { BrandingService } from "@/branding/branding.service";
+import { localeEnglishName } from "@/branding/locale-policy";
 import {
   buildCoursePrompt,
   buildLessonPrompt,
@@ -57,6 +59,7 @@ export class AiTeacherService {
     private readonly curriculumSettings: CurriculumSettingsService,
     private readonly accessibility: AccessibilityService,
     private readonly ai: AiService,
+    private readonly branding: BrandingService,
   ) {}
 
   async start(dto: StartSessionDto, viewer: AuthenticatedUser) {
@@ -552,6 +555,11 @@ export class AiTeacherService {
     // saying why it is needed. See accessibility-prompt.ts.
     const accessibility = await this.accessibility.needsFor(session.startedByUserId);
 
+    // The school's language, not the browser's: the transcript is a school
+    // record that a head teacher and a parent both read later, and it should
+    // not change language depending on who happened to open the lesson.
+    const branding = await this.branding.getForCurrentSchool();
+
     return {
       subjectName: session.subject.name,
       gradeLevel: session.subject.gradeLevel,
@@ -560,6 +568,7 @@ export class AiTeacherService {
       country: settings.country,
       curriculumStandard: settings.curriculumStandard,
       accessibility,
+      language: localeEnglishName(branding.defaultLocale),
     };
   }
 
