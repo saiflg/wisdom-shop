@@ -26,6 +26,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * not reach a child until a head teacher has read and signed it.
  */
 export default function LessonNotesPage() {
+  const { t } = useTranslation();
   const isStaff = useCanAuthor();
   const { data: classes } = useClasses();
   const [classId, setClassId] = useState("");
@@ -34,22 +35,22 @@ export default function LessonNotesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Lesson notes</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("lessonNotes.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
           {isStaff
-            ? "What a class is taught, written out week by week. A note reaches the children once it has been vetted."
-            : "The notes your teachers have approved, week by week."}
+            ? t("lessonNotes.staffIntro")
+            : t("lessonNotes.studentIntro")}
         </p>
       </div>
 
       <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Class
+        {t("lessonNotes.class")}
         <select
           value={classId}
           onChange={(event) => setClassId(event.target.value)}
           className="mt-1 block w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal normal-case dark:border-slate-700 dark:bg-slate-900"
         >
-          <option value="">Every class</option>
+          <option value="">{t("lessonNotes.everyClass")}</option>
           {classes?.map((schoolClass) => (
             <option key={schoolClass.id} value={schoolClass.id}>
               {schoolClass.name} · {schoolClass.academicYear}
@@ -60,10 +61,10 @@ export default function LessonNotesPage() {
 
       {isStaff && <NewNote />}
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {notes?.length === 0 && (
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          {isStaff ? "No notes yet for that choice." : "Nothing has been approved for you to read yet."}
+          {isStaff ? t("lessonNotes.noneStaff") : t("lessonNotes.noneStudent")}
         </p>
       )}
 
@@ -77,6 +78,7 @@ export default function LessonNotesPage() {
 }
 
 function NewNote() {
+  const { t } = useTranslation();
   const create = useCreateLessonNote();
   const { data: classes } = useClasses();
   const { data: subjects } = useSubjects();
@@ -115,7 +117,7 @@ function NewNote() {
     } catch (err) {
       // The one people hit is the duplicate: one note per subject, class and
       // week, and the API says so in words.
-      setError(err instanceof ApiError ? err.message : "Could not save that note");
+      setError(err instanceof ApiError ? err.message : t("lessonNotes.saveFailed"));
     }
   };
 
@@ -126,25 +128,27 @@ function NewNote() {
         onClick={() => setOpen(true)}
         className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
       >
-        New note
+        {t("lessonNotes.newNote")}
       </button>
     );
   }
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">New note</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+        {t("lessonNotes.newNote")}
+      </h2>
 
       <div className="mt-3 flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">
-          Class
+          {t("lessonNotes.class")}
           <select
             value={form.classId}
             onChange={(event) => set({ classId: event.target.value })}
             required
             className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("shared.choose")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -153,14 +157,14 @@ function NewNote() {
           </select>
         </label>
         <label className="text-xs text-slate-500">
-          Subject
+          {t("lessonNotes.subject")}
           <select
             value={form.subjectId}
             onChange={(event) => set({ subjectId: event.target.value })}
             required
             className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("shared.choose")}</option>
             {subjects?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -169,7 +173,7 @@ function NewNote() {
           </select>
         </label>
         <label className="text-xs text-slate-500">
-          Term
+          {t("lessonNotes.term")}
           <select
             value={form.term}
             onChange={(event) => set({ term: event.target.value })}
@@ -181,7 +185,7 @@ function NewNote() {
           </select>
         </label>
         <label className="text-xs text-slate-500">
-          Week
+          {t("lessonNotes.week")}
           <input
             type="number"
             min={1}
@@ -194,19 +198,19 @@ function NewNote() {
       </div>
 
       <label className="mt-3 block text-xs text-slate-500">
-        Title
+        {t("lessonNotes.noteTitle")}
         <input
           value={form.title}
           onChange={(event) => set({ title: event.target.value })}
           required
           maxLength={200}
-          placeholder="Adding fractions with different denominators"
+          placeholder={t("lessonNotes.titlePlaceholder")}
           className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </label>
 
       <label className="mt-3 block text-xs text-slate-500">
-        The note
+        {t("lessonNotes.theNote")}
         <textarea
           value={form.body}
           onChange={(event) => set({ body: event.target.value })}
@@ -218,7 +222,7 @@ function NewNote() {
       </label>
 
       <p className="mt-2 text-xs text-slate-500">
-        Saved as a draft. Nobody outside the staffroom sees it until it has been vetted.
+        {t("lessonNotes.draftHint")}
       </p>
 
       <div className="mt-3 flex gap-2">
@@ -227,14 +231,14 @@ function NewNote() {
           disabled={create.isPending || !form.classId || !form.subjectId || !form.title.trim()}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {create.isPending ? "Saving…" : "Save draft"}
+          {create.isPending ? t("shared.saving") : t("lessonNotes.saveDraft")}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -252,7 +256,11 @@ function NoteRow({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
         <div className="min-w-0">
           <p className="font-medium">{note.title}</p>
           <p className="mt-0.5 text-xs text-slate-500">
-            Week {note.weekNumber} · {note.term} term · {note.subject?.name}
+            {t("lessonNotes.meta", {
+              week: note.weekNumber,
+              term: note.term,
+              subject: note.subject?.name ?? "—",
+            })}
             {note.class && ` · ${note.class.name}`} · {note.authorName}
           </p>
         </div>
@@ -270,7 +278,7 @@ function NoteRow({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
             aria-expanded={open}
             className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
           >
-            {open ? "Close" : "Read"}
+            {open ? t("lessonNotes.close") : t("lessonNotes.read")}
           </button>
         </div>
       </div>
@@ -302,9 +310,9 @@ function NoteBody({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
     setNote(null);
     try {
       await update.mutateAsync({ body });
-      setNote("Saved.");
+      setNote(t("lessonNotes.saved"));
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not save");
+      setNote(err instanceof ApiError ? err.message : t("lessonNotes.couldNotSave"));
     }
   };
 
@@ -316,7 +324,7 @@ function NoteBody({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
     } catch (err) {
       // Where "a note cannot be approved by the person who wrote it" surfaces
       // — the rule the whole screen exists for.
-      setNote(err instanceof ApiError ? err.message : "Could not do that");
+      setNote(err instanceof ApiError ? err.message : t("lessonNotes.couldNotDo"));
     }
   };
 
@@ -344,7 +352,7 @@ function NoteBody({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
               value={comment}
               onChange={(event) => setComment(event.target.value)}
               maxLength={1000}
-              placeholder="What needs changing? (required to send back)"
+              placeholder={t("lessonNotes.returnComment")}
               className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
           )}
@@ -357,7 +365,7 @@ function NoteBody({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
                 disabled={update.isPending}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50 dark:border-slate-700"
               >
-                {update.isPending ? "Saving…" : "Save"}
+                {update.isPending ? t("shared.saving") : t("shared.save")}
               </button>
             )}
             {moves.map((to) => (
@@ -381,7 +389,7 @@ function NoteBody({ note, isStaff }: { note: LessonNote; isStaff: boolean }) {
             // Said plainly rather than leaving a teacher wondering why there
             // is no Approve button on their own note.
             <p className="text-xs text-slate-500">
-              Waiting for someone else to vet this. A note cannot be approved by the person who wrote it.
+              {t("lessonNotes.awaitingOther")}
             </p>
           )}
         </>

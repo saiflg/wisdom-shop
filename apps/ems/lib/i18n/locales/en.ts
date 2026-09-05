@@ -2031,6 +2031,33 @@ export const en = {
   "loans.recordPaymentFrom": "Record a payment from {name}",
   "loans.amountOutstanding": "{amount} outstanding",
   "loans.overpaymentHint": "Anything larger than the balance is reduced to the balance — the school never recovers more than it is owed.",
+
+  // ── Lesson notes ────────────────────────────────────────────────
+  "lessonNotes.title": "Lesson notes",
+  "lessonNotes.staffIntro": "What a class is taught, written out week by week. A note reaches the children once it has been vetted.",
+  "lessonNotes.studentIntro": "The notes your teachers have approved, week by week.",
+  "lessonNotes.class": "Class",
+  "lessonNotes.everyClass": "Every class",
+  "lessonNotes.noneStaff": "No notes yet for that choice.",
+  "lessonNotes.noneStudent": "Nothing has been approved for you to read yet.",
+  "lessonNotes.saveFailed": "Could not save that note",
+  "lessonNotes.newNote": "New note",
+  "lessonNotes.subject": "Subject",
+  "lessonNotes.term": "Term",
+  "lessonNotes.week": "Week",
+  "lessonNotes.noteTitle": "Title",
+  "lessonNotes.titlePlaceholder": "Adding fractions with different denominators",
+  "lessonNotes.theNote": "The note",
+  "lessonNotes.draftHint": "Saved as a draft. Nobody outside the staffroom sees it until it has been vetted.",
+  "lessonNotes.saveDraft": "Save draft",
+  "lessonNotes.meta": "Week {week} · {term} term · {subject}",
+  "lessonNotes.close": "Close",
+  "lessonNotes.read": "Read",
+  "lessonNotes.saved": "Saved.",
+  "lessonNotes.couldNotSave": "Could not save",
+  "lessonNotes.couldNotDo": "Could not do that",
+  "lessonNotes.returnComment": "What needs changing? (required to send back)",
+  "lessonNotes.awaitingOther": "Waiting for someone else to vet this. A note cannot be approved by the person who wrote it.",
 } as const;
 
 /**
