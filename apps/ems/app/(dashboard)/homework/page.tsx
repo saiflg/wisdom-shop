@@ -345,8 +345,8 @@ function Detail({
                   <span className="text-sm font-semibold">
                     {submission.studentProfile?.user
                       ? `${submission.studentProfile.user.firstName} ${submission.studentProfile.user.lastName}`
-                      : "Student"}
-                    {submission.isLate && <span className="ms-2 text-xs font-semibold text-amber-600">late</span>}
+                      : t("shared.student")}
+                    {submission.isLate && <span className="ms-2 text-xs font-semibold text-amber-600">{t("homework.late")}</span>}
                   </span>
                   <span className="text-xs text-slate-500">{submission.status.toLowerCase()}</span>
                 </div>
@@ -375,7 +375,7 @@ function Detail({
             <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {t("homework.whatYouHandedIn")}
-                {mine.isLate && <span className="ms-2 text-amber-600">late</span>}
+                {mine.isLate && <span className="ms-2 text-amber-600">{t("homework.late")}</span>}
               </p>
               <p className="whitespace-pre-wrap text-sm">{mine.content}</p>
 

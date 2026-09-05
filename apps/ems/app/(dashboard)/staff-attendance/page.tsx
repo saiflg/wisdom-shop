@@ -29,6 +29,7 @@ const STATUSES: StaffAttendanceStatus[] = ["PRESENT", "LATE", "ABSENT", "ON_LEAV
  * substituting.
  */
 export default function StaffAttendancePage() {
+  const { t } = useTranslation();
   const isAdmin = useIsSchoolAdmin();
   const [date, setDate] = useState(todayIso());
 
@@ -37,15 +38,14 @@ export default function StaffAttendancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Staff attendance</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("staffAttendance.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Who was in. An absence that falls inside approved leave is recorded as leave — you do not have to
-          remember who is away.
+          {t("staffAttendance.intro")}
         </p>
       </div>
 
       <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Day
+        {t("staffAttendance.day")}
         <input
           type="date"
           value={date}
@@ -60,6 +60,7 @@ export default function StaffAttendancePage() {
 }
 
 function Register({ date }: { date: string }) {
+  const { t } = useTranslation();
   const { data: staff } = useStaff();
   const { data: marks } = useStaffAttendanceDay(date);
 
@@ -67,8 +68,8 @@ function Register({ date }: { date: string }) {
 
   return (
     <section>
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Register</h2>
-      {staff?.length === 0 && <p className="mt-2 text-sm text-slate-600">No staff on record.</p>}
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("staffAttendance.register")}</h2>
+      {staff?.length === 0 && <p className="mt-2 text-sm text-slate-600">{t("staffAttendance.noStaff")}</p>}
       <ul className="mt-2 divide-y divide-slate-200 dark:divide-slate-800">
         {staff?.map((member) => (
           <StaffRow
@@ -95,7 +96,7 @@ function StaffRow({
   date: string;
   mark: StaffAttendanceDay | null;
 }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const record = useMarkStaffAttendance();
   const [note, setNote] = useState<string | null>(null);
 
@@ -114,7 +115,7 @@ function StaffRow({
       // to know why, or they will press it again.
       if (result.adjusted) setNote(result.adjusted);
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not record that");
+      setNote(err instanceof ApiError ? err.message : t("staffAttendance.recordFailed"));
     }
   };
 
@@ -125,7 +126,10 @@ function StaffRow({
         {mark && (
           <p className="text-xs text-slate-500">
             {t(STATUS_KEY[mark.status])}
-            {mark.minutesLate ? ` · ${mark.minutesLate} min late` : ""} · {mark.recordedByName}
+            {mark.minutesLate
+              ? ` · ${tPlural("staffAttendance.minutesLate", mark.minutesLate)}`
+              : ""}{" "}
+            · {mark.recordedByName}
           </p>
         )}
         {note && <p className="text-xs text-amber-600">{note}</p>}
@@ -158,6 +162,7 @@ function StaffRow({
 
 /** A teacher reading their own record. Attendance feeds pay; they are entitled to it. */
 function MyRecord() {
+  const { t } = useTranslation();
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setUTCMonth(d.getUTCMonth() - 1);
@@ -172,15 +177,15 @@ function MyRecord() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">My attendance</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("staffAttendance.myTitle")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          What the school has recorded about your attendance.
+          {t("staffAttendance.myIntro")}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">
-          From
+          {t("staffAttendance.from")}
           <input
             type="date"
             value={from}
@@ -189,7 +194,7 @@ function MyRecord() {
           />
         </label>
         <label className="text-xs text-slate-500">
-          To
+          {t("staffAttendance.to")}
           <input
             type="date"
             value={to}
@@ -205,28 +210,30 @@ function MyRecord() {
 }
 
 function PeriodSummary({ data }: { data: NonNullable<ReturnType<typeof useStaffAttendancePeriod>["data"]> }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   return (
     <>
       <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
         <div className="flex flex-wrap gap-8">
-          <Stat label="Present" value={data.summary.present} />
-          <Stat label="Late" value={data.summary.late} />
-          <Stat label="Absent" value={data.summary.absent} />
-          <Stat label="On leave" value={data.summary.onLeave} />
+          <Stat label={t("staffAttendance.present")} value={data.summary.present} />
+          <Stat label={t("staffAttendance.late")} value={data.summary.late} />
+          <Stat label={t("staffAttendance.absent")} value={data.summary.absent} />
+          <Stat label={t("staffAttendance.onLeave")} value={data.summary.onLeave} />
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Attendance</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("staffAttendance.rate")}</p>
             {/* Null, not 0% or 100%: a period spent entirely on approved
                 leave has no attendance rate, and inventing one puts a number
                 no fact supports into a conversation about pay. */}
             <p className="mt-1 text-2xl font-bold tabular-nums">
               {data.rate === null ? "—" : `${data.rate}%`}
             </p>
-            {data.rate === null && <p className="text-xs text-slate-500">Nobody was expected in</p>}
+            {data.rate === null && <p className="text-xs text-slate-500">{t("staffAttendance.nobodyExpected")}</p>}
           </div>
         </div>
         {data.summary.minutesLate > 0 && (
-          <p className="mt-4 text-xs text-slate-500">{data.summary.minutesLate} minutes late in total</p>
+          <p className="mt-4 text-xs text-slate-500">
+            {tPlural("staffAttendance.totalMinutesLate", data.summary.minutesLate)}
+          </p>
         )}
       </section>
 
@@ -236,7 +243,7 @@ function PeriodSummary({ data }: { data: NonNullable<ReturnType<typeof useStaffA
             <span className="text-sm">{new Date(day.date).toLocaleDateString()}</span>
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[day.status]}`}>
               {t(STATUS_KEY[day.status])}
-              {day.minutesLate ? ` · ${day.minutesLate} min` : ""}
+              {day.minutesLate ? ` · ${tPlural("staffAttendance.minutesShort", day.minutesLate)}` : ""}
             </span>
           </li>
         ))}
