@@ -2269,6 +2269,31 @@ export const en = {
   "payroll.overDeducted": "deductions exceed pay",
   "idCards.whatItCarries": "A card carries the child's name, their class, their admission number and their photograph, and says to return it to the school with the school's telephone number.",
   "idCards.whatItOmits": "It does not carry a home address, a date of birth, a parent's telephone number or anything medical. A school ID is carried by a child, lost by a child, and picked up by strangers — it should identify them to the school and to nobody else.",
+
+  // ── Final sweep ─────────────────────────────────────────────────
+  "pension.missingPins_one": "{count} person has no RSA PIN on file",
+  "pension.missingPins_other": "{count} people have no RSA PIN on file",
+  "pension.missingNames": "{names} — the administrator cannot credit their contribution without it. Add it on the",
+  "pension.staffRecordLink": "staff record",
+  "pension.missing": "missing",
+  "announcements.draftNotSent": "draft — not sent",
+  "studentOverview.walletAvailable": "available",
+  "staffOverview.daysTakenNoAllowance": "days taken · no allowance set",
+  "staffOverview.classesSubjects": "classes / subjects",
+  "questionBank.acceptedHint": "List every spelling a marker should accept — “3, three”. Anything else is marked zero and flagged for you to look at, rather than quietly standing.",
+  "parentMessages.intro": "Every conversation is about one child and is shared by that child's teachers and the office — a family is never left waiting because one person is away.",
+  "parentMessages.awaitingReply": "waiting for a reply",
+  "invoiceDiscounts.tooMuch": "That comes to {worth}, which is more than the family still owes. The most that can be taken off is {room} — anything more would be a refund, not a discount.",
+  "scholarships.unused_one": "1 award has never reduced a bill. That happens when the student has not been invoiced since it was granted.",
+  "scholarships.unused_other": "{count} awards have never reduced a bill. That happens when the student has not been invoiced since it was granted.",
+  "studentDetail.guardianEmailHint": "If this email already belongs to a guardian, they're linked directly. Otherwise fill in the fields below to create a new one.",
+  "staffDetail.revealsRecorded": "Every reveal is recorded in the",
+  "staffDetail.accessLogLink": "bank-detail access log",
+  "staffDetail.includingPayroll": ", including the ones a payroll bank file makes.",
+  "voucher.accessLogLink": "bank detail access log",
+  "payrollChecklist.add": "Add",
+  "settings.encryptionNone": "None",
+  "library.to": "To",
 } as const;
 
 /**

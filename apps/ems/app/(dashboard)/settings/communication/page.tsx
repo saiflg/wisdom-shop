@@ -154,7 +154,7 @@ function EmailSection({ data }: { data: import("@/lib/use-settings").EmailGatewa
             >
               <option value="TLS">TLS</option>
               <option value="SSL">SSL</option>
-              <option value="NONE">None</option>
+              <option value="NONE">{t("settings.encryptionNone")}</option>
             </select>
           </div>
           <FormField label={t("settings.emailSenderName")} name="senderName" defaultValue={data.senderName ?? ""} />

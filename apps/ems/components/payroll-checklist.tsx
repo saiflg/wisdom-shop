@@ -165,7 +165,7 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
             disabled={addItem.isPending || label.trim().length === 0}
             className="rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
           >
-            Add
+            {t("payrollChecklist.add")}
           </button>
           <button
             type="button"

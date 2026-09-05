@@ -97,8 +97,7 @@ export default function StudentDetailPage() {
           <form onSubmit={onSubmit} className="mt-3 space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
             <FormField label={t("studentDetail.email")} type="email" error={form.formState.errors.email?.message} {...form.register("email")} />
             <p className="text-xs text-slate-500">
-              If this email already belongs to a guardian, they&apos;re linked directly. Otherwise fill in the fields
-              below to create a new one.
+              {t("studentDetail.guardianEmailHint")}
             </p>
             <FormField label={t("studentDetail.firstName")} error={form.formState.errors.firstName?.message} {...form.register("firstName")} />
             <FormField label={t("studentDetail.lastName")} error={form.formState.errors.lastName?.message} {...form.register("lastName")} />

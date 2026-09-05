@@ -114,7 +114,7 @@ function Overview({ userId }: { userId: string }) {
             // not that this person has none left.
             <>
               <Big>{data.leave.takenDays}</Big>
-              <Small>days taken · no allowance set</Small>
+              <Small>{t("staffOverview.daysTakenNoAllowance")}</Small>
             </>
           ) : (
             <>
@@ -142,7 +142,7 @@ function Overview({ userId }: { userId: string }) {
           <Big>
             {data.load.classes} / {data.load.subjects}
           </Big>
-          <Small>classes / subjects</Small>
+          <Small>{t("staffOverview.classesSubjects")}</Small>
         </Card>
       </section>
 

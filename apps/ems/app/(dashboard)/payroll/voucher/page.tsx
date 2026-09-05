@@ -95,9 +95,8 @@ export default function VoucherPage() {
           <span className="mt-0.5 block text-slate-600 dark:text-slate-400">
             {t("voucher.accountsNote")}
             <Link href="/staff/access-log" className="underline">
-              bank detail access log
+              {t("voucher.accessLogLink")}
             </Link>
-            .
           </span>
         </span>
       </label>

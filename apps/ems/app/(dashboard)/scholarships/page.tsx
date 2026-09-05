@@ -22,7 +22,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * both are worth somebody noticing.
  */
 export default function ScholarshipsPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: awards, isLoading } = useScholarships();
   const { data: students } = useStudents();
   const award = useAwardScholarship();
@@ -197,8 +197,7 @@ export default function ScholarshipsPage() {
           a bill is either a mistake or a child nobody has invoiced yet. */}
       {unused.length > 0 && (
         <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          {unused.length === 1 ? "1 award has" : `${unused.length} awards have`} never reduced a bill. That
-          happens when the student has not been invoiced since it was granted.
+          {tPlural("scholarships.unused", unused.length)}
         </p>
       )}
 

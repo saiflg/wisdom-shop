@@ -156,7 +156,7 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
           ) : (
             <>
               <Big>{formatAmount(data.walletCents)}</Big>
-              <Small>available</Small>
+              <Small>{t("studentOverview.walletAvailable")}</Small>
             </>
           )}
         </Card>

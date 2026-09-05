@@ -258,7 +258,9 @@ export default function AnnouncementsPage() {
                   <p className="font-semibold">
                     {announcement.title}
                     {announcement.status === "DRAFT" && (
-                      <span className="ms-2 text-xs font-normal text-amber-600">draft — not sent</span>
+                      <span className="ms-2 text-xs font-normal text-amber-600">
+                        {t("announcements.draftNotSent")}
+                      </span>
                     )}
                   </p>
                   <p className="text-xs text-slate-500">

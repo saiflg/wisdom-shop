@@ -23,7 +23,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * curriculum settings screen.
  */
 export default function PensionRegisterPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: runs } = usePayrollRuns();
   const [runId, setRunId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -202,15 +202,15 @@ export default function PensionRegisterPage() {
           {missing.length > 0 && (
             <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
               <p className="font-medium">
-                {missing.length} {missing.length === 1 ? "person has" : "people have"} no RSA PIN on file
+                {tPlural("pension.missingPins", missing.length)}
               </p>
               <p className="mt-0.5">
-                {missing.map((row) => row.staffName).join(", ")} — the administrator cannot credit their
-                contribution without it. Add it on the{" "}
+                {t("pension.missingNames", {
+                  names: missing.map((row) => row.staffName).join(", "),
+                })}{" "}
                 <Link href="/staff" className="underline">
-                  staff record
+                  {t("pension.staffRecordLink")}
                 </Link>
-                .
               </p>
             </div>
           )}
@@ -239,7 +239,9 @@ export default function PensionRegisterPage() {
                       <td className="px-3 py-2">{row.staffName}</td>
                       <td className="px-3 py-2 font-mono text-xs">
                         {row.pensionPin ?? (
-                          <span className="font-sans text-amber-700 dark:text-amber-400">missing</span>
+                          <span className="font-sans text-amber-700 dark:text-amber-400">
+                            {t("pension.missing")}
+                          </span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-end tabular-nums">{money(row.employerCents)}</td>

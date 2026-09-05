@@ -236,8 +236,7 @@ export default function QuestionBankPage() {
               {t("questionBank.acceptedAnswers")}
               <input value={accepted} onChange={(event) => setAccepted(event.target.value)} className={INPUT} />
               <span className="mt-1 block text-xs text-slate-500">
-                List every spelling a marker should accept — &ldquo;3, three&rdquo;. Anything else is marked
-                zero and flagged for you to look at, rather than quietly standing.
+                {t("questionBank.acceptedHint")}
               </span>
             </label>
           )}

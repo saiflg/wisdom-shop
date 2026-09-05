@@ -241,11 +241,11 @@ function StaffRecord({ member }: { member: StaffMember }) {
         {member.bank.hasAccountNumber && <RevealAccountNumber userId={member.id} staffName={member.firstName} />}
 
         <p className="text-xs text-slate-500">
-          Every reveal is recorded in the{" "}
+          {t("staffDetail.revealsRecorded")}{" "}
           <Link href="/staff/access-log" className="font-semibold text-brand-600 hover:underline">
-            bank-detail access log
+            {t("staffDetail.accessLogLink")}
           </Link>
-          , including the ones a payroll bank file makes.
+          {t("staffDetail.includingPayroll")}
         </p>
       </section>
 

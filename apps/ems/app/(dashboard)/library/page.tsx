@@ -187,7 +187,7 @@ function IssuePanel({ book, onDone }: { book: LibraryBook; onDone: () => void })
   return (
     <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
       <label className="text-xs text-slate-500">
-        To
+        {t("library.to")}
         <select
           value={studentProfileId}
           onChange={(event) => setStudentProfileId(event.target.value)}

@@ -27,8 +27,7 @@ export default function ParentMessagesPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("parentMessages.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Every conversation is about one child and is shared by that child&apos;s teachers and the office — a
-          family is never left waiting because one person is away.
+          {t("parentMessages.intro")}
         </p>
       </div>
 
@@ -69,7 +68,7 @@ export default function ParentMessagesPage() {
                   {thread.className && <span className="text-xs text-slate-500">{thread.className}</span>}
                   {thread.awaitingSchool && (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                      waiting for a reply
+                      {t("parentMessages.awaitingReply")}
                     </span>
                   )}
                 </span>
