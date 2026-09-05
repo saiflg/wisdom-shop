@@ -96,13 +96,10 @@ export default function IdCardsPage() {
           {t("idCards.whatIsOn")}
         </p>
         <p className="mt-2">
-          A card carries the child&rsquo;s name, their class, their admission number and their photograph, and
-          says to return it to the school with the school&rsquo;s telephone number.
+          {t("idCards.whatItCarries")}
         </p>
         <p className="mt-2">
-          It does <strong>not</strong> carry a home address, a date of birth, a parent&rsquo;s telephone
-          number or anything medical. A school ID is carried by a child, lost by a child, and picked up by
-          strangers — it should identify them to the school and to nobody else.
+          {t("idCards.whatItOmits")}
         </p>
         <p className="mt-2">
           {t("idCards.noPhotoNote")}

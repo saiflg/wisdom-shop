@@ -45,7 +45,7 @@ interface Transcript {
  * subject and asks "how did they do at mathematics".
  */
 export default function TranscriptsPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { accessToken, enabled } = useAuthQueryState();
   const { data: students } = useStudents();
 
@@ -66,8 +66,7 @@ export default function TranscriptsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("transcripts.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Every published term for one student, across every year. Unpublished terms never appear — a transcript
-          that could still change is not one.
+          {t("transcripts.intro")}
         </p>
       </div>
 
@@ -227,8 +226,9 @@ export default function TranscriptsPage() {
           )}
 
           <p className="text-xs text-slate-500">
-            Produced {new Date(data.issuedAt).toLocaleString()}. A transcript is a snapshot of what had been
-            published at that moment.
+            {t("transcripts.producedAt", {
+              when: new Date(data.issuedAt).toLocaleString(locale),
+            })}
           </p>
         </>
       )}

@@ -2231,4 +2231,20 @@ export const tr: Partial<Dictionary> = {
   "parentThread.goesToAll": "Bu, tek bir kişiye değil, çocuğunuzun öğretmenlerine ve okul ofisine gider — böylece her zaman biri yanıt verebilir.",
   "wallet.intro": "Bir çocuğun kullanması için tutulan para — öğle yemeği, kitaplar, ulaşım. Her hareket yazılır ve buradaki hiçbir şey sonradan düzenlenemez; bir düzeltme yeni bir kayıttır.",
   "wallet.kindDecides": ". Tutarlar her zaman pozitiftir — paranın hangi yöne gideceğine tür karar verir. Daha önce kullanılmış bir referans parayı ikinci kez hareket ettirmez.",
+
+  // ── Transcripts, backup, staff fees, PAYE, payroll, ID cards ────
+  "transcripts.intro": "Bir öğrencinin yayımlanmış her dönemi, tüm yıllar boyunca. Yayımlanmamış dönemler asla görünmez — hâlâ değişebilecek bir transkript, transkript değildir.",
+  "transcripts.producedAt": "{when} tarihinde üretildi. Bir transkript, o an yayımlanmış olanın anlık görüntüsüdür.",
+  "backup.readableCopy": "Burada elde ettiğiniz, kayıtlarınızın okunabilir bir kopyasıdır — bu sistemin dışında saklamak ve sistem erişilemez olduğunda soruları yanıtlamak için kullanışlıdır.",
+  "staffFees.intro": "Personelin kendi çocuklarının okul ücretlerini maaşlarından tahsil edin. Yalnızca buna onay verenler burada görünür — aylık tutar şurada belirlenir:",
+  "staffFees.staffRecordLink": "personel kaydı",
+  "staffFees.approveFirst": "Önce bu çalıştırmayı onaylayın — kimsenin onaylamadığı bir bordrodan bir aileye alacak yazılmamalıdır.",
+  "staffFees.willTake_one": "Bu, {count} maaştan {amount} alıp çocuklarının faturalarına mahsup edecek. İki kez çalıştırmak güvenlidir — ikinci sefer başka bir şey kapatmaz.",
+  "staffFees.willTake_other": "Bu, {count} maaştan {amount} alıp çocuklarının faturalarına mahsup edecek. İki kez çalıştırmak güvenlidir — ikinci sefer başka bir şey kapatmaz.",
+  "paye.intro": "Bu ay kesilen vergi, onaylanmış bordro çalıştırmasından alınmıştır. Burada hiçbir şey yeniden hesaplanmaz — bordronun söylediğini birebir söyler.",
+  "payroll.approvedFrozen": "Onaylandı. Bir maaş düzenlense bile bu bordrolar artık değişmez.",
+  "payroll.approvedByFrozen": "{name} tarafından onaylandı. Bir maaş düzenlense bile bu bordrolar artık değişmez.",
+  "payroll.overDeducted": "kesintiler ödemeyi aşıyor",
+  "idCards.whatItCarries": "Kart, çocuğun adını, sınıfını, kayıt numarasını ve fotoğrafını taşır ve okulun telefon numarasıyla birlikte okula iade edilmesini belirtir.",
+  "idCards.whatItOmits": "Ev adresi, doğum tarihi, bir velinin telefon numarası ya da tıbbi hiçbir şey taşımaz. Bir okul kimliğini çocuk taşır, çocuk kaybeder ve yabancılar bulur — onu okula tanıtmalı, başka kimseye değil.",
 };

@@ -307,8 +307,9 @@ function RunDetail({ id }: { id: string }) {
 
       {run.status === "APPROVED" && (
         <p className="text-xs text-slate-500">
-          Approved{run.approvedByName ? ` by ${run.approvedByName}` : ""}. These payslips no longer change if a
-          salary is edited.
+          {run.approvedByName
+            ? t("payroll.approvedByFrozen", { name: run.approvedByName })
+            : t("payroll.approvedFrozen")}
         </p>
       )}
 
@@ -340,7 +341,9 @@ function RunDetail({ id }: { id: string }) {
                     <span className="ms-1 text-xs text-slate-500">{payslip.staffNumber}</span>
                   ) : null}
                   {payslip.overDeducted && (
-                    <span className="ms-2 text-xs font-semibold text-red-600">deductions exceed pay</span>
+                    <span className="ms-2 text-xs font-semibold text-red-600">
+                      {t("payroll.overDeducted")}
+                    </span>
                   )}
                 </td>
                 <td className="py-2 text-end tabular-nums">{money(payslip.grossCents)}</td>

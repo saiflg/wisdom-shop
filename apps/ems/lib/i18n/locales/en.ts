@@ -2253,6 +2253,22 @@ export const en = {
   "parentThread.goesToAll": "This goes to your child's teachers and the school office, not to one person — so somebody can always answer.",
   "wallet.intro": "Money held for a child to draw on — lunch, books, transport. Every movement is written down and nothing here can be edited afterwards; a correction is a new entry.",
   "wallet.kindDecides": ". Amounts are always positive — the kind decides which way the money goes. A reference used before will not move money a second time.",
+
+  // ── Transcripts, backup, staff fees, PAYE, payroll, ID cards ────
+  "transcripts.intro": "Every published term for one student, across every year. Unpublished terms never appear — a transcript that could still change is not one.",
+  "transcripts.producedAt": "Produced {when}. A transcript is a snapshot of what had been published at that moment.",
+  "backup.readableCopy": "What you get here is a readable copy of your records — useful for keeping off this system, and for answering questions if it is ever unavailable.",
+  "staffFees.intro": "Recover school fees for staff members' own children from their salary. Only people who have agreed to it appear here — the monthly amount is set on each",
+  "staffFees.staffRecordLink": "staff record",
+  "staffFees.approveFirst": "Approve this run first — a family should not be credited from a payroll nobody has agreed to.",
+  "staffFees.willTake_one": "This will take {amount} from {count} salary and credit it against their children's invoices. Running it twice is safe — the second time settles nothing further.",
+  "staffFees.willTake_other": "This will take {amount} from {count} salaries and credit it against their children's invoices. Running it twice is safe — the second time settles nothing further.",
+  "paye.intro": "Tax deducted this month, taken from the approved payroll run. Nothing here is recalculated — it says exactly what the voucher said.",
+  "payroll.approvedFrozen": "Approved. These payslips no longer change if a salary is edited.",
+  "payroll.approvedByFrozen": "Approved by {name}. These payslips no longer change if a salary is edited.",
+  "payroll.overDeducted": "deductions exceed pay",
+  "idCards.whatItCarries": "A card carries the child's name, their class, their admission number and their photograph, and says to return it to the school with the school's telephone number.",
+  "idCards.whatItOmits": "It does not carry a home address, a date of birth, a parent's telephone number or anything medical. A school ID is carried by a child, lost by a child, and picked up by strangers — it should identify them to the school and to nobody else.",
 } as const;
 
 /**

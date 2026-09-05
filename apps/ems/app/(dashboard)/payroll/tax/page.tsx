@@ -35,8 +35,7 @@ export default function TaxRegisterPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("paye.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Tax deducted this month, taken from the approved payroll run. Nothing here is recalculated —
-          it says exactly what the voucher said.
+          {t("paye.intro")}
         </p>
       </div>
 

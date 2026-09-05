@@ -16,7 +16,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * single click on arrival.
  */
 export default function StaffFeesPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: runs } = usePayrollRuns();
   const { data: rows, isLoading, error } = useStaffFeesPreview();
   const apply = useApplyStaffFees();
@@ -55,12 +55,10 @@ export default function StaffFeesPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("staffFees.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Recover school fees for staff members&apos; own children from their salary. Only people who have
-          agreed to it appear here — the monthly amount is set on each{" "}
+          {t("staffFees.intro")}{" "}
           <Link href="/staff" className="underline">
-            staff record
+            {t("staffFees.staffRecordLink")}
           </Link>
-          .
         </p>
       </div>
 
@@ -85,7 +83,7 @@ export default function StaffFeesPage() {
 
         {run?.status === "DRAFT" && (
           <p className="text-sm text-amber-700 dark:text-amber-400">
-            Approve this run first — a family should not be credited from a payroll nobody has agreed to.
+            {t("staffFees.approveFirst")}
           </p>
         )}
       </div>
@@ -197,9 +195,9 @@ export default function StaffFeesPage() {
           {confirming ? (
             <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
               <p className="text-sm">
-                This will take <strong>{money(totalCents)}</strong> from {active.length}{" "}
-                {active.length === 1 ? "salary" : "salaries"} and credit it against their children&apos;s
-                invoices. Running it twice is safe — the second time settles nothing further.
+                {tPlural("staffFees.willTake", active.length, {
+                  amount: money(totalCents),
+                })}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button

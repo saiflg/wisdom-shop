@@ -2237,4 +2237,20 @@ export const ha: Partial<Dictionary> = {
   "parentThread.goesToAll": "Wannan yana zuwa ga malaman ɗanka da ofishin makarantar, ba ga mutum ɗaya ba — don koyaushe wani ya iya amsawa.",
   "wallet.intro": "Kuɗin da ake riƙe wa yaro ya ciro — abincin rana, littattafai, sufuri. Ana rubuta kowane motsi kuma ba a iya gyara kome a nan bayan haka; gyara sabon shigarwa ne.",
   "wallet.kindDecides": ". Adadi koyaushe tabbatacce ne — nau'in ne ke yanke shawara inda kuɗin za su tafi. Lambar da aka yi amfani da ita a baya ba za ta motsa kuɗi sau na biyu ba.",
+
+  // ── Transcripts, backup, staff fees, PAYE, payroll, ID cards ────
+  "transcripts.intro": "Kowane zango da aka buga na ɗalibi ɗaya, a kowace shekara. Zangunan da ba a buga ba ba sa bayyana — takardar sakamako da za ta iya canzawa ba takarda ba ce.",
+  "transcripts.producedAt": "An fitar da shi {when}. Takardar sakamako hoto ne na abin da aka buga a wannan lokacin.",
+  "backup.readableCopy": "Abin da ka samu a nan kwafi ne mai iya karantuwa na rikodinka — yana da amfani don ajiyewa a wajen wannan tsarin, da kuma amsa tambayoyi idan bai samu ba.",
+  "staffFees.intro": "Karɓar kuɗin makaranta na 'ya'yan ma'aikata daga albashinsu. Waɗanda suka amince kaɗai ke bayyana a nan — ana saita adadin wata-wata a kowane",
+  "staffFees.staffRecordLink": "rikodin ma'aikaci",
+  "staffFees.approveFirst": "Ka fara amincewa da wannan gudanarwar — bai kamata a ƙidaya wa iyali kuɗi daga albashin da babu wanda ya amince da shi ba.",
+  "staffFees.willTake_one": "Wannan zai ɗauki {amount} daga albashi {count} ya ƙidaya shi kan takardun kuɗin 'ya'yansu. Yin sa sau biyu ba shi da illa — karo na biyu ba ya biyan kome ƙari.",
+  "staffFees.willTake_other": "Wannan zai ɗauki {amount} daga albashi {count} ya ƙidaya shi kan takardun kuɗin 'ya'yansu. Yin sa sau biyu ba shi da illa — karo na biyu ba ya biyan kome ƙari.",
+  "paye.intro": "Harajin da aka cire wannan wata, daga gudanarwar albashi da aka amince da ita. Ba a sake lissafin kome a nan ba — yana faɗin ainihin abin da takardar ta faɗa.",
+  "payroll.approvedFrozen": "An amince. Waɗannan takardun albashi ba sa canzawa idan an gyara albashi.",
+  "payroll.approvedByFrozen": "{name} ya amince. Waɗannan takardun albashi ba sa canzawa idan an gyara albashi.",
+  "payroll.overDeducted": "cirewa ta wuce albashi",
+  "idCards.whatItCarries": "Katin yana ɗauke da sunan yaron, ajinsa, lambar shigarsa da hotonsa, kuma yana cewa a mayar da shi makarantar tare da lambar wayar makarantar.",
+  "idCards.whatItOmits": "Ba ya ɗauke da adireshin gida, ranar haihuwa, lambar wayar iyaye ko kome na lafiya. Yaro ne ke ɗaukar katin makaranta, yaro ne ke ɓatar da shi, kuma baƙi ne ke tsintar sa — ya kamata ya gane shi ga makarantar kaɗai ba ga wani ba.",
 };

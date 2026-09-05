@@ -83,8 +83,7 @@ export default function BackupPage() {
           {t("backup.notASystemBackup")}
         </p>
         <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
-          What you get here is a readable copy of your records — useful for keeping off this system, and for
-          answering questions if it is ever unavailable.
+          {t("backup.readableCopy")}
         </p>
       </section>
 
