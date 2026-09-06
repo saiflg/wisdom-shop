@@ -1,0 +1,109 @@
+/**
+ * Renders the invoices screen in Arabic and reads what it actually says.
+ *
+ * Companion to the homework one, and pointed at a different risk. This page
+ * has a real invoice open in it, so the parts that only appear once there is
+ * data to show are exercised too — the status badge, the balance line, and
+ * the payment section, which is where a school that takes no card payments
+ * tells a parent to go to the office.
+ */
+
+import { render, screen } from "@testing-library/react";
+import { I18nProvider } from "@/lib/i18n/i18n-provider";
+import { translate } from "@/lib/i18n";
+import InvoicesPage from "./page";
+
+const INVOICE = {
+  id: "inv1",
+  invoiceNumber: "INV-2026-0001",
+  academicYear: "2026/2027",
+  term: "Term 1",
+  status: "ISSUED",
+  currency: "NGN",
+  totalCents: 5000000,
+  paidCents: 0,
+  balanceCents: 5000000,
+  dueDate: "2026-10-01T00:00:00.000Z",
+  studentProfile: { user: { firstName: "Fatima", lastName: "Bello" } },
+  lines: [],
+  payments: [],
+  discounts: [],
+};
+
+jest.mock("@/lib/use-fees", () => ({
+  FEE_PAYMENT_METHODS: ["CASH", "TRANSFER"],
+  formatMoney: (cents: number) => `₦${(cents / 100).toLocaleString()}`,
+  parseMoneyToCents: () => 0,
+  useInvoices: () => ({
+    data: {
+      invoices: [INVOICE],
+      summary: { invoiced: 5000000, collected: 0, outstanding: 5000000, currency: "NGN" },
+    },
+    isLoading: false,
+  }),
+  useRecordPayment: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useStartCheckout: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  // No gateway configured: the branch that has to tell a parent, in their own
+  // language, to pay at the office rather than showing a dead button.
+  usePaymentOptions: () => ({ data: { options: [] }, isLoading: false }),
+}));
+
+jest.mock("@/components/invoice-discounts", () => ({
+  InvoiceDiscounts: () => null,
+}));
+jest.mock("@/components/pdf-button", () => ({
+  PdfButton: ({ label }: { label: string }) => <button type="button">{label}</button>,
+}));
+
+function renderArabic() {
+  window.localStorage.setItem("wisdom-campus-locale", "ar");
+  return render(
+    <I18nProvider>
+      <InvoicesPage />
+    </I18nProvider>,
+  );
+}
+
+describe("the invoices screen in Arabic", () => {
+  it("shows the heading, the intro and the three money figures in Arabic", () => {
+    renderArabic();
+
+    expect(screen.getByText(translate("ar", "fees.invoices.title"))).toBeInTheDocument();
+    expect(screen.getByText(translate("ar", "fees.invoices.intro"))).toBeInTheDocument();
+    expect(screen.getByText(translate("ar", "fees.invoices.invoiced"))).toBeInTheDocument();
+    expect(screen.getByText(translate("ar", "fees.invoices.collected"))).toBeInTheDocument();
+    expect(screen.getByText(translate("ar", "fees.invoices.outstanding"))).toBeInTheDocument();
+  });
+
+  // The status badge builds its key at runtime as fees.status.${status}, so
+  // no scan of the source can see it and no type error catches a missing one.
+  // Every status is checked here for that reason.
+  it.each(["DRAFT", "ISSUED", "PARTIALLY_PAID", "PAID", "VOID"] as const)(
+    "has an Arabic word for the %s badge",
+    (status) => {
+      const word = translate("ar", `fees.status.${status}` as never);
+      expect(word).toBeTruthy();
+      expect(word).not.toMatch(/^fees\./);
+    },
+  );
+
+  it("translates the status badge on a real invoice", () => {
+    renderArabic();
+
+    expect(screen.getByText(translate("ar", "fees.status.ISSUED"))).toBeInTheDocument();
+    expect(screen.getByText(translate("ar", "fees.invoices.balance"))).toBeInTheDocument();
+  });
+
+  it("leaves no English sentence on the screen", () => {
+    const { container } = renderArabic();
+
+    // Latin runs that are data rather than language: the invoice number, the
+    // academic year, the child's name and the term a school typed. Everything
+    // else that reads as a sentence should have been translated.
+    const text = (container.textContent ?? "")
+      .replace(/INV-[\d-]+/g, " ")
+      .replace(/Fatima Bello/g, " ")
+      .replace(/Term \d+/g, " ");
+    expect(text.match(/[A-Za-z]{2,}\s+[A-Za-z]{2,}/g) ?? []).toEqual([]);
+  });
+});
