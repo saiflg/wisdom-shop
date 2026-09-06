@@ -34,7 +34,7 @@ function todayIso(): string {
 }
 
 export default function AttendancePage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data: classes } = useClasses();
 
   const [classId, setClassId] = useState("");
@@ -219,7 +219,7 @@ export default function AttendancePage() {
               {registers.map((register) => (
                 <li key={register.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
                   <p className="text-sm font-medium">
-                    {new Date(register.date).toLocaleDateString()}
+                    {new Date(register.date).toLocaleDateString(locale)}
                     {register.session && ` · ${register.session}`}
                     {register.takenBy && (
                       <span className="ms-2 text-xs font-normal text-slate-500">

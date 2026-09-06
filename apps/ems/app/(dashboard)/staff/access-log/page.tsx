@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useBankAccessLog } from "@/lib/use-staff";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-function when(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+function when(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -23,7 +23,7 @@ function when(iso: string): string {
  * inside a record.
  */
 export default function BankAccessLogPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data: entries, isLoading, error } = useBankAccessLog();
   const [query, setQuery] = useState("");
 
@@ -89,7 +89,7 @@ export default function BankAccessLogPage() {
             <tbody>
               {visible.map((entry) => (
                 <tr key={entry.id} className="border-t border-slate-200 align-top dark:border-slate-800">
-                  <td className="whitespace-nowrap py-2 pe-4 text-slate-500">{when(entry.createdAt)}</td>
+                  <td className="whitespace-nowrap py-2 pe-4 text-slate-500">{when(entry.createdAt, locale)}</td>
                   <td className="py-2 pe-4 font-medium">{entry.staffName}</td>
                   <td className="py-2 pe-4">{entry.actorName}</td>
                   <td className="py-2 text-slate-600 dark:text-slate-400">{entry.reason}</td>
