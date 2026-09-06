@@ -7,6 +7,8 @@ import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useCanAuthor, useIsSchoolAdmin } from "@/lib/use-can-author";
 import { useStudents } from "@/lib/use-students";
 import { usePortalChildren } from "@/lib/use-wallet";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 interface Document {
   id: string;
@@ -46,6 +48,7 @@ function readableSize(bytes: number): string {
  * download here goes through fetch and a blob rather than a plain link.
  */
 export default function DocumentsPage() {
+  const { t } = useTranslation();
   const isStaff = useCanAuthor();
   const { data: students } = useStudents();
   const { data: children } = usePortalChildren(!isStaff);
@@ -60,21 +63,21 @@ export default function DocumentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Documents</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("documents.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Papers the school holds for a child — birth certificates, immunisation records, transfer letters.
+          {t("documents.intro")}
         </p>
       </div>
 
       {options.length > 1 && (
         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {isStaff ? "Student" : "Child"}
+          {isStaff ? t("shared.student") : t("shared.child")}
           <select
             value={current ?? ""}
             onChange={(event) => setChosen(event.target.value || null)}
             className="mt-1 block w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal normal-case dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("shared.choose")}</option>
             {options.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.name}
@@ -90,15 +93,16 @@ export default function DocumentsPage() {
 }
 
 function Documents({ studentProfileId, isStaff }: { studentProfileId: string; isStaff: boolean }) {
+  const { t } = useTranslation();
   const { data, isLoading } = useDocuments(studentProfileId);
 
   return (
     <div className="space-y-4">
       {isStaff && <Upload studentProfileId={studentProfileId} />}
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {data?.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">Nothing held for this child.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("documents.none")}</p>
       )}
 
       <ul className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -111,6 +115,7 @@ function Documents({ studentProfileId, isStaff }: { studentProfileId: string; is
 }
 
 function DocumentRow({ document: doc }: { document: Document }) {
+  const { t } = useTranslation();
   const isAdmin = useIsSchoolAdmin();
   const queryClient = useQueryClient();
   const accessToken = useAuthQueryState().accessToken;
@@ -137,7 +142,7 @@ function DocumentRow({ document: doc }: { document: Document }) {
       const response = await fetch(`/v1/documents/${doc.id}/file`, {
         headers: authHeaders(accessToken) as HeadersInit,
       });
-      if (!response.ok) throw new Error("Could not fetch that document");
+      if (!response.ok) throw new Error(t("errs.fetchDocument"));
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const anchor = window.document.createElement("a");
@@ -146,7 +151,7 @@ function DocumentRow({ document: doc }: { document: Document }) {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setNote(err instanceof Error ? err.message : "Could not download that");
+      setNote(err instanceof Error ? err.message : t("documents.downloadFailed"));
     } finally {
       setBusy(false);
     }
@@ -169,7 +174,7 @@ function DocumentRow({ document: doc }: { document: Document }) {
           disabled={busy}
           className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700"
         >
-          {busy ? "Fetching…" : "Download"}
+          {busy ? t("documents.fetching") : t("documents.download")}
         </button>
         {isAdmin && (
           <button
@@ -178,7 +183,7 @@ function DocumentRow({ document: doc }: { document: Document }) {
             disabled={remove.isPending}
             className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 disabled:opacity-50 dark:border-red-900"
           >
-            Remove
+            {t("shared.remove")}
           </button>
         )}
       </div>
@@ -187,6 +192,7 @@ function DocumentRow({ document: doc }: { document: Document }) {
 }
 
 function Upload({ studentProfileId }: { studentProfileId: string }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const accessToken = useAuthQueryState().accessToken;
   const input = useRef<HTMLInputElement>(null);
@@ -199,7 +205,7 @@ function Upload({ studentProfileId }: { studentProfileId: string }) {
     setError(null);
     const file = input.current?.files?.[0];
     if (!file) {
-      setError("Choose a file");
+      setError(t("documents.chooseFile"));
       return;
     }
 
@@ -216,14 +222,14 @@ function Upload({ studentProfileId }: { studentProfileId: string }) {
       });
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new ApiError(response.status, payload?.message ?? "Could not upload that");
+        throw new ApiError(response.status, payload?.message ?? t("documents.uploadFailed"));
       }
 
       setLabel("");
       if (input.current) input.current.value = "";
       await queryClient.invalidateQueries({ queryKey: KEY });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not upload that");
+      setError(err instanceof Error ? err.message : t("documents.uploadFailed"));
     } finally {
       setBusy(false);
     }
@@ -231,22 +237,22 @@ function Upload({ studentProfileId }: { studentProfileId: string }) {
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Attach a document</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("documents.attach")}</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         <input
           value={label}
           onChange={(event) => setLabel(event.target.value)}
           required
           maxLength={200}
-          placeholder="Birth certificate"
-          aria-label="What the document is"
+          placeholder={t("documents.kindPlaceholder")}
+          aria-label={t("documents.whatItIs")}
           className="w-52 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <input
           ref={input}
           type="file"
           accept="application/pdf,image/jpeg,image/png,image/webp"
-          aria-label="File"
+          aria-label={t("documents.file")}
           className="text-sm"
         />
         <button
@@ -254,12 +260,11 @@ function Upload({ studentProfileId }: { studentProfileId: string }) {
           disabled={busy || !label.trim()}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {busy ? "Uploading…" : "Upload"}
+          {busy ? t("documents.uploading") : t("documents.upload")}
         </button>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        PDF, JPEG, PNG or WebP, up to 10 MB. Stored where only signed-in staff and this child&rsquo;s own
-        family can reach it — there is no public link.
+        {t("documents.uploadRules")}
       </p>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </form>

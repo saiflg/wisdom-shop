@@ -4,14 +4,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 type RoleName = "SCHOOL_ADMIN" | "TEACHER" | "STUDENT" | "GUARDIAN";
 
-const ROLE_LABEL: Record<RoleName, string> = {
-  SCHOOL_ADMIN: "Administrators",
-  TEACHER: "Teachers",
-  STUDENT: "Students",
-  GUARDIAN: "Parents",
+const ROLE_KEY: Record<RoleName, TranslationKey> = {
+  SCHOOL_ADMIN: "roles.administrators",
+  TEACHER: "roles.teachers",
+  STUDENT: "roles.students",
+  GUARDIAN: "roles.parents",
 };
 
 const ROLES: RoleName[] = ["SCHOOL_ADMIN", "TEACHER", "STUDENT", "GUARDIAN"];
@@ -66,20 +68,20 @@ function useCapabilities() {
  * administrator about restrictions that were removed months ago.
  */
 export default function RolesPage() {
+  const { t, tPlural } = useTranslation();
   const { data, isLoading } = useCapabilities();
   const [role, setRole] = useState<RoleName | "ALL">("ALL");
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Roles</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("roles.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          What each kind of account can reach. Read from the API itself, so it cannot disagree with what is
-          actually enforced.
+          {t("roles.intro")}
         </p>
       </div>
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
 
       {data && (
         <>
@@ -88,7 +90,7 @@ export default function RolesPage() {
               {ROLES.map((name) => (
                 <div key={name}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {ROLE_LABEL[name]}
+                    {t(ROLE_KEY[name])}
                   </p>
                   <p className="mt-1 text-2xl font-bold tabular-nums">{data.counts[name]}</p>
                   <p className="text-xs text-slate-500">
@@ -104,9 +106,7 @@ export default function RolesPage() {
                 than have to add it up. */}
             {data.openRoutes > 0 && (
               <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-400">
-                {data.openRoutes} endpoint{data.openRoutes === 1 ? " is" : "s are"} open to everyone signed
-                in. Each one is a deliberate decision — mostly things a family needs about their own child,
-                narrowed inside the service rather than by role.
+                {tPlural("roles.openRoutes", data.openRoutes)}
               </p>
             )}
 
@@ -115,31 +115,31 @@ export default function RolesPage() {
                 screen did until 28 Aug 2026 — understated them. */}
             {data.publicRoutes > 0 && (
               <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                {data.publicRoutes} endpoint{data.publicRoutes === 1 ? " is" : "s are"} reachable{" "}
-                <strong>without signing in</strong> — payment webhooks, the login and invitation pages. These
-                are the ones worth reviewing first.
+                {tPlural("roles.publicRoutesPre", data.publicRoutes)}{" "}
+                <strong>{t("roles.withoutSigningIn")}</strong>
+                {t("roles.publicRoutesPost")}
               </p>
             )}
 
             {data.platformRoutes > 0 && (
               <p className="mt-2 text-xs text-slate-500">
                 A further {data.platformRoutes} belong to the Super Admin console, which signs in separately.
-                No school account can reach them, so they are left out of the figures above.
+                {t("roles.platformNote")}
               </p>
             )}
           </section>
 
           <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Show what one role can reach
+            {t("roles.showOneRole")}
             <select
               value={role}
               onChange={(event) => setRole(event.target.value as RoleName | "ALL")}
               className="mt-1 block w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal normal-case dark:border-slate-700 dark:bg-slate-900"
             >
-              <option value="ALL">Everything</option>
+              <option value="ALL">{t("roles.everything")}</option>
               {ROLES.map((name) => (
                 <option key={name} value={name}>
-                  {ROLE_LABEL[name]}
+                  {t(ROLE_KEY[name])}
                 </option>
               ))}
             </select>
@@ -159,6 +159,7 @@ export default function RolesPage() {
 }
 
 function Area({ area, role }: { area: AreaSummary; role: RoleName | "ALL" }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const routes =
     role === "ALL"
@@ -172,7 +173,7 @@ function Area({ area, role }: { area: AreaSummary; role: RoleName | "ALL" }) {
           <p className="font-medium">{area.area}</p>
           <p className="mt-0.5 text-xs text-slate-500">
             {routes.length} endpoint{routes.length === 1 ? "" : "s"} ·{" "}
-            {area.reachedBy.map((name) => ROLE_LABEL[name]).join(", ") || "Nobody"}
+            {area.reachedBy.map((name) => t(ROLE_KEY[name])).join(", ") || "Nobody"}
             {area.modules.length > 0 && ` · needs ${area.modules.join(", ")}`}
           </p>
         </div>
@@ -193,7 +194,7 @@ function Area({ area, role }: { area: AreaSummary; role: RoleName | "ALL" }) {
             aria-expanded={open}
             className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
           >
-            {open ? "Close" : "Endpoints"}
+            {open ? t("shared.close") : t("roles.endpoints")}
           </button>
         </div>
       </div>
@@ -221,10 +222,10 @@ function Area({ area, role }: { area: AreaSummary; role: RoleName | "ALL" }) {
                 {route.isPublic
                   ? "anyone, without signing in"
                   : route.isPlatform
-                    ? "Super Admin only"
+                    ? t("roles.superAdminOnly")
                     : route.roles === null
                       ? "everyone signed in"
-                      : route.roles.map((name) => ROLE_LABEL[name]).join(", ")}
+                      : route.roles.map((name) => t(ROLE_KEY[name])).join(", ")}
               </span>
             </li>
           ))}

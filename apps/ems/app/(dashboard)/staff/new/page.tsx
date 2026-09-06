@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -10,26 +10,30 @@ import { errorMessage } from "@/lib/api";
 import { EMPLOYMENT_TYPES, useRegisterStaff, type RegisterStaffInput } from "@/lib/use-staff";
 import { EMPLOYMENT_LABELS } from "@/lib/staff-directory";
 import { FormField } from "@/components/form-field";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
-const schema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Enter a valid email address"),
-  password: z
-    .string()
-    .min(10, "At least 10 characters")
-    .regex(
-      /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/,
-      "Needs an uppercase letter, lowercase letter, number, and symbol",
-    ),
-  role: z.enum(["TEACHER", "SCHOOL_ADMIN"]),
-  staffNumber: z.string().max(40).optional(),
-  jobTitle: z.string().max(120).optional(),
-  employmentType: z.enum(EMPLOYMENT_TYPES).optional().or(z.literal("")),
-  startDate: z.string().optional(),
-});
+function schemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    firstName: z.string().min(1, t("valid.firstNameRequired")),
+    lastName: z.string().min(1, t("valid.lastNameRequired")),
+    email: z.string().email(t("valid.emailInvalid")),
+    password: z
+      .string()
+      .min(10, t("valid.passwordLength"))
+      .regex(
+        /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/,
+        t("valid.passwordStrength"),
+      ),
+    role: z.enum(["TEACHER", "SCHOOL_ADMIN"]),
+    staffNumber: z.string().max(40).optional(),
+    jobTitle: z.string().max(120).optional(),
+    employmentType: z.enum(EMPLOYMENT_TYPES).optional().or(z.literal("")),
+    startDate: z.string().optional(),
+  });
+}
 
-type Values = z.infer<typeof schema>;
+type Values = z.infer<ReturnType<typeof schemaFor>>;
 
 /** Empty strings are how a browser reports an untouched field; the API wants them gone. */
 function toInput(values: Values): RegisterStaffInput {
@@ -47,6 +51,8 @@ function toInput(values: Values): RegisterStaffInput {
 }
 
 export default function RegisterStaffPage() {
+  const { t } = useTranslation();
+  const schema = useMemo(() => schemaFor(t), [t]);
   const router = useRouter();
   const register = useRegisterStaff();
   const [formError, setFormError] = useState<string | null>(null);
@@ -66,7 +72,7 @@ export default function RegisterStaffPage() {
       // wants, and they are deliberately not on this form.
       router.push(`/staff/${member.id}`);
     } catch (err) {
-      setFormError(errorMessage(err, "Couldn't register that staff member."));
+      setFormError(errorMessage(err, t("errs.registerStaff")));
     }
   });
 
@@ -76,43 +82,42 @@ export default function RegisterStaffPage() {
         <Link href="/staff" className="text-sm font-semibold text-brand-600 hover:underline">
           ← Staff directory
         </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Register staff</h1>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">{t("staffNew.title")}</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Creates the login and the employment record together. Bank details come afterwards, on their record.
+          {t("staffNew.intro")}
         </p>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-5 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="First name" error={form.formState.errors.firstName?.message} {...form.register("firstName")} />
-          <FormField label="Last name" error={form.formState.errors.lastName?.message} {...form.register("lastName")} />
+          <FormField label={t("staffNew.firstName")} error={form.formState.errors.firstName?.message} {...form.register("firstName")} />
+          <FormField label={t("staffNew.lastName")} error={form.formState.errors.lastName?.message} {...form.register("lastName")} />
         </div>
 
-        <FormField label="Email" type="email" error={form.formState.errors.email?.message} {...form.register("email")} />
+        <FormField label={t("staffNew.email")} type="email" error={form.formState.errors.email?.message} {...form.register("email")} />
         <FormField
-          label="First password"
+          label={t("staffNew.firstPassword")}
           type="password"
-          hint="Min 10 chars, upper/lower/number/symbol. Give it to them to change."
+          hint={t("staffNew.passwordHint")}
           error={form.formState.errors.password?.message}
           {...form.register("password")}
         />
 
         <div>
           <label htmlFor="role" className="block text-sm font-medium">
-            Role
+            {t("staffNew.role")}
           </label>
           <select
             id="role"
             {...form.register("role")}
             className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="TEACHER">Teacher — teaches, marks, sets homework</option>
-            <option value="SCHOOL_ADMIN">Administrator — bursar, registrar, head</option>
+            <option value="TEACHER">{t("staffNew.roleTeacher")}</option>
+            <option value="SCHOOL_ADMIN">{t("staffNew.roleAdmin")}</option>
           </select>
           {role === "SCHOOL_ADMIN" && (
             <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-              An administrator can see and change everything in this school, including fees, payroll and every
-              staff member&apos;s bank details. Their reveals are logged, but nothing stops them.
+              {t("staffNew.adminWarning")}
             </p>
           )}
         </div>
@@ -124,25 +129,25 @@ export default function RegisterStaffPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
-              label="Staff number"
-              hint="What a re-imported spreadsheet matches on"
+              label={t("staffNew.staffNumber")}
+              hint={t("staffNew.staffNumberHint")}
               error={form.formState.errors.staffNumber?.message}
               {...form.register("staffNumber")}
             />
-            <FormField label="Job title" error={form.formState.errors.jobTitle?.message} {...form.register("jobTitle")} />
+            <FormField label={t("staffNew.jobTitle")} error={form.formState.errors.jobTitle?.message} {...form.register("jobTitle")} />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="employmentType" className="block text-sm font-medium">
-                Employment type
+                {t("staffNew.employmentType")}
               </label>
               <select
                 id="employmentType"
                 {...form.register("employmentType")}
                 className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               >
-                <option value="">Not stated</option>
+                <option value="">{t("staffNew.notStated")}</option>
                 {EMPLOYMENT_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {EMPLOYMENT_LABELS[type]}
@@ -151,7 +156,7 @@ export default function RegisterStaffPage() {
               </select>
             </div>
             <FormField
-              label="Start date"
+              label={t("staffNew.startDate")}
               type="date"
               error={form.formState.errors.startDate?.message}
               {...form.register("startDate")}
@@ -170,7 +175,7 @@ export default function RegisterStaffPage() {
           disabled={form.formState.isSubmitting}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
         >
-          {form.formState.isSubmitting ? "Registering…" : "Register"}
+          {form.formState.isSubmitting ? t("staffNew.registering") : t("staffNew.register")}
         </button>
       </form>
     </div>

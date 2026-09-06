@@ -16,6 +16,7 @@ import { EMPLOYMENT_LABELS, employmentState, isTeaching } from "@/lib/staff-dire
 import { RevealAccountNumber } from "@/components/reveal-account-number";
 import { PersonPhotoEditor } from "@/components/person-photo";
 import { SalaryEditor } from "@/components/salary-editor";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /** The API sends timestamps; a date input wants "2026-09-01". */
 function dateInputValue(value: string | null): string {
@@ -47,12 +48,13 @@ function draftFrom(member: StaffMember): Draft {
 }
 
 export default function StaffRecordPage() {
+  const { t } = useTranslation();
   const params = useParams<{ userId: string }>();
   const userId = params?.userId ?? "";
   const { data: member, isLoading, error } = useStaffMember(userId);
 
   if (!userId) return null;
-  if (isLoading) return <p className="text-sm text-slate-500">Loading staff record…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("staffRecord.loading")}</p>;
 
   if (error || !member) {
     return (
@@ -61,7 +63,7 @@ export default function StaffRecordPage() {
           ← Staff directory
         </Link>
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't load that staff record.")}
+          {errorMessage(error, t("errs.loadStaffRecord"))}
         </p>
       </div>
     );
@@ -80,6 +82,7 @@ export default function StaffRecordPage() {
  * has actually typed one — that field alone means "leave it alone" when absent.
  */
 function StaffRecord({ member }: { member: StaffMember }) {
+  const { t } = useTranslation();
   const save = useUpsertStaffProfile(member.id);
   const state = employmentState(member, new Date());
   const fullName = `${member.firstName} ${member.lastName}`;
@@ -112,7 +115,7 @@ function StaffRecord({ member }: { member: StaffMember }) {
       setAccountNumber("");
       setMessage({ tone: "ok", text: ok });
     } catch (err) {
-      setMessage({ tone: "error", text: errorMessage(err, "Couldn't save that record.") });
+      setMessage({ tone: "error", text: errorMessage(err, t("errs.saveStaffRecord")) });
     }
   };
 
@@ -135,7 +138,7 @@ function StaffRecord({ member }: { member: StaffMember }) {
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">{fullName}</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          {isTeaching(member) ? "Teaching staff" : "Non-teaching staff"}
+          {isTeaching(member) ? t("staffRecord.teaching") : t("staffRecord.nonTeaching")}
           {member.email ? ` · ${member.email}` : ""}
           {state === "ENDED" ? " · no longer employed" : ""}
           {state === "FUTURE" ? " · has not started yet" : ""}
@@ -143,27 +146,27 @@ function StaffRecord({ member }: { member: StaffMember }) {
       </div>
 
       <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Photo</h2>
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">{t("staffRecord.photo")}</h2>
         <PersonPhotoEditor userId={member.id} name={fullName} />
       </section>
 
       <section className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Employment</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("staffRecord.employment")}</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Text label="Staff number" value={draft.staffNumber} onChange={(staffNumber) => set({ staffNumber })} />
-          <Text label="Job title" value={draft.jobTitle} onChange={(jobTitle) => set({ jobTitle })} />
+          <Text label={t("staffRecord.staffNumber")} value={draft.staffNumber} onChange={(staffNumber) => set({ staffNumber })} />
+          <Text label={t("staffRecord.jobTitle")} value={draft.jobTitle} onChange={(jobTitle) => set({ jobTitle })} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="block text-sm font-medium">
-            Employment type
+            {t("staffRecord.employmentType")}
             <select
               value={draft.employmentType}
               onChange={(event) => set({ employmentType: event.target.value as EmploymentType | "" })}
               className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
-              <option value="">Not stated</option>
+              <option value="">{t("staffRecord.notStated")}</option>
               {EMPLOYMENT_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {EMPLOYMENT_LABELS[type]}
@@ -171,42 +174,42 @@ function StaffRecord({ member }: { member: StaffMember }) {
               ))}
             </select>
           </label>
-          <Text label="Start date" type="date" value={draft.startDate} onChange={(startDate) => set({ startDate })} />
-          <Text label="End date" type="date" value={draft.endDate} onChange={(endDate) => set({ endDate })} />
+          <Text label={t("staffRecord.startDate")} type="date" value={draft.startDate} onChange={(startDate) => set({ startDate })} />
+          <Text label={t("staffRecord.endDate")} type="date" value={draft.endDate} onChange={(endDate) => set({ endDate })} />
         </div>
 
         <button
           type="button"
-          onClick={() => void submit({}, "Saved.")}
+          onClick={() => void submit({}, t("staffRecord.savedBank"))}
           disabled={save.isPending}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
-          {save.isPending ? "Saving…" : "Save record"}
+          {save.isPending ? t("shared.saving") : t("staffRecord.save")}
         </button>
       </section>
 
       <section className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Bank details</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("staffRecord.bankDetails")}</h2>
           <p className="text-xs text-slate-500">
-            {member.bank.hasAccountNumber ? `On file: ${member.bank.accountNumberMasked}` : "No account number on file"}
+            {member.bank.hasAccountNumber ? `On file: ${member.bank.accountNumberMasked}` : t("staffRecord.noAccount")}
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <Text label="Bank" value={draft.bankName} onChange={(bankName) => set({ bankName })} />
-          <Text label="Bank / sort code" value={draft.bankCode} onChange={(bankCode) => set({ bankCode })} />
-          <Text label="Name on the account" value={draft.accountName} onChange={(accountName) => set({ accountName })} />
+          <Text label={t("staffRecord.bank")} value={draft.bankName} onChange={(bankName) => set({ bankName })} />
+          <Text label={t("staffRecord.sortCode")} value={draft.bankCode} onChange={(bankCode) => set({ bankCode })} />
+          <Text label={t("staffRecord.accountName")} value={draft.accountName} onChange={(accountName) => set({ accountName })} />
         </div>
 
         <Text
-          label={member.bank.hasAccountNumber ? "Replace the account number" : "Account number"}
+          label={member.bank.hasAccountNumber ? t("staffRecord.replaceAccount") : t("staffRecord.accountNumber")}
           value={accountNumber}
           onChange={setAccountNumber}
           inputMode="numeric"
           autoComplete="off"
           placeholder={member.bank.hasAccountNumber ? (member.bank.accountNumberMasked ?? "") : "0123456789"}
-          hint="Digits only. Stored encrypted, and shown back only as the last four."
+          hint={t("staffRecord.accountHint")}
         />
 
         <div className="flex flex-wrap gap-2">
@@ -215,13 +218,13 @@ function StaffRecord({ member }: { member: StaffMember }) {
             onClick={() =>
               void submit(
                 accountNumber.trim() ? { accountNumber: accountNumber.trim() } : {},
-                accountNumber.trim() ? "Saved." : "Saved. The account number was left as it was.",
+                accountNumber.trim() ? t("staffRecord.savedBank") : t("staffRecord.savedAccountKept"),
               )
             }
             disabled={save.isPending}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
           >
-            {save.isPending ? "Saving…" : "Save bank details"}
+            {save.isPending ? t("shared.saving") : t("staffRecord.saveBank")}
           </button>
           {member.bank.hasAccountNumber && (
             <button
@@ -230,7 +233,7 @@ function StaffRecord({ member }: { member: StaffMember }) {
               disabled={save.isPending}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-red-950/30"
             >
-              Remove
+              {t("shared.remove")}
             </button>
           )}
         </div>
@@ -238,11 +241,11 @@ function StaffRecord({ member }: { member: StaffMember }) {
         {member.bank.hasAccountNumber && <RevealAccountNumber userId={member.id} staffName={member.firstName} />}
 
         <p className="text-xs text-slate-500">
-          Every reveal is recorded in the{" "}
+          {t("staffDetail.revealsRecorded")}{" "}
           <Link href="/staff/access-log" className="font-semibold text-brand-600 hover:underline">
-            bank-detail access log
+            {t("staffDetail.accessLogLink")}
           </Link>
-          , including the ones a payroll bank file makes.
+          {t("staffDetail.includingPayroll")}
         </p>
       </section>
 

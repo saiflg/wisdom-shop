@@ -16,6 +16,7 @@ import {
   type LibraryLoan,
   type LibrarySummary,
 } from "@/lib/use-library";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * The shelves, and who has what.
@@ -25,6 +26,7 @@ import {
  * and a library that says otherwise marks a child late for being punctual.
  */
 export default function LibraryPage() {
+  const { t } = useTranslation();
   const isStaff = useCanAuthor();
   const [tab, setTab] = useState<"catalogue" | "loans">("catalogue");
   const [search, setSearch] = useState("");
@@ -34,10 +36,10 @@ export default function LibraryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Library</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("library.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          What the school owns and who has it.
-          {limits && ` Up to ${limits.maxPerBorrower} books at a time, for ${limits.loanDays} days.`}
+          {t("library.intro")}
+          {limits && t("library.limits", { max: limits.maxPerBorrower, days: limits.loanDays })}
         </p>
       </div>
 
@@ -45,8 +47,8 @@ export default function LibraryPage() {
 
       {isStaff && (
         <div className="flex gap-2">
-          <Tab label="Catalogue" active={tab === "catalogue"} onClick={() => setTab("catalogue")} />
-          <Tab label="Out on loan" active={tab === "loans"} onClick={() => setTab("loans")} />
+          <Tab label={t("library.catalogue")} active={tab === "catalogue"} onClick={() => setTab("catalogue")} />
+          <Tab label={t("library.onLoan")} active={tab === "loans"} onClick={() => setTab("loans")} />
         </div>
       )}
 
@@ -57,17 +59,17 @@ export default function LibraryPage() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by title or author"
-            aria-label="Search the catalogue"
+            placeholder={t("library.searchPlaceholder")}
+            aria-label={t("library.searchLabel")}
             className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
 
           {isStaff && <NewBook />}
 
-          {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+          {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
           {data?.books.length === 0 && (
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              {search ? "Nothing matches that." : "No books on the shelves yet."}
+              {search ? t("library.noMatch") : t("library.empty")}
             </p>
           )}
 
@@ -99,17 +101,18 @@ function Tab({ label, active, onClick }: { label: string; active: boolean; onCli
 }
 
 function Summary({ summary }: { summary: LibrarySummary }) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
       <div className="flex flex-wrap gap-8">
         {/* Titles beside copies, never instead of: forty copies of one book
             and forty different books are the same number and a very
             different library. */}
-        <Stat label="Titles" value={summary.titles} />
-        <Stat label="Copies" value={summary.copies} />
-        <Stat label="Out" value={summary.onLoan} />
-        <Stat label="Available" value={summary.available} />
-        <Stat label="Overdue" value={summary.overdue} tone={summary.overdue > 0 ? "bad" : undefined} />
+        <Stat label={t("library.titles")} value={summary.titles} />
+        <Stat label={t("library.copies")} value={summary.copies} />
+        <Stat label={t("library.out")} value={summary.onLoan} />
+        <Stat label={t("library.available")} value={summary.available} />
+        <Stat label={t("library.overdue")} value={summary.overdue} tone={summary.overdue > 0 ? "bad" : undefined} />
       </div>
     </section>
   );
@@ -125,6 +128,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "ba
 }
 
 function BookRow({ book, isStaff }: { book: LibraryBook; isStaff: boolean }) {
+  const { t } = useTranslation();
   const [issuing, setIssuing] = useState(false);
 
   return (
@@ -133,7 +137,7 @@ function BookRow({ book, isStaff }: { book: LibraryBook; isStaff: boolean }) {
         <div className="min-w-0">
           <p className="text-sm font-medium">{book.title}</p>
           <p className="text-xs text-slate-500">
-            {book.author ?? "Author unknown"}
+            {book.author ?? t("library.authorUnknown")}
             {book.category && ` · ${book.category}`}
           </p>
         </div>
@@ -150,7 +154,7 @@ function BookRow({ book, isStaff }: { book: LibraryBook; isStaff: boolean }) {
               aria-expanded={issuing}
               className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold disabled:opacity-40 dark:border-slate-700"
             >
-              {issuing ? "Cancel" : "Issue"}
+              {issuing ? t("common.cancel") : t("library.issue")}
             </button>
           )}
         </div>
@@ -162,6 +166,7 @@ function BookRow({ book, isStaff }: { book: LibraryBook; isStaff: boolean }) {
 }
 
 function IssuePanel({ book, onDone }: { book: LibraryBook; onDone: () => void }) {
+  const { t } = useTranslation();
   const { data: students } = useStudents();
   const borrow = useBorrow();
   const [studentProfileId, setStudentProfileId] = useState("");
@@ -175,20 +180,20 @@ function IssuePanel({ book, onDone }: { book: LibraryBook; onDone: () => void })
     } catch (err) {
       // Where "they have a book overdue" and "they already have a copy of
       // that book" surface — the reason, not a generic failure.
-      setNote(err instanceof ApiError ? err.message : "Could not issue that");
+      setNote(err instanceof ApiError ? err.message : t("library.issueFailed"));
     }
   };
 
   return (
     <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
       <label className="text-xs text-slate-500">
-        To
+        {t("library.to")}
         <select
           value={studentProfileId}
           onChange={(event) => setStudentProfileId(event.target.value)}
           className="mt-1 block w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
-          <option value="">Choose a student…</option>
+          <option value="">{t("library.chooseStudent")}</option>
           {students?.map((student) => (
             <option key={student.id} value={student.id}>
               {student.user.firstName} {student.user.lastName}
@@ -202,7 +207,7 @@ function IssuePanel({ book, onDone }: { book: LibraryBook; onDone: () => void })
         disabled={borrow.isPending || !studentProfileId}
         className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
       >
-        {borrow.isPending ? "Issuing…" : "Issue"}
+        {borrow.isPending ? t("library.issuing") : t("library.issue")}
       </button>
       {note && <p className="w-full text-xs text-amber-600">{note}</p>}
     </div>
@@ -210,6 +215,7 @@ function IssuePanel({ book, onDone }: { book: LibraryBook; onDone: () => void })
 }
 
 function OnLoan() {
+  const { t } = useTranslation();
   const { data: loans } = useLibraryLoans();
   const takeBack = useReturnLoan();
   const [note, setNote] = useState<string | null>(null);
@@ -222,13 +228,13 @@ function OnLoan() {
       // about; it is the second scan of the same barcode.
       if (result.alreadyReturned) setNote(`${loan.book.title} was already back in.`);
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not take that back");
+      setNote(err instanceof ApiError ? err.message : t("library.returnFailed"));
     }
   };
 
   if (!loans) return null;
   if (loans.length === 0) {
-    return <p className="text-sm text-slate-600 dark:text-slate-400">Nothing is out at the moment.</p>;
+    return <p className="text-sm text-slate-600 dark:text-slate-400">{t("library.nothingOut")}</p>;
   }
 
   return (
@@ -250,7 +256,7 @@ function OnLoan() {
               disabled={takeBack.isPending}
               className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700"
             >
-              Take back
+              {t("library.takeBack")}
             </button>
           </li>
         ))}
@@ -260,6 +266,7 @@ function OnLoan() {
 }
 
 function NewBook() {
+  const { t } = useTranslation();
   const add = useAddBook();
   const [form, setForm] = useState({ title: "", author: "", category: "", copies: "1" });
   const [error, setError] = useState<string | null>(null);
@@ -276,37 +283,37 @@ function NewBook() {
       });
       setForm({ title: "", author: "", category: "", copies: "1" });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add that book");
+      setError(err instanceof ApiError ? err.message : t("library.addFailed"));
     }
   };
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Add a book</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("library.addBook")}</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         <input
           value={form.title}
           onChange={(event) => setForm({ ...form, title: event.target.value })}
           required
           maxLength={300}
-          placeholder="Title"
-          aria-label="Title"
+          placeholder={t("library.bookTitle")}
+          aria-label={t("library.bookTitle")}
           className="min-w-[14rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <input
           value={form.author}
           onChange={(event) => setForm({ ...form, author: event.target.value })}
           maxLength={200}
-          placeholder="Author"
-          aria-label="Author"
+          placeholder={t("library.author")}
+          aria-label={t("library.author")}
           className="w-44 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <input
           value={form.category}
           onChange={(event) => setForm({ ...form, category: event.target.value })}
           maxLength={80}
-          placeholder="Shelf"
-          aria-label="Shelf or category"
+          placeholder={t("library.shelf")}
+          aria-label={t("library.shelfLabel")}
           className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <input
@@ -314,7 +321,7 @@ function NewBook() {
           min={0}
           value={form.copies}
           onChange={(event) => setForm({ ...form, copies: event.target.value })}
-          aria-label="How many copies"
+          aria-label={t("library.copiesLabel")}
           className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
         />
         <button
@@ -322,7 +329,7 @@ function NewBook() {
           disabled={add.isPending || !form.title.trim()}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {add.isPending ? "Adding…" : "Add"}
+          {add.isPending ? t("library.adding") : "Add"}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}

@@ -140,17 +140,17 @@ function ProviderCard({ gateway }: { gateway: PaymentGatewayView }) {
         {isOpay && (
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
-              label="Merchant ID"
+              label={t("settings.merchantId")}
               name="merchantId"
               defaultValue={gateway.merchantId ?? ""}
-              placeholder="e.g. 281822xxxxxxxxx"
+              placeholder={t("settings.merchantIdPlaceholder")}
             />
             <label className="flex items-start gap-2 self-end pb-2 text-sm">
               <input type="checkbox" name="sandbox" defaultChecked={gateway.sandbox} className="mt-0.5 h-4 w-4" />
               <span>
-                Test mode
+                {t("settings.testMode")}
                 <span className="block text-xs text-slate-500">
-                  Sandbox keys take real-looking payments that are not real. Parents are shown a “test mode” label.
+                  {t("settings.testModeHint")}
                 </span>
               </span>
             </label>
@@ -201,7 +201,7 @@ function ProviderCard({ gateway }: { gateway: PaymentGatewayView }) {
           </button>
           <span className="text-xs text-slate-500">
             {isOpay
-              ? "OPay has no read-only credential check. Save the details and take one sandbox payment to confirm them."
+              ? t("settings.opayNoCheck")
               : t("settings.paymentTestNote")}
           </span>
         </div>

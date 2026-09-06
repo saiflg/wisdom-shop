@@ -19,8 +19,10 @@ import { BoardDiagram, BoardText, ChalkThinking } from "@/components/lesson-boar
 import { ClassChat } from "@/components/class-chat";
 import { useMyClasses } from "@/lib/use-class-chat";
 import { useLessonVoice } from "@/lib/use-lesson-voice";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 export default function TutorLessonPage() {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const sessionId = params?.id ?? "";
   const user = useAuthStore((s) => s.user);
@@ -169,17 +171,17 @@ export default function TutorLessonPage() {
     } catch (err) {
       // Put the question back so it is not lost to a failed send.
       setQuestion(trimmed);
-      setActionError(err instanceof ApiError ? err.message : "Couldn't reach the teacher just now.");
+      setActionError(err instanceof ApiError ? err.message : t("aiTeacher.reachFailed"));
     }
   };
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading lesson…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("aiTeacher.loadingLesson")}</p>;
   if (error || !session) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-red-600 dark:text-red-400">Couldn&apos;t open that lesson.</p>
+        <p className="text-sm text-red-600 dark:text-red-400">{t("aiTeacher.openFailed")}</p>
         <Link href="/ai-teacher" className="text-sm font-semibold text-brand-600 hover:underline">
-          Back to lessons
+          {t("aiTeacher.backToLessons")}
         </Link>
       </div>
     );
@@ -244,9 +246,9 @@ export default function TutorLessonPage() {
               looks deliberate. */}
           {session.followsScheme && (
             <p className="mt-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-900 dark:bg-brand-950/40 dark:text-brand-200">
-              You asked about <span className="font-semibold">{session.topic}</span>. This class follows your
-              school&apos;s scheme of work, so it starts where your class is up to — your question is covered as
-              the course reaches it, and you can ask about it any time in the box below.
+              {t("aiTeacher.youAskedTopic")}{" "}
+              <span className="font-semibold">{session.topic}</span>
+              {t("aiTeacher.schemeExplains")}
             </p>
           )}
 
@@ -255,11 +257,16 @@ export default function TutorLessonPage() {
               <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>
                   {session.finished
-                    ? "Course complete"
-                    : `Next: ${session.currentLesson?.title ?? "—"}`}
+                    ? t("aiTeacher.courseComplete")
+                    : t("aiTeacher.nextLesson", {
+                        title: session.currentLesson?.title ?? "—",
+                      })}
                 </span>
                 <span>
-                  {session.position} of {session.course.lessons.length}
+                  {t("aiTeacher.positionOf", {
+                    position: session.position,
+                    total: session.course.lessons.length,
+                  })}
                 </span>
               </div>
               <div
@@ -268,7 +275,7 @@ export default function TutorLessonPage() {
                 aria-valuenow={session.percent}
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-label="Course progress"
+                aria-label={t("aiTeacher.courseProgress")}
               >
                 <div className="h-full bg-brand-600 transition-all" style={{ width: `${session.percent}%` }} />
               </div>
@@ -282,14 +289,22 @@ export default function TutorLessonPage() {
               type="button"
               onClick={() => voice.setEnabled((on) => !on)}
               aria-pressed={voice.enabled}
-              title={voice.voiceName ? `Read aloud using ${voice.voiceName}` : "Read the lesson aloud"}
+              title={
+                voice.voiceName
+                  ? t("aiTeacher.readAloudWith", { voice: voice.voiceName })
+                  : t("aiTeacher.readAloudTitle")
+              }
               className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
                 voice.enabled
                   ? "border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
                   : "border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
               }`}
             >
-              {voice.enabled ? (voice.speaking ? "Speaking…" : "Voice on") : "Read aloud"}
+              {voice.enabled
+                ? voice.speaking
+                  ? t("aiTeacher.speaking")
+                  : t("aiTeacher.voiceOn")
+                : t("aiTeacher.readAloud")}
             </button>
           )}
 
@@ -299,27 +314,27 @@ export default function TutorLessonPage() {
             aria-pressed={fullScreen}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
           >
-            {fullScreen ? "Exit full screen" : "Full screen"}
+            {fullScreen ? t("aiTeacher.exitFullScreen") : t("aiTeacher.fullScreen")}
           </button>
 
           {canAct && isClass && session.status === "ACTIVE" && !session.finished && (
             <button
               type="button"
-              onClick={() => void run(() => pause.mutateAsync(), "Couldn't pause the class.")}
+              onClick={() => void run(() => pause.mutateAsync(), t("aiTeacher.pauseFailed"))}
               disabled={pause.isPending}
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              Pause
+              {t("aiTeacher.pause")}
             </button>
           )}
           {session.status !== "ENDED" && isOwner && (
             <button
               type="button"
-              onClick={() => void run(() => endSession.mutateAsync(), "Couldn't end the lesson.")}
+              onClick={() => void run(() => endSession.mutateAsync(), t("aiTeacher.endFailed"))}
               disabled={endSession.isPending}
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              End
+              {t("aiTeacher.end")}
             </button>
           )}
         </div>
@@ -343,7 +358,7 @@ export default function TutorLessonPage() {
           className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-200 p-4 dark:border-slate-800"
           role="log"
           aria-live="polite"
-          aria-label="Lesson transcript"
+          aria-label={t("aiTeacher.transcript")}
         >
           {watchingResource && (
             <div className="chalk-in mb-3">
@@ -358,7 +373,7 @@ export default function TutorLessonPage() {
                     }}
                     className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
                   >
-                    Close
+                    {t("shared.close")}
                   </button>
                 </div>
                 {watchingResource.embedUrl ? (
@@ -383,7 +398,7 @@ export default function TutorLessonPage() {
                     rel="noreferrer noopener"
                     className="block rounded-xl border border-slate-300 p-4 text-sm font-semibold text-brand-600 hover:underline dark:border-slate-700"
                   >
-                    Open this in a new tab
+                    {t("aiTeacher.openNewTab")}
                   </a>
                 )}
               </div>
@@ -393,10 +408,10 @@ export default function TutorLessonPage() {
           {session.turns?.length === 0 && (
             <p className="py-8 text-center text-sm text-slate-500">
               {!canAct
-                ? "Nothing has been taught yet."
+                ? t("aiTeacher.nothingTaught")
                 : isClass
-                  ? "Press Start the class below when you're ready."
-                  : "Ask your first question below."}
+                  ? t("aiTeacher.pressStart")
+                  : t("aiTeacher.askFirst")}
             </p>
           )}
 
@@ -405,7 +420,7 @@ export default function TutorLessonPage() {
           {busy && (
             <div className="flex justify-start">
               <ChalkThinking
-                label={continueClass.isPending ? "Preparing the next lesson…" : "Thinking…"}
+                label={continueClass.isPending ? t("aiTeacher.preparingNext") : t("aiTeacher.thinking")}
               />
             </div>
           )}
@@ -451,45 +466,47 @@ export default function TutorLessonPage() {
               on the screen, and the lesson moves on without them. */}
           {isClass && !session.finished && session.position > 0 && (session.turns?.length ?? 0) > 0 && !busy && (
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-              <p className="text-sm font-medium">Did that make sense so far?</p>
+              <p className="text-sm font-medium">{t("aiTeacher.madeSense")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => void run(() => continueClass.mutateAsync(), "Couldn't load the next lesson.")}
+                  onClick={() => void run(() => continueClass.mutateAsync(), t("aiTeacher.nextLessonFailed"))}
                   disabled={busy}
                   className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
                 >
-                  Yes, carry on
+                  {t("aiTeacher.carryOn")}
                 </button>
                 <button
                   type="button"
                   onClick={() =>
                     void run(
-                      () => ask.mutateAsync("Please explain that last part again, more slowly and with a simpler example."),
-                      "Couldn't ask for another explanation.",
+                      () => ask.mutateAsync(t("aiTeacher.askExplainAgain")),
+                      t("aiTeacher.explainFailed"),
                     )
                   }
                   disabled={busy}
                   className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
                 >
-                  Explain it again
+                  {t("aiTeacher.explainAgain")}
                 </button>
                 <button
                   type="button"
                   onClick={() =>
                     void run(
-                      () => ask.mutateAsync("Can you give me one more example of that, please?"),
-                      "Couldn't ask for an example.",
+                      () => ask.mutateAsync(t("aiTeacher.askAnotherExample")),
+                      t("aiTeacher.exampleFailed"),
                     )
                   }
                   disabled={busy}
                   className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
                 >
-                  Another example
+                  {t("aiTeacher.anotherExample")}
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Asking for more does not lose your place — the next lesson is still {session.currentLesson?.title ?? "waiting"}.
+                {t("aiTeacher.keepsPlace", {
+                  title: session.currentLesson?.title ?? t("aiTeacher.waiting"),
+                })}
               </p>
             </div>
           )}
@@ -497,15 +514,19 @@ export default function TutorLessonPage() {
           {isClass && !session.finished && (session.position === 0 || (session.turns?.length ?? 0) === 0) && (
             <button
               type="button"
-              onClick={() => void run(() => continueClass.mutateAsync(), "Couldn't load the next lesson.")}
+              onClick={() => void run(() => continueClass.mutateAsync(), t("aiTeacher.nextLessonFailed"))}
               disabled={busy}
               className="w-full rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
             >
               {session.position === 0
-                ? "Start the class"
+                ? t("aiTeacher.startClass")
                 : session.status === "PAUSED"
-                  ? `Resume: ${session.currentLesson?.title ?? "next lesson"}`
-                  : `Continue: ${session.currentLesson?.title ?? "next lesson"}`}
+                  ? t("aiTeacher.resumeLesson", {
+                      title: session.currentLesson?.title ?? t("aiTeacher.nextLessonFallback"),
+                    })
+                  : t("aiTeacher.continueLesson", {
+                      title: session.currentLesson?.title ?? t("aiTeacher.nextLessonFallback"),
+                    })}
             </button>
           )}
 
@@ -525,7 +546,7 @@ export default function TutorLessonPage() {
                   void send();
                 }
               }}
-              placeholder={isClass ? "Ask about this lesson…" : "Ask a question…"}
+              placeholder={isClass ? t("aiTeacher.askAboutLesson") : t("aiTeacher.askQuestion")}
               maxLength={1000}
               className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900"
             />
@@ -535,11 +556,11 @@ export default function TutorLessonPage() {
               disabled={busy || question.trim().length === 0}
               className="rounded-lg border border-slate-300 px-5 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              Ask
+              {t("aiTeacher.ask")}
             </button>
           </div>
           {isClass && (
-            <p className="text-xs text-slate-500">Asking a question won&apos;t skip your place in the course.</p>
+            <p className="text-xs text-slate-500">{t("aiTeacher.wontSkip")}</p>
           )}
         </div>
       ) : (
@@ -548,19 +569,19 @@ export default function TutorLessonPage() {
         // read as the feature being broken rather than as an explanation.
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
           {session.status === "ENDED" ? (
-            <p>This lesson has ended. Its transcript is kept as a record.</p>
+            <p>{t("aiTeacher.lessonEnded")}</p>
           ) : (
             <>
-              <p className="font-semibold">There is no question box on this lesson because it is not yours.</p>
+              <p className="font-semibold">{t("aiTeacher.notYours")}</p>
               <p className="mt-1">
                 {session.startedByUser
-                  ? `${session.startedByUser.firstName} ${session.startedByUser.lastName} is the student taking it`
-                  : "Another student is taking it"}
-                , and only they can speak in it. You are reading the record.{" "}
+                  ? t("aiTeacher.takenBy", {
+                      name: `${session.startedByUser.firstName} ${session.startedByUser.lastName}`,
+                    })
+                  : t("aiTeacher.takenByOther")}{" "}
                 <Link href="/ai-teacher" className="font-semibold underline">
-                  Start your own lesson
-                </Link>{" "}
-                to ask questions.
+                  {t("aiTeacher.startOwnLesson")}
+                </Link>
               </p>
             </>
           )}
@@ -583,6 +604,7 @@ export default function TutorLessonPage() {
  * permanent decision they have to undo later.
  */
 function ClassmatesPanel() {
+  const { t } = useTranslation();
   const { data: classes, isLoading } = useMyClasses();
   const [open, setOpen] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
@@ -597,12 +619,10 @@ function ClassmatesPanel() {
     return (
       <aside className="shrink-0 xl:w-96">
         <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-xs text-slate-500 dark:border-slate-700">
-          <span className="font-semibold">Class chat</span> is where the students of one class talk to each
-          other. You are not in a class, so there is nothing to show here — open a class from{" "}
+          {t("aiTeacher.classChatEmpty")}{" "}
           <Link href="/classes" className="font-semibold text-brand-600 hover:underline">
-            Classes
-          </Link>{" "}
-          to see its conversation.
+            {t("aiTeacher.openAClass")}
+          </Link>
         </p>
       </aside>
     );
@@ -616,7 +636,7 @@ function ClassmatesPanel() {
       <div className="flex items-center justify-between gap-2">
         {(classes?.length ?? 0) > 1 ? (
           <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <span className="sr-only">Which class</span>
+            <span className="sr-only">{t("aiTeacher.whichClass")}</span>
             <select
               value={classId}
               onChange={(event) => setSelected(event.target.value)}
@@ -639,7 +659,7 @@ function ClassmatesPanel() {
           aria-expanded={open}
           className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
         >
-          {open ? "Hide classmates" : "Show classmates"}
+          {open ? t("aiTeacher.hideClassmates") : t("aiTeacher.showClassmates")}
         </button>
       </div>
 
@@ -653,11 +673,12 @@ function ClassmatesPanel() {
 }
 
 function Turn({ turn }: { turn: TutorTurn }) {
+  const { t } = useTranslation();
   if (turn.role === "STUDENT") {
     return (
       <div className="chalk-in flex justify-end">
         <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-brand-600 px-4 py-2.5 text-sm text-white">
-          <span className="sr-only">You asked: </span>
+          <span className="sr-only">{t("aiTeacher.youAsked")} </span>
           {turn.content}
         </div>
       </div>
@@ -670,7 +691,7 @@ function Turn({ turn }: { turn: TutorTurn }) {
   return (
     <div className="chalk-in flex justify-start">
       <div className="chalk-board w-full max-w-[95%]">
-        <span className="sr-only">Teacher: </span>
+        <span className="sr-only">{t("aiTeacher.teacherSaid")} </span>
         <BoardText text={turn.content} alt={turn.diagramAlt} />
         {turn.diagram && <BoardDiagram svg={turn.diagram} alt={turn.diagramAlt} />}
 
@@ -681,7 +702,7 @@ function Turn({ turn }: { turn: TutorTurn }) {
         {turn.diagramPending && !turn.diagram && (
           <p className="mt-3 flex items-center gap-2 text-xs italic text-white/70" role="status">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-white/70" />
-            Drawing a picture for this…
+            {t("aiTeacher.drawing")}
           </p>
         )}
       </div>
@@ -708,6 +729,7 @@ function Demonstrations({
   watching: string | null;
   onWatch: (id: string | null) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
       {/* The first of these is already up on the board, so this list is what
@@ -716,9 +738,9 @@ function Demonstrations({
           a library a teacher curated, and it matters to a student deciding
           whether to trust what they are about to watch. */}
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {isClass ? "On the board for this lesson" : "Your school added these"}
+        {isClass ? t("aiTeacher.onTheBoard") : t("aiTeacher.schoolAdded")}
       </p>
-      <p className="mt-0.5 text-xs text-slate-500">Press play when you are ready.</p>
+      <p className="mt-0.5 text-xs text-slate-500">{t("aiTeacher.pressPlay")}</p>
       <ul className="mt-2 space-y-2">
         {resources.map((resource) => (
           <li key={resource.id} className="flex items-center justify-between gap-3">
@@ -730,7 +752,7 @@ function Demonstrations({
                 aria-pressed={watching === resource.id}
                 className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
               >
-                {watching === resource.id ? "Hide" : "Watch"}
+                {watching === resource.id ? t("aiTeacher.hide") : t("aiTeacher.watch")}
               </button>
             ) : (
               /* Not every link can be embedded — an arbitrary origin in an
@@ -743,7 +765,7 @@ function Demonstrations({
                 rel="noreferrer noopener"
                 className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
               >
-                Open
+                {t("aiTeacher.open")}
               </a>
             )}
           </li>

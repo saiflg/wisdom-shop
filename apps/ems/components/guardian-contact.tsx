@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { errorMessage } from "@/lib/api";
 import { useUpdateGuardianContact, type GuardianEntry } from "@/lib/use-guardians";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * How the school can reach a family, and how to fix it when it cannot.
@@ -13,6 +14,7 @@ import { useUpdateGuardianContact, type GuardianEntry } from "@/lib/use-guardian
  * nothing could be done.
  */
 export function GuardianContact({ guardian }: { guardian: GuardianEntry }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [email, setEmail] = useState(guardian.email ?? "");
   const [phone, setPhone] = useState(guardian.phone ?? "");
@@ -42,9 +44,9 @@ export function GuardianContact({ guardian }: { guardian: GuardianEntry }) {
         phone: phone.trim() === "" ? null : phone,
       });
       setEditing(false);
-      setSaved(result.changed.length === 0 ? "Nothing changed." : "Saved.");
+      setSaved(result.changed.length === 0 ? t("guardianContact.nothingChanged") : t("guardianContact.saved"));
     } catch (err) {
-      setMessage(errorMessage(err, "Couldn't save those details."));
+      setMessage(errorMessage(err, t("errs.saveContact")));
     }
   };
 
@@ -56,7 +58,7 @@ export function GuardianContact({ guardian }: { guardian: GuardianEntry }) {
     return (
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
         <span className={unreachable ? "font-semibold text-amber-700 dark:text-amber-400" : "text-slate-500"}>
-          {guardian.email ?? "No email"}
+          {guardian.email ?? t("guardianContact.noEmail")}
           {guardian.phone ? ` · ${guardian.phone}` : " · no phone"}
         </span>
         <button
@@ -64,7 +66,7 @@ export function GuardianContact({ guardian }: { guardian: GuardianEntry }) {
           onClick={start}
           className="font-semibold text-brand-600 hover:underline"
         >
-          Edit contact details
+          {t("guardianContact.edit")}
         </button>
         {saved && <span className="text-emerald-600">{saved}</span>}
       </div>
@@ -75,22 +77,22 @@ export function GuardianContact({ guardian }: { guardian: GuardianEntry }) {
     <div className="mt-2 space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800">
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="text-xs font-medium">
-          Email
+          {t("guardianContact.email")}
           <input
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             type="email"
-            placeholder="none on file"
+            placeholder={t("guardianContact.noneOnFile")}
             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
         <label className="text-xs font-medium">
-          Phone
+          {t("guardianContact.phone")}
           <input
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
             type="tel"
-            placeholder="none on file"
+            placeholder={t("guardianContact.noneOnFile")}
             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
@@ -98,8 +100,7 @@ export function GuardianContact({ guardian }: { guardian: GuardianEntry }) {
 
       {wouldLockOut && (
         <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          This parent signs in with that email address. Clearing it would lock them out of the portal, so it
-          will be refused.
+          {t("guardianContact.lockoutWarning")}
         </p>
       )}
 
@@ -116,14 +117,14 @@ export function GuardianContact({ guardian }: { guardian: GuardianEntry }) {
           disabled={update.isPending || wouldLockOut}
           className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
-          {update.isPending ? "Saving…" : "Save"}
+          {update.isPending ? t("shared.saving") : t("shared.save")}
         </button>
         <button
           type="button"
           onClick={() => setEditing(false)}
           className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -12,25 +13,33 @@ import { useCurriculumSettings } from "@/lib/use-curriculum-settings";
 import { useQuizzes, useCreateQuiz, useGenerateQuiz } from "@/lib/use-quizzes";
 import { useCanAuthor } from "@/lib/use-can-author";
 import { FormField } from "@/components/form-field";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const createSchema = z.object({
-  schemeOfWorkId: z.string().min(1, "Choose a scheme of work"),
-  weekNumber: z.coerce.number().int().min(1, "Week number is required"),
-  title: z.string().min(1, "Title is required"),
-  prompt: z.string().min(1, "Give question 1 a prompt"),
-  correctAnswer: z.string().min(1, "An answer is required"),
-  marks: z.coerce.number().int().min(1, "Marks are required"),
-});
-type CreateValues = z.infer<typeof createSchema>;
+function createSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    schemeOfWorkId: z.string().min(1, t("valid.chooseScheme")),
+    weekNumber: z.coerce.number().int().min(1, t("valid.weekRequired")),
+    title: z.string().min(1, t("valid.titleRequired")),
+    prompt: z.string().min(1, t("valid.firstQuestionPrompt")),
+    correctAnswer: z.string().min(1, t("valid.answerRequired")),
+    marks: z.coerce.number().int().min(1, t("valid.marksRequired")),
+  });
+}
+type CreateValues = z.infer<ReturnType<typeof createSchemaFor>>;
 
-const generateSchema = z.object({
-  schemeOfWorkId: z.string().min(1, "Choose a scheme of work"),
-  weekNumber: z.coerce.number().int().min(1, "Week number is required"),
-  title: z.string().min(1, "Title is required"),
-});
-type GenerateValues = z.infer<typeof generateSchema>;
+function generateSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    schemeOfWorkId: z.string().min(1, t("valid.chooseScheme")),
+    weekNumber: z.coerce.number().int().min(1, t("valid.weekRequired")),
+    title: z.string().min(1, t("valid.titleRequired")),
+  });
+}
+type GenerateValues = z.infer<ReturnType<typeof generateSchemaFor>>;
 
 export default function QuizzesPage() {
+  const { t, tPlural } = useTranslation();
+  const createSchema = useMemo(() => createSchemaFor(t), [t]);
+  const generateSchema = useMemo(() => generateSchemaFor(t), [t]);
   const searchParams = useSearchParams();
   const schemeOfWorkId = searchParams.get("schemeOfWorkId") ?? undefined;
   const weekNumberParam = searchParams.get("weekNumber") ?? undefined;
@@ -82,7 +91,7 @@ export default function QuizzesPage() {
       createForm.reset();
       setMode("none");
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't create that quiz.");
+      setFormError(err instanceof ApiError ? err.message : t("quizzes.createFailed"));
     }
   });
 
@@ -93,7 +102,7 @@ export default function QuizzesPage() {
       generateForm.reset();
       setMode("none");
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't generate that quiz.");
+      setFormError(err instanceof ApiError ? err.message : t("quizzes.generateFailed"));
     }
   });
 
@@ -104,7 +113,7 @@ export default function QuizzesPage() {
   ) => (
     <div>
       <label htmlFor={id} className="block text-sm font-medium">
-        Scheme of work
+        {t("quizzes.schemeOfWork")}
       </label>
       <select
         id={id}
@@ -113,11 +122,11 @@ export default function QuizzesPage() {
         className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900"
       >
         <option value="" disabled>
-          Choose a scheme of work
+          {t("quizzes.chooseScheme")}
         </option>
         {schemesOfWork?.map((sow) => (
           <option key={sow.id} value={sow.id}>
-            {sow.subject?.name ?? "Subject"} · {sow.academicYear} · {sow.term}
+            {sow.subject?.name ?? t("quizzes.subjectFallback")} · {sow.academicYear} · {sow.term}
           </option>
         ))}
       </select>
@@ -128,7 +137,7 @@ export default function QuizzesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Quizzes</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("quizzes.title")}</h1>
         <div className="flex gap-2">
           {canAuthor && (
             <button
@@ -139,7 +148,7 @@ export default function QuizzesPage() {
               }}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              {mode === "manual" ? "Cancel" : "Create manually"}
+              {mode === "manual" ? t("common.cancel") : t("quizzes.createManually")}
             </button>
           )}
           {canGenerate && (
@@ -151,7 +160,7 @@ export default function QuizzesPage() {
               }}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
-              {mode === "generate" ? "Cancel" : "Generate with Wisdom"}
+              {mode === "generate" ? t("common.cancel") : t("quizzes.generateWithWisdom")}
             </button>
           )}
         </div>
@@ -161,7 +170,7 @@ export default function QuizzesPage() {
         <form onSubmit={onCreate} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           {schemeSelect(createForm, "create-schemeOfWorkId", createForm.formState.errors.schemeOfWorkId?.message)}
           <FormField
-            label="Week number"
+            label={t("quizzes.weekNumber")}
             type="number"
             min={1}
             defaultValue={weekNumberParam}
@@ -169,25 +178,25 @@ export default function QuizzesPage() {
             {...createForm.register("weekNumber")}
           />
           <FormField
-            label="Title"
-            placeholder="Week 1 quiz"
+            label={t("quizzes.quizTitle")}
+            placeholder={t("quizzes.titlePlaceholder")}
             error={createForm.formState.errors.title?.message}
             {...createForm.register("title")}
           />
           <FormField
-            label="Question 1"
-            placeholder="What is a noun?"
+            label={t("quizzes.question1")}
+            placeholder={t("quizzes.question1Placeholder")}
             error={createForm.formState.errors.prompt?.message}
             {...createForm.register("prompt")}
           />
           <FormField
-            label="Question 1 answer"
-            placeholder="A naming word"
+            label={t("quizzes.question1Answer")}
+            placeholder={t("quizzes.answerPlaceholder")}
             error={createForm.formState.errors.correctAnswer?.message}
             {...createForm.register("correctAnswer")}
           />
           <FormField
-            label="Question 1 marks"
+            label={t("quizzes.question1Marks")}
             type="number"
             min={1}
             defaultValue={1}
@@ -204,9 +213,9 @@ export default function QuizzesPage() {
             disabled={createForm.formState.isSubmitting}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            Create
+            {t("common.create")}
           </button>
-          <p className="text-xs text-slate-500">More questions can be added by editing the quiz after creation.</p>
+          <p className="text-xs text-slate-500">{t("quizzes.moreQuestions")}</p>
         </form>
       )}
 
@@ -214,7 +223,7 @@ export default function QuizzesPage() {
         <form onSubmit={onGenerate} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           {schemeSelect(generateForm, "generate-schemeOfWorkId", generateForm.formState.errors.schemeOfWorkId?.message)}
           <FormField
-            label="Week number"
+            label={t("quizzes.weekNumber")}
             type="number"
             min={1}
             defaultValue={weekNumberParam}
@@ -222,8 +231,8 @@ export default function QuizzesPage() {
             {...generateForm.register("weekNumber")}
           />
           <FormField
-            label="Title"
-            placeholder="Week 1 quiz"
+            label={t("quizzes.quizTitle")}
+            placeholder={t("quizzes.titlePlaceholder")}
             error={generateForm.formState.errors.title?.message}
             {...generateForm.register("title")}
           />
@@ -237,19 +246,19 @@ export default function QuizzesPage() {
             disabled={generateForm.formState.isSubmitting}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            Generate
+            {t("quizzes.generate")}
           </button>
         </form>
       )}
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           Couldn&apos;t load quizzes: {error.message}
         </p>
       )}
 
-      {quizzes && quizzes.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-400">No quizzes yet.</p>}
+      {quizzes && quizzes.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-400">{t("quizzes.none")}</p>}
 
       {quizzes && quizzes.length > 0 && (
         <ul className="space-y-3">
@@ -270,13 +279,14 @@ export default function QuizzesPage() {
                     {quiz.status}
                   </span>
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                    {quiz.source === "AI_GENERATED" ? "Wisdom generated" : "Manual"}
+                    {quiz.source === "AI_GENERATED" ? t("quizzes.wisdomGenerated") : t("quizzes.manual")}
                   </span>
                 </div>
               </div>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                {quiz.schemeOfWork?.subject?.name ?? "Subject"} · Week {quiz.weekNumber} ·{" "}
-                {quiz.content.questions.length} question{quiz.content.questions.length === 1 ? "" : "s"}
+                {quiz.schemeOfWork?.subject?.name ?? t("quizzes.subjectFallback")} ·{" "}
+                {t("quizzes.week", { n: quiz.weekNumber })} ·{" "}
+                {tPlural("quizzes.questionCount", quiz.content.questions.length)}
               </p>
             </li>
           ))}

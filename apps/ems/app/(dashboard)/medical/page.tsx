@@ -7,21 +7,24 @@ import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useCanAuthor } from "@/lib/use-can-author";
 import { useStudents } from "@/lib/use-students";
 import { usePortalChildren } from "@/lib/use-wallet";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 type MedicalKind = "ALLERGY" | "CONDITION" | "MEDICATION" | "NOTE";
 type Severity = "LIFE_THREATENING" | "SIGNIFICANT" | "MINOR";
 
-const KIND_LABEL: Record<MedicalKind, string> = {
-  ALLERGY: "Allergy",
-  CONDITION: "Condition",
-  MEDICATION: "Medication",
-  NOTE: "Note",
+// Keys rather than labels: a map built at module scope freezes its English.
+const KIND_KEY: Record<MedicalKind, TranslationKey> = {
+  ALLERGY: "medical.kindALLERGY",
+  CONDITION: "medical.kindCONDITION",
+  MEDICATION: "medical.kindMEDICATION",
+  NOTE: "medical.kindNOTE",
 };
 
-const SEVERITY_LABEL: Record<Severity, string> = {
-  LIFE_THREATENING: "Life-threatening",
-  SIGNIFICANT: "Significant",
-  MINOR: "Minor",
+const SEVERITY_KEY: Record<Severity, TranslationKey> = {
+  LIFE_THREATENING: "medical.sevLIFE_THREATENING",
+  SIGNIFICANT: "medical.sevSIGNIFICANT",
+  MINOR: "medical.sevMINOR",
 };
 
 const SEVERITY_STYLE: Record<Severity, string> = {
@@ -67,6 +70,7 @@ function useRecord(studentProfileId: string | null) {
  * is a document that should not exist in a school portal.
  */
 export default function MedicalPage() {
+  const { t } = useTranslation();
   const isStaff = useCanAuthor();
   const { data: students } = useStudents();
   const { data: children } = usePortalChildren(!isStaff);
@@ -81,22 +85,21 @@ export default function MedicalPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Medical records</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("medical.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Allergies, conditions and medication. Staff and the child&rsquo;s own family only — and never sent
-          to the AI.
+          {t("medical.intro")}
         </p>
       </div>
 
       {options.length > 1 && (
         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {isStaff ? "Student" : "Child"}
+          {isStaff ? t("shared.student") : t("shared.child")}
           <select
             value={current ?? ""}
             onChange={(event) => setChosen(event.target.value || null)}
             className="mt-1 block w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal normal-case dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("shared.choose")}</option>
             {options.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.name}
@@ -112,9 +115,10 @@ export default function MedicalPage() {
 }
 
 function Record({ studentProfileId, isStaff }: { studentProfileId: string; isStaff: boolean }) {
+  const { t } = useTranslation();
   const { data, isLoading } = useRecord(studentProfileId);
 
-  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
   if (!data) return null;
 
   return (
@@ -123,7 +127,7 @@ function Record({ studentProfileId, isStaff }: { studentProfileId: string; isSta
       {data.critical.length > 0 && (
         <section className="rounded-2xl border-2 border-red-300 p-4 dark:border-red-900">
           <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">
-            Read before taking this child anywhere
+            {t("medical.readBefore")}
           </p>
           <ul className="mt-2 space-y-2">
             {data.critical.map((entry) => (
@@ -139,8 +143,7 @@ function Record({ studentProfileId, isStaff }: { studentProfileId: string; isSta
       {/* "Nothing recorded" is not "nothing to worry about". */}
       {data.summary.empty && (
         <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-900 dark:text-slate-400">
-          Nothing has been recorded for this child. That is not the same as there being nothing to record —
-          nobody has been asked.
+          {t("medical.emptyNotNothing")}
         </p>
       )}
 
@@ -158,15 +161,17 @@ function Record({ studentProfileId, isStaff }: { studentProfileId: string; isSta
               <div className="min-w-0">
                 <p className="text-sm font-medium">
                   {entry.title}
-                  <span className="ms-2 text-xs font-normal text-slate-500">{KIND_LABEL[entry.kind]}</span>
+                  <span className="ms-2 text-xs font-normal text-slate-500">{t(KIND_KEY[entry.kind])}</span>
                   {entry.archivedAt && (
-                    <span className="ms-2 text-xs font-normal italic text-slate-500">no longer current</span>
+                    <span className="ms-2 text-xs font-normal italic text-slate-500">
+                      {t("medical.noLongerCurrent")}
+                    </span>
                   )}
                 </p>
                 {entry.detail && <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{entry.detail}</p>}
                 {entry.action && (
                   <p className="mt-1 text-sm">
-                    <span className="font-semibold">What to do: </span>
+                    <span className="font-semibold">{t("medical.whatToDo")} </span>
                     {entry.action}
                   </p>
                 )}
@@ -174,7 +179,7 @@ function Record({ studentProfileId, isStaff }: { studentProfileId: string; isSta
               </div>
               {entry.severity && (
                 <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${SEVERITY_STYLE[entry.severity]}`}>
-                  {SEVERITY_LABEL[entry.severity]}
+                  {t(SEVERITY_KEY[entry.severity])}
                 </span>
               )}
             </div>
@@ -186,6 +191,7 @@ function Record({ studentProfileId, isStaff }: { studentProfileId: string; isSta
 }
 
 function AddEntry({ studentProfileId }: { studentProfileId: string }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const accessToken = useAuthQueryState().accessToken;
   const add = useMutation({
@@ -228,22 +234,22 @@ function AddEntry({ studentProfileId }: { studentProfileId: string }) {
           });
           setForm({ ...form, title: "", detail: "", action: "" });
         } catch (err) {
-          setError(err instanceof ApiError ? err.message : "Could not save that");
+          setError(err instanceof ApiError ? err.message : t("medical.saveFailed"));
         }
       }}
       className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
     >
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Record something</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("medical.record")}</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         <select
           value={form.kind}
           onChange={(event) => setForm({ ...form, kind: event.target.value as MedicalKind })}
-          aria-label="Kind"
+          aria-label={t("medical.kind")}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
-          {(Object.keys(KIND_LABEL) as MedicalKind[]).map((kind) => (
+          {(Object.keys(KIND_KEY) as MedicalKind[]).map((kind) => (
             <option key={kind} value={kind}>
-              {KIND_LABEL[kind]}
+              {t(KIND_KEY[kind])}
             </option>
           ))}
         </select>
@@ -251,13 +257,13 @@ function AddEntry({ studentProfileId }: { studentProfileId: string }) {
           <select
             value={form.severity}
             onChange={(event) => setForm({ ...form, severity: event.target.value as Severity | "" })}
-            aria-label="How serious"
+            aria-label={t("medical.howSerious")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            {!needsSeverity && <option value="">No severity</option>}
-            {(Object.keys(SEVERITY_LABEL) as Severity[]).map((severity) => (
+            {!needsSeverity && <option value="">{t("medical.noSeverity")}</option>}
+            {(Object.keys(SEVERITY_KEY) as Severity[]).map((severity) => (
               <option key={severity} value={severity}>
-                {SEVERITY_LABEL[severity]}
+                {t(SEVERITY_KEY[severity])}
               </option>
             ))}
           </select>
@@ -267,8 +273,8 @@ function AddEntry({ studentProfileId }: { studentProfileId: string }) {
           onChange={(event) => setForm({ ...form, title: event.target.value })}
           required
           maxLength={200}
-          placeholder="Peanuts"
-          aria-label="What it is"
+          placeholder={t("medical.examplePeanuts")}
+          aria-label={t("medical.whatItIs")}
           className="w-44 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </div>
@@ -276,13 +282,13 @@ function AddEntry({ studentProfileId }: { studentProfileId: string }) {
         value={form.action}
         onChange={(event) => setForm({ ...form, action: event.target.value })}
         maxLength={2000}
-        placeholder="What to do if it happens"
-        aria-label="What to do if it happens"
+        placeholder={t("medical.actionPlaceholder")}
+        aria-label={t("medical.actionPlaceholder")}
         className="mt-2 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
       />
       {needsSeverity && (
         <p className="mt-2 text-xs text-slate-500">
-          An allergy or condition needs a severity — nobody can judge that from the name alone.
+          {t("medical.severityNeeded")}
         </p>
       )}
       <button
@@ -290,7 +296,7 @@ function AddEntry({ studentProfileId }: { studentProfileId: string }) {
         disabled={add.isPending || !form.title.trim()}
         className="mt-3 rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
       >
-        {add.isPending ? "Saving…" : "Save"}
+        {add.isPending ? t("shared.saving") : t("shared.save")}
       </button>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </form>

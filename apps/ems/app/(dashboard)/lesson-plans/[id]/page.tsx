@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { ApiError } from "@/lib/api";
 import { useLessonPlan, useUpdateLessonPlan, usePublishLessonPlan } from "@/lib/use-lesson-plans";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 interface FormValues {
   objectivesText: string;
@@ -25,6 +26,7 @@ function linesToList(value: string): string[] {
 }
 
 export default function LessonPlanDetailPage() {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const { data: plan, isLoading, error } = useLessonPlan(params.id);
   const update = useUpdateLessonPlan(params.id);
@@ -62,7 +64,7 @@ export default function LessonPlanDetailPage() {
       });
       setSaved(true);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't save this lesson plan.");
+      setFormError(err instanceof ApiError ? err.message : t("planEdit.saveFailed"));
     }
   });
 
@@ -71,11 +73,11 @@ export default function LessonPlanDetailPage() {
     try {
       await publish.mutateAsync();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't publish this lesson plan.");
+      setFormError(err instanceof ApiError ? err.message : t("planEdit.publishFailed"));
     }
   };
 
-  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
   if (error) {
     return (
       <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
@@ -91,12 +93,12 @@ export default function LessonPlanDetailPage() {
         <div>
           {plan.schemeOfWork && (
             <Link href={`/schemes-of-work/${plan.schemeOfWork.id}`} className="text-sm text-slate-600 hover:underline dark:text-slate-400">
-              ← {plan.schemeOfWork.subject?.name ?? "Subject"} · {plan.schemeOfWork.academicYear} · {plan.schemeOfWork.term}
+              ← {plan.schemeOfWork.subject?.name ?? t("shared.subjectFallback")} · {plan.schemeOfWork.academicYear} · {plan.schemeOfWork.term}
             </Link>
           )}
           <h1 className="mt-1 text-2xl font-bold tracking-tight">Week {plan.weekNumber} lesson plan</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {plan.source === "AI_GENERATED" ? "Wisdom generated" : "Manual"}
+            {plan.source === "AI_GENERATED" ? t("shared.wisdomGenerated") : t("shared.manual")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -116,7 +118,7 @@ export default function LessonPlanDetailPage() {
               disabled={publish.isPending}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              Publish
+              {t("shared.publish")}
             </button>
           )}
         </div>
@@ -149,7 +151,7 @@ export default function LessonPlanDetailPage() {
 
         <div>
           <label htmlFor="introduction" className="block text-sm font-medium">
-            Introduction
+            {t("lessonPlans.introduction")}
           </label>
           <textarea
             id="introduction"
@@ -173,7 +175,7 @@ export default function LessonPlanDetailPage() {
 
         <div>
           <label htmlFor="conclusion" className="block text-sm font-medium">
-            Conclusion
+            {t("lessonPlans.conclusion")}
           </label>
           <textarea
             id="conclusion"
@@ -185,7 +187,7 @@ export default function LessonPlanDetailPage() {
 
         <div>
           <label htmlFor="assessment" className="block text-sm font-medium">
-            Assessment
+            {t("lessonPlans.assessment")}
           </label>
           <textarea
             id="assessment"
@@ -197,7 +199,7 @@ export default function LessonPlanDetailPage() {
 
         <div>
           <label htmlFor="homework" className="block text-sm font-medium">
-            Homework
+            {t("lessonPlans.homework")}
           </label>
           <textarea
             id="homework"
@@ -212,14 +214,14 @@ export default function LessonPlanDetailPage() {
             {formError}
           </p>
         )}
-        {saved && !formError && <p className="text-sm text-emerald-600 dark:text-emerald-400">Saved.</p>}
+        {saved && !formError && <p className="text-sm text-emerald-600 dark:text-emerald-400">{t("shared.savedShort")}</p>}
 
         <button
           type="submit"
           disabled={form.formState.isSubmitting}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
         >
-          Save changes
+          {t("shared.saveChanges")}
         </button>
       </form>
     </div>

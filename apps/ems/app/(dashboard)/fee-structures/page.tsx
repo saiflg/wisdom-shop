@@ -185,7 +185,7 @@ export default function FeeStructuresPage() {
         </button>
       </form>
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {structures?.length === 0 && (
         <p className="text-sm text-slate-600 dark:text-slate-400">{t("fees.structures.none")}</p>
       )}

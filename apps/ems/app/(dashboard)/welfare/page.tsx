@@ -5,23 +5,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useIsSchoolAdmin } from "@/lib/use-can-author";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 type WelfareKind = "MEDICAL" | "HARDSHIP" | "BEREAVEMENT" | "LOAN" | "OTHER";
 type WelfareStatus = "REQUESTED" | "APPROVED" | "PAID" | "DECLINED";
 
-const KIND_LABEL: Record<WelfareKind, string> = {
-  MEDICAL: "Medical assistance",
-  HARDSHIP: "Hardship",
-  BEREAVEMENT: "Bereavement",
-  LOAN: "Loan",
-  OTHER: "Something else",
+// Keys, resolved at render — see the medical screen for why a label map
+// built at module scope stays English whatever the reader chose.
+const KIND_KEY: Record<WelfareKind, TranslationKey> = {
+  MEDICAL: "welfare.kindMEDICAL",
+  HARDSHIP: "welfare.kindHARDSHIP",
+  BEREAVEMENT: "welfare.kindBEREAVEMENT",
+  LOAN: "welfare.kindLOAN",
+  OTHER: "welfare.kindOTHER",
 };
 
-const STATUS_LABEL: Record<WelfareStatus, string> = {
-  REQUESTED: "Waiting for a decision",
-  APPROVED: "Approved, not yet paid",
-  PAID: "Paid",
-  DECLINED: "Declined",
+const STATUS_KEY: Record<WelfareStatus, TranslationKey> = {
+  REQUESTED: "welfare.statusREQUESTED",
+  APPROVED: "welfare.statusAPPROVED",
+  PAID: "welfare.statusPAID",
+  DECLINED: "welfare.statusDECLINED",
 };
 
 const STATUS_STYLE: Record<WelfareStatus, string> = {
@@ -31,11 +35,11 @@ const STATUS_STYLE: Record<WelfareStatus, string> = {
   DECLINED: "bg-slate-500 text-white",
 };
 
-const TRANSITION_LABEL: Record<WelfareStatus, string> = {
-  APPROVED: "Approve",
-  DECLINED: "Decline",
-  PAID: "Record payment",
-  REQUESTED: "Ask again",
+const TRANSITION_KEY: Record<WelfareStatus, TranslationKey> = {
+  APPROVED: "welfare.approve",
+  DECLINED: "welfare.decline",
+  PAID: "welfare.recordPayment",
+  REQUESTED: "welfare.askAgain",
 };
 
 interface WelfareRequest {
@@ -115,29 +119,28 @@ function useDecide(id: string) {
  * nobody decides their own.
  */
 export default function WelfarePage() {
+  const { t } = useTranslation();
   const isAdmin = useIsSchoolAdmin();
   const { data, isLoading } = useWelfare();
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Welfare</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("welfare.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Asking the school for help — medical bills, hardship, bereavement, a loan.
-          {isAdmin
-            ? " You can see every request, and you cannot decide your own."
-            : " Only you and the school administrators can see what you write here."}
+          {t("welfare.intro")}
+          {isAdmin ? t("welfare.adminScope") : t("welfare.staffScope")}
         </p>
       </div>
 
       <AskForHelp />
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
 
       {data && isAdmin && <Summary summary={data.summary} />}
 
       {data?.requests.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">Nothing here yet.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("welfare.none")}</p>
       )}
 
       <div className="space-y-3">
@@ -150,20 +153,21 @@ export default function WelfarePage() {
 }
 
 function Summary({ summary }: { summary: WelfareList["summary"] }) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
       <div className="flex flex-wrap gap-8">
-        <Stat label="Committed" value={formatAmount(summary.committedCents)} />
-        <Stat label="Paid" value={formatAmount(summary.paidCents)} />
-        <Stat label="Owing" value={formatAmount(summary.outstandingCents)} />
-        <Stat label="Waiting" value={formatAmount(summary.pendingCents)} hint="not a commitment yet" />
+        <Stat label={t("welfare.committed")} value={formatAmount(summary.committedCents)} />
+        <Stat label={t("welfare.paid")} value={formatAmount(summary.paidCents)} />
+        <Stat label={t("welfare.owing")} value={formatAmount(summary.outstandingCents)} />
+        <Stat label={t("welfare.waiting")} value={formatAmount(summary.pendingCents)} hint={t("welfare.waitingHint")} />
       </div>
       {summary.byKind.length > 0 && (
         <p className="mt-4 text-xs text-slate-500">
           {/* Counts beside amounts: one large bill and twelve small ones are
               the same figure and a very different picture. */}
           {summary.byKind
-            .map((k) => `${KIND_LABEL[k.kind]} ${formatAmount(k.amountCents)} (${k.count})`)
+            .map((k) => `${t(KIND_KEY[k.kind])} ${formatAmount(k.amountCents)} (${k.count})`)
             .join(" · ")}
         </p>
       )}
@@ -182,6 +186,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 }
 
 function AskForHelp() {
+  const { t } = useTranslation();
   const ask = useAskForHelp();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ kind: "MEDICAL" as WelfareKind, reason: "", amount: "" });
@@ -197,7 +202,7 @@ function AskForHelp() {
         onClick={() => setOpen(true)}
         className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
       >
-        Ask for help
+        {t("welfare.askForHelp")}
       </button>
     );
   }
@@ -212,22 +217,22 @@ function AskForHelp() {
           setForm({ ...form, reason: "", amount: "" });
           setOpen(false);
         } catch (err) {
-          setError(err instanceof ApiError ? err.message : "Could not send that request");
+          setError(err instanceof ApiError ? err.message : t("welfare.sendFailed"));
         }
       }}
       className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
     >
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Ask for help</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("welfare.askForHelp")}</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         <select
           value={form.kind}
           onChange={(event) => setForm({ ...form, kind: event.target.value as WelfareKind })}
-          aria-label="What kind of help"
+          aria-label={t("welfare.whatKind")}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
-          {(Object.keys(KIND_LABEL) as WelfareKind[]).map((kind) => (
+          {(Object.keys(KIND_KEY) as WelfareKind[]).map((kind) => (
             <option key={kind} value={kind}>
-              {KIND_LABEL[kind]}
+              {t(KIND_KEY[kind])}
             </option>
           ))}
         </select>
@@ -236,7 +241,7 @@ function AskForHelp() {
           onChange={(event) => setForm({ ...form, amount: event.target.value })}
           inputMode="decimal"
           placeholder="50000.00"
-          aria-label="Amount"
+          aria-label={t("welfare.amount")}
           className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
         />
       </div>
@@ -245,12 +250,12 @@ function AskForHelp() {
         onChange={(event) => setForm({ ...form, reason: event.target.value })}
         required
         maxLength={1000}
-        placeholder="What it is for"
-        aria-label="What it is for"
+        placeholder={t("welfare.reason")}
+        aria-label={t("welfare.reason")}
         className="mt-2 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
       />
       <p className="mt-2 text-xs text-slate-500">
-        Only you and the school administrators will see this. Somebody other than you has to decide it.
+        {t("welfare.onlyYouAndAdmins")}
       </p>
       <div className="mt-3 flex gap-2">
         <button
@@ -258,14 +263,14 @@ function AskForHelp() {
           disabled={ask.isPending || !valid}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {ask.isPending ? "Sending…" : "Send"}
+          {ask.isPending ? t("welfare.sending") : t("welfare.send")}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -274,6 +279,7 @@ function AskForHelp() {
 }
 
 function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: boolean }) {
+  const { t } = useTranslation();
   const decide = useDecide(request.id);
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -285,7 +291,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
       await decide.mutateAsync({ to, note: note.trim() || undefined });
       setNote("");
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : "Could not do that");
+      setMessage(err instanceof ApiError ? err.message : t("welfare.actionFailed"));
     }
   };
 
@@ -294,7 +300,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-medium">
-            {KIND_LABEL[request.kind]}
+            {t(KIND_KEY[request.kind])}
             <span className="ms-2 tabular-nums text-slate-600 dark:text-slate-400">
               {formatAmount(request.amountCents)}
             </span>
@@ -308,7 +314,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
           {request.decisionNote && <p className="mt-1 text-xs text-amber-600">{request.decisionNote}</p>}
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[request.status]}`}>
-          {STATUS_LABEL[request.status]}
+          {t(STATUS_KEY[request.status])}
         </span>
       </div>
 
@@ -319,7 +325,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
               value={note}
               onChange={(event) => setNote(event.target.value)}
               maxLength={1000}
-              placeholder="Why? (required to decline)"
+              placeholder={t("welfare.declineReason")}
               className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
           )}
@@ -336,7 +342,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
                     : "border border-slate-300 dark:border-slate-700"
                 }`}
               >
-                {TRANSITION_LABEL[to]}
+                {t(TRANSITION_KEY[to])}
               </button>
             ))}
           </div>
@@ -345,7 +351,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
 
       {moves.length === 0 && request.status === "REQUESTED" && (
         <p className="mt-2 text-xs text-slate-500">
-          Waiting for somebody else. A request cannot be decided by the person who made it.
+          {t("welfare.waitingForSomeoneElse")}
         </p>
       )}
 

@@ -9,6 +9,7 @@ import {
   formatMinute,
   useStudentOverview,
 } from "@/lib/use-student-overview";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Everything about one child, in one view.
@@ -19,6 +20,7 @@ import {
  * parents' evening as a child who never came.
  */
 export default function StudentOverviewPage() {
+  const { t } = useTranslation();
   const isStaff = useCanAuthor();
   const { data: students } = useStudents();
   const { data: children } = usePortalChildren(!isStaff);
@@ -34,21 +36,21 @@ export default function StudentOverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Student dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("studentOverview.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Where one child stands — attendance, fees, behaviour, books, bus and bed, in one place.
+          {t("studentOverview.intro")}
         </p>
       </div>
 
       {options.length > 1 && (
         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {isStaff ? "Student" : "Child"}
+          {isStaff ? t("shared.student") : t("shared.child")}
           <select
             value={current ?? ""}
             onChange={(event) => setChosen(event.target.value || null)}
             className="mt-1 block w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal normal-case dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("shared.choose")}</option>
             {options.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.name}
@@ -64,9 +66,10 @@ export default function StudentOverviewPage() {
 }
 
 function Overview({ studentProfileId }: { studentProfileId: string }) {
+  const { t } = useTranslation();
   const { data, isLoading } = useStudentOverview(studentProfileId);
 
-  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
   if (!data) return null;
 
   return (
@@ -74,7 +77,7 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
       <div>
         <p className="text-lg font-semibold">{data.student.name}</p>
         <p className="text-xs text-slate-500">
-          {data.student.class ? `${data.student.class.name} · ${data.student.class.academicYear}` : "Not in a class"}
+          {data.student.class ? `${data.student.class.name} · ${data.student.class.academicYear}` : t("studentOverview.notInAClass")}
           {data.student.studentCode && ` · ${data.student.studentCode}`}
         </p>
       </div>
@@ -86,7 +89,7 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
       {data.flags.length > 0 && (
         <section className="rounded-2xl border border-amber-300 p-4 dark:border-amber-900">
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
-            Worth a look
+            {t("studentOverview.worthALook")}
           </p>
           <ul className="mt-2 space-y-1">
             {data.flags.map((flag) => (
@@ -99,9 +102,9 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
       )}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card label="Attendance">
+        <Card label={t("studentOverview.attendance")}>
           {data.attendanceRate === null ? (
-            <NotRecorded>No registers yet</NotRecorded>
+            <NotRecorded>{t("studentOverview.noRegisters")}</NotRecorded>
           ) : (
             <>
               <Big>{data.attendanceRate}%</Big>
@@ -110,11 +113,11 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
           )}
         </Card>
 
-        <Card label="Fees">
+        <Card label={t("studentOverview.fees")}>
           {data.balanceCents === null ? (
             // Not "0.00 owed": a family who has not been billed is in a
             // different position from one who has settled.
-            <NotRecorded>Never invoiced</NotRecorded>
+            <NotRecorded>{t("studentOverview.neverInvoiced")}</NotRecorded>
           ) : (
             <>
               <Big tone={data.balanceCents > 0 ? "bad" : "good"}>
@@ -131,11 +134,11 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
           )}
         </Card>
 
-        <Card label="Behaviour">
+        <Card label={t("studentOverview.behaviour")}>
           {data.behaviour === null ? (
             // A child nothing has been written about is not a child assessed
             // and found blameless.
-            <NotRecorded>Nothing recorded</NotRecorded>
+            <NotRecorded>{t("studentOverview.nothingRecorded")}</NotRecorded>
           ) : (
             <>
               <Big>{data.behaviour.netPoints}</Big>
@@ -147,22 +150,22 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
           )}
         </Card>
 
-        <Card label="Wallet">
+        <Card label={t("studentOverview.wallet")}>
           {data.walletCents === null ? (
-            <NotRecorded>No wallet</NotRecorded>
+            <NotRecorded>{t("studentOverview.noWallet")}</NotRecorded>
           ) : (
             <>
               <Big>{formatAmount(data.walletCents)}</Big>
-              <Small>available</Small>
+              <Small>{t("studentOverview.walletAvailable")}</Small>
             </>
           )}
         </Card>
       </section>
 
       <section className="grid gap-3 md:grid-cols-3">
-        <Panel title="Library">
+        <Panel title={t("studentOverview.library")}>
           {data.loans.length === 0 ? (
-            <p className="text-sm text-slate-500">Nothing out.</p>
+            <p className="text-sm text-slate-500">{t("studentOverview.nothingOut")}</p>
           ) : (
             <ul className="space-y-1">
               {data.loans.map((loan) => (
@@ -177,7 +180,7 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
           )}
         </Panel>
 
-        <Panel title="Transport">
+        <Panel title={t("studentOverview.transport")}>
           {data.transport ? (
             <p className="text-sm">
               {data.transport.route}
@@ -186,18 +189,18 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
               </span>
             </p>
           ) : (
-            <p className="text-sm text-slate-500">Not on a route.</p>
+            <p className="text-sm text-slate-500">{t("studentOverview.notOnARoute")}</p>
           )}
         </Panel>
 
-        <Panel title="Boarding">
+        <Panel title={t("studentOverview.boarding")}>
           {data.hostel ? (
             <p className="text-sm">
               {data.hostel.block}
               <span className="block text-xs text-slate-500">{data.hostel.room}</span>
             </p>
           ) : (
-            <p className="text-sm text-slate-500">Not boarding.</p>
+            <p className="text-sm text-slate-500">{t("studentOverview.notBoarding")}</p>
           )}
         </Panel>
       </section>

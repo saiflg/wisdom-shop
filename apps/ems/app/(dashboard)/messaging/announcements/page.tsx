@@ -13,16 +13,18 @@ import {
   type AnnouncementPreview,
   type SentAnnouncement,
 } from "@/lib/use-announcements";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Telling the whole school something.
  *
  * The shape of this screen is one decision: **you cannot send without seeing
  * the count first**. An announcement reaches hundreds of people, costs money
- * per head on SMS, and cannot be recalled — so "Check who this reaches" comes
+ * per head on SMS, and cannot be recalled — so t("announcements.checkReach") comes
  * before "Send", and changing any field puts the check back.
  */
 export default function AnnouncementsPage() {
+  const { t } = useTranslation();
   const { data: sent } = useAnnouncements();
   const { data: classes } = useClasses();
   const preview = usePreviewAnnouncement();
@@ -55,7 +57,7 @@ export default function AnnouncementsPage() {
       setChecked(await preview.mutateAsync(input));
     } catch (err) {
       setChecked(null);
-      setProblem(errorMessage(err, "Couldn't work out who this would reach."));
+      setProblem(errorMessage(err, t("errs.audienceUnknown")));
     }
   };
 
@@ -68,7 +70,7 @@ export default function AnnouncementsPage() {
       setTitle("");
       setBody("");
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't send that."));
+      setProblem(errorMessage(err, t("errs.sendThat")));
     }
   };
 
@@ -82,33 +84,32 @@ export default function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Announcements</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("announcements.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          One message to a whole audience. Every send is recorded in the outbox, and anybody who could not be
-          reached is listed rather than quietly skipped.
+          {t("announcements.intro")}
         </p>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
         <label className="block text-sm font-medium">
-          Title
+          {t("announcements.titleField")}
           <input
             value={title}
             onChange={(event) => { setTitle(event.target.value); changed(); }}
             maxLength={150}
-            placeholder="School closed on Friday"
+            placeholder={t("announcements.titlePlaceholder")}
             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
 
         <label className="block text-sm font-medium">
-          Message
+          {t("announcements.message")}
           <textarea
             value={body}
             onChange={(event) => { setBody(event.target.value); changed(); }}
             rows={4}
             maxLength={2000}
-            placeholder="The school will be closed on Friday 21st for a public holiday."
+            placeholder={t("announcements.messagePlaceholder")}
             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
           <span className="text-xs text-slate-500">{body.length}/2000</span>
@@ -116,7 +117,7 @@ export default function AnnouncementsPage() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-medium">
-            Who is this for?
+            {t("announcements.whoFor")}
             <select
               value={audience}
               onChange={(event) => { setAudience(event.target.value); changed(); }}
@@ -130,13 +131,13 @@ export default function AnnouncementsPage() {
 
           {audience === "CLASS" && (
             <label className="block text-sm font-medium">
-              Which class?
+              {t("announcements.whichClass")}
               <select
                 value={classId}
                 onChange={(event) => { setClassId(event.target.value); changed(); }}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               >
-                <option value="">Choose a class…</option>
+                <option value="">{t("announcements.chooseClass")}</option>
                 {(classes ?? []).map((klass) => (
                   <option key={klass.id} value={klass.id}>{klass.name}</option>
                 ))}
@@ -146,7 +147,7 @@ export default function AnnouncementsPage() {
         </div>
 
         <fieldset>
-          <legend className="text-sm font-medium">How should it go out?</legend>
+          <legend className="text-sm font-medium">{t("announcements.howSend")}</legend>
           <div className="mt-1 flex gap-4">
             {["EMAIL", "SMS"].map((channel) => (
               <label key={channel} className="flex items-center gap-2 text-sm">
@@ -156,7 +157,7 @@ export default function AnnouncementsPage() {
                   onChange={() => toggleChannel(channel)}
                   className="h-4 w-4 rounded border-slate-300 text-brand-600"
                 />
-                {channel === "EMAIL" ? "Email" : "Text message"}
+                {channel === "EMAIL" ? t("announcements.email") : t("announcements.sms")}
               </label>
             ))}
           </div>
@@ -173,7 +174,7 @@ export default function AnnouncementsPage() {
             disabled={preview.isPending || !title.trim() || !body.trim() || channels.length === 0}
             className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
           >
-            {preview.isPending ? "Checking…" : "Check who this reaches"}
+            {preview.isPending ? t("announcements.checking") : t("announcements.checkReach")}
           </button>
         ) : (
           <div className="space-y-3 rounded-xl border border-brand-200 bg-brand-50/60 p-4 dark:border-brand-900 dark:bg-brand-950/20">
@@ -219,14 +220,14 @@ export default function AnnouncementsPage() {
                 disabled={send.isPending || checked.totalSends === 0}
                 className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
               >
-                {send.isPending ? "Sending…" : `Send to ${checked.totalSends}`}
+                {send.isPending ? t("announcements.sending") : `Send to ${checked.totalSends}`}
               </button>
               <button
                 type="button"
                 onClick={() => setChecked(null)}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
               >
-                Back
+                {t("announcements.back")}
               </button>
             </div>
           </div>
@@ -238,10 +239,10 @@ export default function AnnouncementsPage() {
             that still need something doing. The API orders them this way; the
             screen does not re-sort. */}
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Drafts and what has been sent
+          {t("announcements.draftsAndSent")}
         </h2>
         {(sent?.length ?? 0) === 0 ? (
-          <p className="mt-2 text-sm text-slate-500">Nothing announced yet.</p>
+          <p className="mt-2 text-sm text-slate-500">{t("announcements.none")}</p>
         ) : (
           <ul className="mt-2 space-y-2">
             {sent?.map((announcement) => (
@@ -257,7 +258,9 @@ export default function AnnouncementsPage() {
                   <p className="font-semibold">
                     {announcement.title}
                     {announcement.status === "DRAFT" && (
-                      <span className="ms-2 text-xs font-normal text-amber-600">draft — not sent</span>
+                      <span className="ms-2 text-xs font-normal text-amber-600">
+                        {t("announcements.draftNotSent")}
+                      </span>
                     )}
                   </p>
                   <p className="text-xs text-slate-500">
@@ -270,7 +273,7 @@ export default function AnnouncementsPage() {
                   </p>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-400">
-                  {announcement.body || <span className="italic text-slate-400">Nothing written yet.</span>}
+                  {announcement.body || <span className="italic text-slate-400">{t("announcements.nothingWritten")}</span>}
                 </p>
                 {announcement.status === "SENT" ? (
                   <p className="mt-1.5 text-xs text-slate-500">
@@ -298,6 +301,7 @@ export default function AnnouncementsPage() {
  * not as it stood when somebody started writing.
  */
 function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
+  const { t } = useTranslation();
   const send = useSendDraft(announcement.id);
   const discard = useDiscardDraft();
   const [note, setNote] = useState<string | null>(null);
@@ -311,7 +315,7 @@ function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
       const result = await send.mutateAsync();
       setNote(`Sent to ${result.reached}.`);
     } catch (err) {
-      setNote(errorMessage(err, "Could not send that draft"));
+      setNote(errorMessage(err, t("errs.sendDraft")));
     }
   };
 
@@ -320,14 +324,15 @@ function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
       {!ready && (
         // Said before the button is pressed rather than as an error after.
         <p className="text-xs text-slate-500">
-          Still needs {[
-            announcement.body?.trim() ? null : "something written",
-            announcement.audience ? null : "an audience",
-            announcement.channels.length ? null : "a way to send it",
-          ]
-            .filter(Boolean)
-            .join(", ")}
-          .
+          {t("announcements.stillNeeds", {
+            missing: [
+              announcement.body?.trim() ? null : t("announcements.needsBody"),
+              announcement.audience ? null : t("announcements.needsAudience"),
+              announcement.channels.length ? null : t("announcements.needsChannel"),
+            ]
+              .filter(Boolean)
+              .join(", "),
+          })}
         </p>
       )}
 
@@ -343,14 +348,14 @@ function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
               disabled={send.isPending}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {send.isPending ? "Sending…" : "Yes, send it now"}
+              {send.isPending ? t("announcements.sending") : t("announcements.confirmSend")}
             </button>
             <button
               type="button"
               onClick={() => setConfirming(false)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </>
         ) : (
@@ -360,7 +365,7 @@ function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
             disabled={!ready}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-40 dark:border-slate-700"
           >
-            Send this
+            {t("announcements.sendThis")}
           </button>
         )}
         <button
@@ -369,7 +374,7 @@ function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
           disabled={discard.isPending}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 disabled:opacity-50 dark:border-slate-700"
         >
-          Discard
+          {t("announcements.discard")}
         </button>
       </div>
       {note && <p className="text-xs text-slate-600 dark:text-slate-400">{note}</p>}

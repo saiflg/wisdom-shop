@@ -6,6 +6,7 @@ import { apiFetch, errorMessage } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useStudents } from "@/lib/use-students";
 import { PdfButton } from "@/components/pdf-button";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 interface TranscriptTerm {
   academicYear: string;
@@ -44,6 +45,7 @@ interface Transcript {
  * subject and asks "how did they do at mathematics".
  */
 export default function TranscriptsPage() {
+  const { t, locale } = useTranslation();
   const { accessToken, enabled } = useAuthQueryState();
   const { data: students } = useStudents();
 
@@ -62,21 +64,20 @@ export default function TranscriptsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Transcripts</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("transcripts.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Every published term for one student, across every year. Unpublished terms never appear — a transcript
-          that could still change is not one.
+          {t("transcripts.intro")}
         </p>
       </div>
 
       <label className="block max-w-md text-sm font-medium">
-        Student
+        {t("shared.student")}
         <select
           value={studentProfileId}
           onChange={(event) => setStudent(event.target.value)}
           className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
-          <option value="">Choose a student…</option>
+          <option value="">{t("transcripts.chooseStudent")}</option>
           {(students ?? []).map((student) => (
             <option key={student.id} value={student.id}>
               {student.user.firstName} {student.user.lastName}
@@ -86,10 +87,10 @@ export default function TranscriptsPage() {
         </select>
       </label>
 
-      {isLoading && studentProfileId && <p className="text-sm text-slate-500">Gathering the record…</p>}
+      {isLoading && studentProfileId && <p className="text-sm text-slate-500">{t("transcripts.gathering")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't build that transcript.")}
+          {errorMessage(error, t("transcripts.buildFailed"))}
         </p>
       )}
 
@@ -100,24 +101,24 @@ export default function TranscriptsPage() {
               <div>
                 <p className="text-lg font-bold">{data.student.name}</p>
                 <p className="text-sm text-slate-500">
-                  {data.student.studentCode ?? "No admission number"}
+                  {data.student.studentCode ?? t("transcripts.noAdmissionNumber")}
                   {!data.student.stillEnrolled && " · has left the school"}
                 </p>
               </div>
               <PdfButton
-                label="Download the report card"
+                label={t("transcripts.download")}
                 path={`/v1/pdf/report-cards/${studentProfileId}`}
                 filename={`transcript-${data.student.name.replace(/\s+/g, "-").toLowerCase()}.pdf`}
               />
             </div>
 
             <dl className="mt-4 grid gap-4 sm:grid-cols-4">
-              <Figure label="Terms" value={String(data.termsCounted)} />
-              <Figure label="Years" value={data.years.length ? data.years.join(", ") : "—"} />
-              <Figure label="Cumulative average" value={data.cumulativeAverage ?? "—"} />
+              <Figure label={t("transcripts.terms")} value={String(data.termsCounted)} />
+              <Figure label={t("transcripts.years")} value={data.years.length ? data.years.join(", ") : "—"} />
+              <Figure label={t("transcripts.cumulativeAverage")} value={data.cumulativeAverage ?? "—"} />
               {/* Absent rather than zero when the school's scale has no
                   points: an invented GPA is worse than none. */}
-              <Figure label="Grade point average" value={data.gradePointAverage ?? "Not used"} />
+              <Figure label={t("transcripts.gpa")} value={data.gradePointAverage ?? t("transcripts.notUsed")} />
             </dl>
 
             {/* Said out loud: a transcript that silently omits a term looks
@@ -138,7 +139,7 @@ export default function TranscriptsPage() {
 
           {data.termsCounted === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-              Nothing has been published for this student yet.
+              {t("transcripts.nothingPublished")}
             </p>
           ) : (
             <>
@@ -155,7 +156,7 @@ export default function TranscriptsPage() {
                         : "rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-900"
                     }
                   >
-                    {option === "terms" ? "Term by term" : "Subject by subject"}
+                    {option === "terms" ? t("transcripts.termByTerm") : t("transcripts.subjectBySubject")}
                   </button>
                 ))}
               </div>
@@ -173,7 +174,7 @@ export default function TranscriptsPage() {
                           {term.className && <span className="ms-2 font-normal text-slate-500">{term.className}</span>}
                         </p>
                         <p className="text-sm">
-                          <span className="text-slate-500">Overall </span>
+                          <span className="text-slate-500">{t("transcripts.overall")} </span>
                           <span className="font-semibold tabular-nums">{term.overall ?? "—"}</span>
                         </p>
                       </div>
@@ -225,8 +226,9 @@ export default function TranscriptsPage() {
           )}
 
           <p className="text-xs text-slate-500">
-            Produced {new Date(data.issuedAt).toLocaleString()}. A transcript is a snapshot of what had been
-            published at that moment.
+            {t("transcripts.producedAt", {
+              when: new Date(data.issuedAt).toLocaleString(locale),
+            })}
           </p>
         </>
       )}

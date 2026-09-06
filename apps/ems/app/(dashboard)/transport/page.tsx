@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/api";
 import { useCanAuthor } from "@/lib/use-can-author";
 import { useStudents } from "@/lib/use-students";
 import {
-  DIRECTION_LABEL,
+  DIRECTION_KEY,
   formatMinute,
   parseMinute,
   useAddRoute,
@@ -18,6 +18,7 @@ import {
   type Route,
   type TransportDirection,
 } from "@/lib/use-transport";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Buses, the runs they do, and who is on them.
@@ -28,6 +29,7 @@ import {
  * would refuse half a school a seat that exists.
  */
 export default function TransportPage() {
+  const { t } = useTranslation();
   const isStaff = useCanAuthor();
   const { data: routes, isLoading } = useRoutes();
 
@@ -36,18 +38,17 @@ export default function TransportPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Transport</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("transport.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Routes, stops and who rides. Morning and afternoon are counted separately — a bus doing both runs
-          carries its seats twice.
+          {t("transport.intro")}
         </p>
       </div>
 
       <Setup />
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {routes?.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">No routes yet.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("transport.noRoutes")}</p>
       )}
 
       <div className="space-y-3">
@@ -60,6 +61,7 @@ export default function TransportPage() {
 }
 
 function Setup() {
+  const { t } = useTranslation();
   const { data: vehicles } = useVehicles();
   const addVehicle = useAddVehicle();
   const addRoute = useAddRoute();
@@ -81,19 +83,19 @@ function Setup() {
             });
             setVehicle({ label: "", seats: "30", driverName: "" });
           } catch (err) {
-            setNote(err instanceof ApiError ? err.message : "Could not add that bus");
+            setNote(err instanceof ApiError ? err.message : t("transport.addBusFailed"));
           }
         }}
         className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
       >
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Add a bus</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("transport.addBus")}</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <input
             value={vehicle.label}
             onChange={(event) => setVehicle({ ...vehicle, label: event.target.value })}
             required
-            placeholder="Bus 1"
-            aria-label="Bus name"
+            placeholder={t("transport.busNamePlaceholder")}
+            aria-label={t("transport.busName")}
             className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
           <label className="text-xs text-slate-500">
@@ -103,15 +105,15 @@ function Setup() {
               min={0}
               value={vehicle.seats}
               onChange={(event) => setVehicle({ ...vehicle, seats: event.target.value })}
-              aria-label="Seats per run"
+              aria-label={t("transport.seatsPerRun")}
               className="mt-1 block w-20 rounded-lg border border-slate-300 px-3 py-2 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
           <input
             value={vehicle.driverName}
             onChange={(event) => setVehicle({ ...vehicle, driverName: event.target.value })}
-            placeholder="Driver"
-            aria-label="Driver name"
+            placeholder={t("transport.driverPlaceholder")}
+            aria-label={t("transport.driverName")}
             className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
           <button
@@ -119,7 +121,7 @@ function Setup() {
             disabled={addVehicle.isPending || !vehicle.label.trim()}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            Add
+            {t("transport.add")}
           </button>
         </div>
       </form>
@@ -135,28 +137,28 @@ function Setup() {
             });
             setRoute({ name: "", vehicleId: "" });
           } catch (err) {
-            setNote(err instanceof ApiError ? err.message : "Could not add that route");
+            setNote(err instanceof ApiError ? err.message : t("transport.addRouteFailed"));
           }
         }}
         className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
       >
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Add a route</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("transport.addRoute")}</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <input
             value={route.name}
             onChange={(event) => setRoute({ ...route, name: event.target.value })}
             required
-            placeholder="Ikeja run"
-            aria-label="Route name"
+            placeholder={t("transport.routeNamePlaceholder")}
+            aria-label={t("transport.routeName")}
             className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
           <select
             value={route.vehicleId}
             onChange={(event) => setRoute({ ...route, vehicleId: event.target.value })}
-            aria-label="Bus"
+            aria-label={t("transport.bus")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">No bus yet</option>
+            <option value="">{t("transport.noBusYet")}</option>
             {vehicles?.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.label} ({v.seats} seats)
@@ -168,7 +170,7 @@ function Setup() {
             disabled={addRoute.isPending || !route.name.trim()}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            Add
+            {t("transport.add")}
           </button>
         </div>
         {note && <p className="mt-2 text-xs text-red-600">{note}</p>}
@@ -178,6 +180,7 @@ function Setup() {
 }
 
 function RouteCard({ route }: { route: Route }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -188,7 +191,7 @@ function RouteCard({ route }: { route: Route }) {
           <p className="mt-0.5 text-xs text-slate-500">
             {route.vehicle
               ? `${route.vehicle.label} · ${route.seats} seats${route.vehicle.driverName ? ` · ${route.vehicle.driverName}` : ""}`
-              : "No bus on this route yet"}
+              : t("transport.noBusOnRoute")}
           </p>
           {/* Two figures, never one. */}
           <p className="mt-1 text-xs tabular-nums text-slate-500">
@@ -201,7 +204,7 @@ function RouteCard({ route }: { route: Route }) {
           aria-expanded={open}
           className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
         >
-          {open ? "Close" : "Manage"}
+          {open ? t("shared.close") : t("transport.manage")}
         </button>
       </div>
 
@@ -222,6 +225,7 @@ function RouteCard({ route }: { route: Route }) {
 }
 
 function RouteDetail({ route }: { route: Route }) {
+  const { t } = useTranslation();
   const { data: students } = useStudents();
   const assign = useAssign();
   const unassign = useUnassign();
@@ -253,7 +257,7 @@ function RouteDetail({ route }: { route: Route }) {
           }),
       );
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not save those stops");
+      setNote(err instanceof ApiError ? err.message : t("transport.saveStopsFailed"));
     }
   };
 
@@ -270,14 +274,14 @@ function RouteDetail({ route }: { route: Route }) {
     } catch (err) {
       // Where "they are already on Route B for that run" and "the morning run
       // is full" surface.
-      setNote(err instanceof ApiError ? err.message : "Could not put them on this route");
+      setNote(err instanceof ApiError ? err.message : t("transport.assignFailed"));
     }
   };
 
   return (
     <div className="mt-4 space-y-5 border-t border-slate-200 pt-4 dark:border-slate-800">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Stops, in order</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("transport.stopsInOrder")}</p>
         <ul className="mt-2 space-y-2">
           {rows.map((row, index) => (
             <li key={index} className="flex flex-wrap items-center gap-2">
@@ -287,7 +291,7 @@ function RouteDetail({ route }: { route: Route }) {
                 onChange={(event) =>
                   setRows(rows.map((r, i) => (i === index ? { ...r, name: event.target.value } : r)))
                 }
-                placeholder="Stop name"
+                placeholder={t("transport.stopName")}
                 aria-label={`Stop ${index + 1} name`}
                 className="w-44 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
@@ -305,7 +309,7 @@ function RouteDetail({ route }: { route: Route }) {
                 onClick={() => setRows(rows.filter((_, i) => i !== index))}
                 className="text-xs text-slate-500 underline"
               >
-                Remove
+                {t("shared.remove")}
               </button>
             </li>
           ))}
@@ -316,7 +320,7 @@ function RouteDetail({ route }: { route: Route }) {
             onClick={() => setRows([...rows, { name: "", time: "" }])}
             className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
           >
-            Add stop
+            {t("transport.addStop")}
           </button>
           <button
             type="button"
@@ -324,23 +328,23 @@ function RouteDetail({ route }: { route: Route }) {
             disabled={setStops.isPending}
             className="rounded-lg bg-brand-gradient px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
           >
-            {setStops.isPending ? "Saving…" : "Save stops"}
+            {setStops.isPending ? t("shared.saving") : t("transport.saveStops")}
           </button>
         </div>
         <p className="mt-1 text-xs text-slate-500">
-          Leave a time blank if the school has not set one. Blank is not midnight.
+          {t("transport.blankTimeHint")}
         </p>
       </div>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Riders</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("transport.riders")}</p>
         <ul className="mt-2 divide-y divide-slate-200 dark:divide-slate-800">
           {route.assignments.map((assignment) => (
             <li key={assignment.id} className="flex items-center justify-between gap-2 py-2">
               <span className="min-w-0 truncate text-sm">
                 {assignment.studentProfile.user.firstName} {assignment.studentProfile.user.lastName}
                 <span className="ms-2 text-xs text-slate-500">
-                  {DIRECTION_LABEL[assignment.direction]}
+                  {t(DIRECTION_KEY[assignment.direction])}
                   {assignment.stop && ` · ${assignment.stop.name}`}
                 </span>
               </span>
@@ -350,12 +354,12 @@ function RouteDetail({ route }: { route: Route }) {
                 disabled={unassign.isPending}
                 className="shrink-0 text-xs text-slate-500 underline disabled:opacity-50"
               >
-                Take off
+                {t("transport.takeOff")}
               </button>
             </li>
           ))}
           {route.assignments.length === 0 && (
-            <li className="py-2 text-sm text-slate-500">Nobody on this route yet.</li>
+            <li className="py-2 text-sm text-slate-500">{t("transport.noRiders")}</li>
           )}
         </ul>
 
@@ -363,10 +367,10 @@ function RouteDetail({ route }: { route: Route }) {
           <select
             value={studentProfileId}
             onChange={(event) => setStudentProfileId(event.target.value)}
-            aria-label="Student"
+            aria-label={t("shared.student")}
             className="w-52 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose a student…</option>
+            <option value="">{t("transport.chooseStudent")}</option>
             {students?.map((student) => (
               <option key={student.id} value={student.id}>
                 {student.user.firstName} {student.user.lastName}
@@ -376,22 +380,22 @@ function RouteDetail({ route }: { route: Route }) {
           <select
             value={direction}
             onChange={(event) => setDirection(event.target.value as TransportDirection)}
-            aria-label="Which runs"
+            aria-label={t("transport.whichRuns")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            {(Object.keys(DIRECTION_LABEL) as TransportDirection[]).map((value) => (
+            {(Object.keys(DIRECTION_KEY) as TransportDirection[]).map((value) => (
               <option key={value} value={value}>
-                {DIRECTION_LABEL[value]}
+                {t(DIRECTION_KEY[value])}
               </option>
             ))}
           </select>
           <select
             value={stopId}
             onChange={(event) => setStopId(event.target.value)}
-            aria-label="Stop"
+            aria-label={t("transport.stop")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">No stop yet</option>
+            <option value="">{t("transport.noStopYet")}</option>
             {route.stops.map((stop) => (
               <option key={stop.id} value={stop.id}>
                 {stop.name} {formatMinute(stop.pickupMinute)}
@@ -404,7 +408,7 @@ function RouteDetail({ route }: { route: Route }) {
             disabled={assign.isPending || !studentProfileId}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {assign.isPending ? "Adding…" : "Add rider"}
+            {assign.isPending ? t("shared.adding") : t("transport.addRider")}
           </button>
         </div>
       </div>
@@ -422,16 +426,17 @@ function formatMinuteInput(minute: number | null): string {
 
 /** A family reading which bus their child is on. */
 function FamilyView() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Transport</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("transport.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Which bus your child rides, where it picks up, and when.
+          {t("transport.familyIntro")}
         </p>
       </div>
       <p className="text-sm text-slate-600 dark:text-slate-400">
-        Ask the school office to add your child to a route, and their bus and stop will appear here.
+        {t("transport.familyEmpty")}
       </p>
     </div>
   );

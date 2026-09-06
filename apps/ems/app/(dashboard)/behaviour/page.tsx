@@ -14,6 +14,8 @@ import {
   type BehaviourRecord,
   type BehaviourSummary,
 } from "@/lib/use-behaviour";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * What the school has written down about one child.
@@ -24,6 +26,7 @@ import {
  * meant to help a child becomes something used against them.
  */
 export default function BehaviourPage() {
+  const { t } = useTranslation();
   const isStaff = useCanAuthor();
   const { data: students } = useStudents();
   const { data: children, isError: portalUnavailable } = usePortalChildren(!isStaff);
@@ -39,28 +42,27 @@ export default function BehaviourPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Behaviour</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("behaviour.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Merits and concerns, one child at a time. A concern is not a punishment — most of what a school
-          writes down is a child who needs help rather than a child in trouble.
+          {t("behaviour.intro")}
         </p>
       </div>
 
       {!isStaff && portalUnavailable && (
         <p className="text-sm text-amber-600">
-          Your school has not switched on the family portal, so this list is not available to you here.
+          {t("shared.portalOff")}
         </p>
       )}
 
       {options.length > 1 && (
         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {isStaff ? "Student" : "Child"}
+          {isStaff ? t("shared.student") : t("shared.child")}
           <select
             value={chosen ?? ""}
             onChange={(event) => setStudentProfileId(event.target.value || null)}
             className="mt-1 block w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal normal-case dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("shared.choose")}</option>
             {options.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.name}
@@ -74,7 +76,7 @@ export default function BehaviourPage() {
         <StudentBehaviour studentProfileId={chosen} isStaff={isStaff} />
       ) : (
         options.length > 1 && (
-          <p className="text-sm text-slate-600 dark:text-slate-400">Choose someone to see their record.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{t("behaviour.chooseSomeone")}</p>
         )
       )}
     </div>
@@ -82,9 +84,10 @@ export default function BehaviourPage() {
 }
 
 function StudentBehaviour({ studentProfileId, isStaff }: { studentProfileId: string; isStaff: boolean }) {
+  const { t } = useTranslation();
   const { data, isLoading } = useBehaviourForStudent(studentProfileId);
 
-  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
   if (!data) return null;
 
   return (
@@ -93,10 +96,10 @@ function StudentBehaviour({ studentProfileId, isStaff }: { studentProfileId: str
       {isStaff && <NewRecord studentProfileId={studentProfileId} />}
 
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Record</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("behaviour.record")}</h2>
         {data.records.length === 0 ? (
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Nothing has been written down about this child.
+            {t("behaviour.nothingWritten")}
           </p>
         ) : (
           <ul className="mt-2 space-y-2">
@@ -111,6 +114,7 @@ function StudentBehaviour({ studentProfileId, isStaff }: { studentProfileId: str
 }
 
 function Summary({ summary }: { summary: BehaviourSummary }) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
       <div className="flex flex-wrap gap-8">
@@ -118,17 +122,17 @@ function Summary({ summary }: { summary: BehaviourSummary }) {
             and one ten-point merit are the same total and a very different
             term. */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Merits</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("behaviour.merits")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">{summary.merits}</p>
           <p className="text-xs text-slate-500">{summary.meritPoints} points</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Concerns</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("behaviour.concerns")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-amber-600">{summary.concerns}</p>
           <p className="text-xs text-slate-500">{summary.concernPoints} points</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Net</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("behaviour.net")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums">{summary.netPoints}</p>
         </div>
       </div>
@@ -143,6 +147,7 @@ function Summary({ summary }: { summary: BehaviourSummary }) {
 }
 
 function RecordRow({ record, isStaff }: { record: BehaviourRecord; isStaff: boolean }) {
+  const { t } = useTranslation();
   const withdraw = useWithdrawBehaviourRecord();
   const isAdmin = useIsSchoolAdmin();
   const merit = record.kind === "MERIT";
@@ -157,7 +162,7 @@ function RecordRow({ record, isStaff }: { record: BehaviourRecord; isStaff: bool
         <div className="min-w-0">
           <p className="text-sm font-semibold">
             <span className={merit ? "text-emerald-600" : "text-amber-600"}>
-              {merit ? "Merit" : "Concern"}
+              {merit ? t("behaviour.merit") : t("behaviour.concern")}
             </span>
             <span className="ms-2 text-slate-600 dark:text-slate-400">{record.category}</span>
             {record.points > 0 && <span className="ms-2 text-xs text-slate-500">{record.points} points</span>}
@@ -179,7 +184,7 @@ function RecordRow({ record, isStaff }: { record: BehaviourRecord; isStaff: bool
             disabled={withdraw.isPending}
             className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700"
           >
-            Withdraw
+            {t("shared.withdraw")}
           </button>
         )}
       </div>
@@ -188,6 +193,7 @@ function RecordRow({ record, isStaff }: { record: BehaviourRecord; isStaff: bool
 }
 
 function NewRecord({ studentProfileId }: { studentProfileId: string }) {
+  const { t } = useTranslation();
   const create = useCreateBehaviourRecord();
   const [kind, setKind] = useState<BehaviourKind>("MERIT");
   const [category, setCategory] = useState("");
@@ -211,41 +217,41 @@ function NewRecord({ studentProfileId }: { studentProfileId: string }) {
       setCategory("");
       setDescription("");
       setOccurredAt("");
-      setNote("Written down.");
+      setNote(t("errs.writtenDown"));
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not save that");
+      setNote(err instanceof ApiError ? err.message : t("behaviour.saveFailed"));
     }
   };
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Write something down</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("behaviour.writeSomething")}</h2>
 
       <div className="mt-3 flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">
-          Kind
+          {t("shared.kind")}
           <select
             value={kind}
             onChange={(event) => setKind(event.target.value as BehaviourKind)}
             className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="MERIT">Merit</option>
-            <option value="CONCERN">Concern</option>
+            <option value="MERIT">{t("behaviour.merit")}</option>
+            <option value="CONCERN">{t("behaviour.concern")}</option>
           </select>
         </label>
         <label className="text-xs text-slate-500">
-          Category
+          {t("behaviour.category")}
           <input
             value={category}
             onChange={(event) => setCategory(event.target.value)}
             required
             maxLength={80}
-            placeholder="Helpfulness"
+            placeholder={t("behaviour.categoryPlaceholder")}
             className="mt-1 block w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
         <label className="text-xs text-slate-500">
-          Points
+          {t("behaviour.points")}
           <input
             type="number"
             min={0}
@@ -268,21 +274,20 @@ function NewRecord({ studentProfileId }: { studentProfileId: string }) {
       </div>
 
       <label className="mt-3 block text-xs text-slate-500">
-        What happened
+        {t("behaviour.whatHappened")}
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           required
           maxLength={1000}
           rows={2}
-          placeholder="Stayed behind to help clear up after the science lesson."
+          placeholder={t("behaviour.descriptionPlaceholder")}
           className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </label>
 
       <p className="mt-2 text-xs text-slate-500">
-        Points are always positive — whether they count for or against is decided by the kind. This child and
-        their family can read this.
+        {t("behaviour.pointsNote")}
       </p>
 
       <button
@@ -290,7 +295,7 @@ function NewRecord({ studentProfileId }: { studentProfileId: string }) {
         disabled={create.isPending || !category.trim() || !description.trim()}
         className="mt-3 rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
       >
-        {create.isPending ? "Saving…" : "Save"}
+        {create.isPending ? t("shared.saving") : t("shared.save")}
       </button>
       {note && <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{note}</p>}
     </form>

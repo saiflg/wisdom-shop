@@ -16,11 +16,13 @@ import {
   useStaffAttempt,
   useUpdateExam,
 } from "@/lib/use-exams";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 const CARD = "rounded-xl border border-slate-200 p-4 dark:border-slate-800";
 
 /** Building a paper, watching it being sat, and marking what is left. */
 export function ExamBuilder({ examId }: { examId: string }) {
+  const { t } = useTranslation();
   const { data: exam, isLoading, error } = useExam(examId);
   const { data: bank } = useQuestionBank(exam?.subjectId);
 
@@ -35,11 +37,11 @@ export function ExamBuilder({ examId }: { examId: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500">{t("common.loading")}</p>;
   if (error || !exam) {
     return (
       <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-        {error instanceof ApiError ? error.message : "Couldn't load this exam."}
+        {error instanceof ApiError ? error.message : t("examBuilder.loadFailed")}
       </p>
     );
   }
@@ -50,7 +52,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
       await addQuestions.mutateAsync(picked);
       setPicked([]);
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Couldn't add those questions.");
+      setActionError(err instanceof ApiError ? err.message : t("examBuilder.addFailed"));
     }
   };
 
@@ -80,19 +82,19 @@ export function ExamBuilder({ examId }: { examId: string }) {
           {exam.status === "DRAFT" && (
             <button
               type="button"
-              onClick={() => run(() => update.mutateAsync({ status: "PUBLISHED" }), "Couldn't publish it.")}
+              onClick={() => run(() => update.mutateAsync({ status: "PUBLISHED" }), t("errs.publishExam"))}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
             >
-              Publish to the class
+              {t("examBuilder.publish")}
             </button>
           )}
           {exam.status === "PUBLISHED" && (
             <button
               type="button"
-              onClick={() => run(() => update.mutateAsync({ status: "CLOSED" }), "Couldn't close it.")}
+              onClick={() => run(() => update.mutateAsync({ status: "CLOSED" }), t("errs.closeExam"))}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
             >
-              Close
+              {t("examBuilder.close")}
             </button>
           )}
           {exam.status !== "DRAFT" && (
@@ -104,14 +106,14 @@ export function ExamBuilder({ examId }: { examId: string }) {
                     const result = await collect.mutateAsync();
                     setNotice(
                       result.collected === 0
-                        ? "No papers were left running."
+                        ? t("examBuilder.noneLeftRunning")
                         : `Marked ${result.collected} paper(s) whose time had run out.`,
                     );
-                  }, "Couldn't collect them.")
+                  }, t("errs.collectScripts"))
                 }
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
               >
-                Collect expired
+                {t("examBuilder.collectExpired")}
               </button>
               <button
                 type="button"
@@ -123,11 +125,11 @@ export function ExamBuilder({ examId }: { examId: string }) {
                         ? `Released ${result.released}. ${result.heldForReview} still need marking by you.`
                         : `Released ${result.released} result(s).`,
                     );
-                  }, "Couldn't release the results.")
+                  }, t("errs.releaseResults"))
                 }
                 className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
               >
-                Release results
+                {t("examBuilder.releaseResults")}
               </button>
             </>
           )}
@@ -143,11 +145,11 @@ export function ExamBuilder({ examId }: { examId: string }) {
 
       <section className={CARD} aria-labelledby="paper-heading">
         <h2 id="paper-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          The paper
+          {t("examBuilder.thePaper")}
         </h2>
         {(exam.questions ?? []).length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">
-            No questions yet. Add some from the bank below — an empty paper cannot be published.
+            {t("examBuilder.noQuestions")}
           </p>
         ) : (
           <ol className="mt-2 space-y-2">
@@ -165,7 +167,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                     onClick={() => removeQuestion.mutate(question.id)}
                     className="shrink-0 text-xs font-semibold text-red-600 hover:underline"
                   >
-                    Remove
+                    {t("shared.remove")}
                   </button>
                 )}
               </li>
@@ -178,7 +180,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
         <section className={CARD} aria-labelledby="bank-heading">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="bank-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Add from the question bank
+              {t("examBuilder.addFromBank")}
             </h2>
             <button
               type="button"
@@ -192,7 +194,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
 
           {bank && bank.length === 0 && (
             <p className="mt-2 text-sm text-slate-500">
-              Nothing in the bank for this subject yet.
+              {t("examBuilder.bankEmpty")}
             </p>
           )}
 
@@ -229,7 +231,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
       {exam.status !== "DRAFT" && (
         <section className={CARD} aria-labelledby="attempts-heading">
           <h2 id="attempts-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            The class
+            {t("examBuilder.theClass")}
           </h2>
           <p className="mt-1 text-xs text-slate-500">
             {exam.progress?.submitted} of {exam.progress?.expected} handed in ·{" "}
@@ -237,7 +239,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
           </p>
 
           {(exam.attempts ?? []).length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">Nobody has started yet.</p>
+            <p className="mt-2 text-sm text-slate-500">{t("examBuilder.nobodyStarted")}</p>
           ) : (
             <ul className="mt-3 space-y-2">
               {exam.attempts?.map((attempt) => (
@@ -261,7 +263,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                       onClick={() => setMarkingId(markingId === attempt.id ? null : attempt.id)}
                       className="text-xs font-semibold text-brand-600 hover:underline"
                     >
-                      {markingId === attempt.id ? "Close" : "Mark"}
+                      {markingId === attempt.id ? t("shared.close") : t("examBuilder.mark")}
                     </button>
                   </span>
                 </li>
@@ -278,16 +280,17 @@ export function ExamBuilder({ examId }: { examId: string }) {
 
 /** One student's paper, with the key alongside, for a teacher to mark. */
 function AttemptMarker({ attemptId }: { attemptId: string }) {
+  const { t } = useTranslation();
   const { data: attempt, isLoading, error } = useStaffAttempt(attemptId);
   const mark = useMarkExamAnswer(attemptId);
   const [drafts, setDrafts] = useState<Record<string, { marks: string; feedback: string }>>({});
   const [markError, setMarkError] = useState<string | null>(null);
 
-  if (isLoading) return <p className="mt-4 text-sm text-slate-500">Loading the paper…</p>;
+  if (isLoading) return <p className="mt-4 text-sm text-slate-500">{t("examBuilder.loadingPaper")}</p>;
   if (error || !attempt) {
     return (
       <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
-        {error instanceof ApiError ? error.message : "Couldn't load that paper."}
+        {error instanceof ApiError ? error.message : t("examBuilder.paperLoadFailed")}
       </p>
     );
   }
@@ -339,7 +342,7 @@ function AttemptMarker({ attemptId }: { attemptId: string }) {
                 />
               </label>
               <label className="min-w-[12rem] flex-1 text-xs font-medium">
-                Feedback
+                {t("examBuilder.feedback")}
                 <input
                   value={draft.feedback}
                   onChange={(event) => {
@@ -363,18 +366,18 @@ function AttemptMarker({ attemptId }: { attemptId: string }) {
                       feedback: draft.feedback || undefined,
                     });
                   } catch (err) {
-                    setMarkError(err instanceof ApiError ? err.message : "Couldn't save that mark.");
+                    setMarkError(err instanceof ApiError ? err.message : t("examBuilder.markSaveFailed"));
                   }
                 }}
                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold dark:border-slate-700"
               >
-                Save
+                {t("shared.save")}
               </button>
               {answer.needsReview && (
-                <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">Needs you</span>
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">{t("examBuilder.needsYou")}</span>
               )}
               {answer.autoMarked && !answer.needsReview && (
-                <span className="text-xs text-slate-500">Marked by the machine</span>
+                <span className="text-xs text-slate-500">{t("examBuilder.markedByMachine")}</span>
               )}
             </div>
           </div>

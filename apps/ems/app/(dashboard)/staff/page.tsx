@@ -15,16 +15,22 @@ import {
   missingBankDetails,
   type StaffGroup,
 } from "@/lib/staff-directory";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
-const GROUPS: { value: StaffGroup; label: string }[] = [
-  { value: "all", label: "Everyone" },
-  { value: "teaching", label: "Teaching" },
-  { value: "non-teaching", label: "Non-teaching" },
+// Keys, not labels. A label baked in at module scope is fixed in whatever
+// language was active at import — which is none — so the filter would stay
+// English while the rest of the page translated around it.
+const GROUPS: { value: StaffGroup; key: TranslationKey }[] = [
+  { value: "all", key: "staff.everyone" },
+  { value: "teaching", key: "staff.teaching" },
+  { value: "non-teaching", key: "staff.nonTeaching" },
 ];
 
 const BADGE = "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold";
 
 export default function StaffDirectoryPage() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const { data: staff, isLoading, error } = useStaff();
 
@@ -43,29 +49,28 @@ export default function StaffDirectoryPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Staff directory</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("staff.directory")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-            Everyone with a staff login, teaching and non-teaching. Bank details are shown here only as whether
-            an account is on file — the number itself lives behind a reason and a log entry.
+            {t("staff.intro")}
           </p>
         </div>
         <Link
           href="/staff/new"
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          Register staff
+          {t("staff.register")}
         </Link>
       </div>
 
       {staff && staff.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-3">
-          <Stat label="Staff" value={String(staff.length)} />
-          <Stat label="Teaching" value={String(staff.filter(isTeaching).length)} />
+          <Stat label={t("staff.countLabel")} value={String(staff.length)} />
+          <Stat label={t("staff.teaching")} value={String(staff.filter(isTeaching).length)} />
           <Stat
-            label="No bank account"
+            label={t("staff.noBankAccount")}
             value={String(unpayable.length)}
             tone={unpayable.length > 0 ? "warn" : "ok"}
-            hint={unpayable.length > 0 ? "payroll would skip them" : "everyone can be paid"}
+            hint={unpayable.length > 0 ? t("staff.payrollWouldSkip") : t("staff.everyoneCanBePaid")}
           />
         </div>
       )}
@@ -84,24 +89,24 @@ export default function StaffDirectoryPage() {
                   : "rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-900"
               }
             >
-              {option.label}
+              {t(option.key)}
             </button>
           ))}
         </div>
 
         <label className="min-w-[14rem] flex-1 text-sm">
-          <span className="sr-only">Search staff</span>
+          <span className="sr-only">{t("staff.search")}</span>
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Name, staff number, job title or email"
+            placeholder={t("staff.searchPlaceholder")}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
       </div>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading staff…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("staff.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           Couldn&apos;t load the staff directory: {error.message}
@@ -110,12 +115,12 @@ export default function StaffDirectoryPage() {
 
       {staff && staff.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          Nobody has a staff record yet. Register the first one to get started.
+          {t("staff.noneYet")}
         </p>
       )}
 
       {staff && staff.length > 0 && visible.length === 0 && (
-        <p className="text-sm text-slate-500">Nobody matches that.</p>
+        <p className="text-sm text-slate-500">{t("staff.noMatch")}</p>
       )}
 
       <ul className="space-y-2">
@@ -140,12 +145,12 @@ export default function StaffDirectoryPage() {
                     )}
                     {state === "FUTURE" && (
                       <span className={`${BADGE} bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300`}>
-                        not started
+                        {t("staff.notStarted")}
                       </span>
                     )}
                     {!isTeaching(member) && (
                       <span className={`${BADGE} bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300`}>
-                        non-teaching
+                        {t("staff.nonTeaching")}
                       </span>
                     )}
                   </span>
@@ -180,11 +185,10 @@ export default function StaffDirectoryPage() {
       </ul>
 
       <p className="text-xs text-slate-500">
-        Looking for who has read someone&apos;s bank details? That is the{" "}
+        {t("staff.accessLogQuestion")}{" "}
         <Link href="/staff/access-log" className="font-semibold text-brand-600 hover:underline">
-          bank-detail access log
+          {t("staff.accessLogLink")}
         </Link>
-        .
       </p>
     </div>
   );

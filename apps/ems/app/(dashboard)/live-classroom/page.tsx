@@ -7,15 +7,17 @@ import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useCanAuthor } from "@/lib/use-can-author";
 import { useClasses } from "@/lib/use-classes";
 import { useSubjects } from "@/lib/use-subjects";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 type MeetingState = "CANCELLED" | "FINISHED" | "LIVE" | "SOON" | "SCHEDULED";
 
-const STATE_LABEL: Record<MeetingState, string> = {
-  LIVE: "Happening now",
-  SOON: "Starting shortly",
-  SCHEDULED: "Scheduled",
-  FINISHED: "Finished",
-  CANCELLED: "Cancelled",
+const STATE_KEY: Record<MeetingState, TranslationKey> = {
+  LIVE: "liveClassroom.statusLIVE",
+  SOON: "liveClassroom.statusSOON",
+  SCHEDULED: "liveClassroom.statusSCHEDULED",
+  FINISHED: "liveClassroom.statusFINISHED",
+  CANCELLED: "liveClassroom.statusCANCELLED",
 };
 
 const STATE_STYLE: Record<MeetingState, string> = {
@@ -60,6 +62,7 @@ function useLessons(classId: string) {
  * classroom would have children turning up to something that does not exist.
  */
 export default function LiveClassroomPage() {
+  const { t } = useTranslation();
   const isStaff = useCanAuthor();
   const { data: classes } = useClasses();
   const [classId, setClassId] = useState("");
@@ -68,21 +71,20 @@ export default function LiveClassroomPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Live classroom</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("liveClassroom.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Scheduled online lessons. The school runs the meeting itself on Zoom, Meet or Teams — this is where
-          the time and the link live, so a class can find them in one place.
+          {t("liveClassroom.intro")}
         </p>
       </div>
 
       <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Class
+        {t("liveClassroom.class")}
         <select
           value={classId}
           onChange={(event) => setClassId(event.target.value)}
           className="mt-1 block w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal normal-case dark:border-slate-700 dark:bg-slate-900"
         >
-          <option value="">Choose a class…</option>
+          <option value="">{t("liveClassroom.chooseClass")}</option>
           {classes?.map((schoolClass) => (
             <option key={schoolClass.id} value={schoolClass.id}>
               {schoolClass.name} · {schoolClass.academicYear}
@@ -93,9 +95,9 @@ export default function LiveClassroomPage() {
 
       {isStaff && classId && <ScheduleLesson classId={classId} />}
 
-      {isLoading && classId && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && classId && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {classId && lessons?.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">Nothing scheduled for this class.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("liveClassroom.none")}</p>
       )}
 
       <div className="space-y-2">
@@ -108,6 +110,7 @@ export default function LiveClassroomPage() {
 }
 
 function LessonRow({ lesson, isStaff }: { lesson: Lesson; isStaff: boolean }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const accessToken = useAuthQueryState().accessToken;
   const cancel = useMutation({
@@ -133,7 +136,7 @@ function LessonRow({ lesson, isStaff }: { lesson: Lesson; isStaff: boolean }) {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATE_STYLE[lesson.state]}`}>
-            {STATE_LABEL[lesson.state]}
+            {t(STATE_KEY[lesson.state])}
           </span>
 
           {/* The link only exists once it is time. A child given it on Monday
@@ -146,11 +149,11 @@ function LessonRow({ lesson, isStaff }: { lesson: Lesson; isStaff: boolean }) {
               rel="noreferrer noopener"
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
             >
-              Join
+              {t("liveClassroom.join")}
             </a>
           )}
           {!lesson.canJoin && lesson.state === "SCHEDULED" && (
-            <span className="text-xs text-slate-500">Link appears 15 minutes before</span>
+            <span className="text-xs text-slate-500">{t("liveClassroom.linkAppears")}</span>
           )}
 
           {isStaff && !lesson.cancelledAt && lesson.state !== "FINISHED" && (
@@ -160,7 +163,7 @@ function LessonRow({ lesson, isStaff }: { lesson: Lesson; isStaff: boolean }) {
               disabled={cancel.isPending}
               className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           )}
         </div>
@@ -170,6 +173,7 @@ function LessonRow({ lesson, isStaff }: { lesson: Lesson; isStaff: boolean }) {
 }
 
 function ScheduleLesson({ classId }: { classId: string }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const accessToken = useAuthQueryState().accessToken;
   const { data: subjects } = useSubjects();
@@ -199,29 +203,29 @@ function ScheduleLesson({ classId }: { classId: string }) {
           setForm({ ...form, title: "", meetingUrl: "" });
         } catch (err) {
           // Where "links have to be from zoom.us, meet.google.com…" surfaces.
-          setError(err instanceof ApiError ? err.message : "Could not schedule that");
+          setError(err instanceof ApiError ? err.message : t("liveClassroom.scheduleFailed"));
         }
       }}
       className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
     >
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Schedule a lesson</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("liveClassroom.schedule")}</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         <input
           value={form.title}
           onChange={(event) => setForm({ ...form, title: event.target.value })}
           required
           maxLength={200}
-          placeholder="Fractions revision"
-          aria-label="Title"
+          placeholder={t("liveClassroom.titlePlaceholder")}
+          aria-label={t("liveClassroom.lessonTitle")}
           className="w-52 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <select
           value={form.subjectId}
           onChange={(event) => setForm({ ...form, subjectId: event.target.value })}
-          aria-label="Subject"
+          aria-label={t("liveClassroom.subject")}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
-          <option value="">No subject</option>
+          <option value="">{t("liveClassroom.noSubject")}</option>
           {subjects?.map((subject) => (
             <option key={subject.id} value={subject.id}>
               {subject.name}
@@ -233,7 +237,7 @@ function ScheduleLesson({ classId }: { classId: string }) {
           value={form.startsAt}
           onChange={(event) => setForm({ ...form, startsAt: event.target.value })}
           required
-          aria-label="Starts"
+          aria-label={t("liveClassroom.starts")}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <input
@@ -241,7 +245,7 @@ function ScheduleLesson({ classId }: { classId: string }) {
           value={form.endsAt}
           onChange={(event) => setForm({ ...form, endsAt: event.target.value })}
           required
-          aria-label="Ends"
+          aria-label={t("liveClassroom.ends")}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </div>
@@ -251,19 +255,18 @@ function ScheduleLesson({ classId }: { classId: string }) {
         required
         maxLength={500}
         placeholder="https://meet.google.com/abc-defg-hij"
-        aria-label="Meeting link"
+        aria-label={t("liveClassroom.meetingLink")}
         className="mt-2 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
       />
       <p className="mt-2 text-xs text-slate-500">
-        Zoom, Google Meet, Teams, Whereby or Jitsi, over https. Other addresses are refused — children click
-        whatever is put in front of them.
+        {t("liveClassroom.urlRules")}
       </p>
       <button
         type="submit"
         disabled={schedule.isPending || !form.title.trim() || !form.meetingUrl.trim()}
         className="mt-3 rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
       >
-        {schedule.isPending ? "Scheduling…" : "Schedule"}
+        {schedule.isPending ? t("liveClassroom.scheduling") : t("liveClassroom.scheduleButton")}
       </button>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </form>

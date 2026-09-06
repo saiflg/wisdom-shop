@@ -73,21 +73,20 @@ export default function BrandingSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">School branding</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("branding.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Your name, logo and colours, as staff and families see them — on this console and on your
-          school&apos;s sign-in page.
+          {t("branding.intro")}
         </p>
       </div>
 
       <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-        <h2 className="mb-4 text-lg font-semibold">Logo</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t("branding.logo")}</h2>
         <div className="flex flex-wrap items-center gap-4">
           {data.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={data.logoUrl}
-              alt={`${data.schoolName} logo`}
+              alt={t("branding.logoAlt", { school: data.schoolName })}
               className="h-16 w-16 rounded-lg object-contain"
             />
           ) : (
@@ -107,9 +106,9 @@ export default function BrandingSettingsPage() {
                 setMessage(null);
                 try {
                   await uploadLogo.mutateAsync(file);
-                  setMessage({ tone: "ok", text: "Logo updated." });
+                  setMessage({ tone: "ok", text: t("branding.logoUpdated") });
                 } catch (err) {
-                  fromError(err, "Could not upload that logo.");
+                  fromError(err, t("branding.logoUploadFailed"));
                 } finally {
                   // Clear it, or picking the same file twice fires no change
                   // event and the second attempt looks like nothing happened.
@@ -118,8 +117,7 @@ export default function BrandingSettingsPage() {
               }}
             />
             <p className="text-xs text-slate-500">
-              PNG, JPEG or WebP, up to 2MB. SVG is not accepted — an SVG can carry a script, and this
-              image is shown on a page anyone can open.
+              {t("branding.logoRules")}
             </p>
             {data.logoUrl && (
               <button
@@ -130,13 +128,13 @@ export default function BrandingSettingsPage() {
                   setMessage(null);
                   try {
                     await removeLogo.mutateAsync();
-                    setMessage({ tone: "ok", text: "Logo removed." });
+                    setMessage({ tone: "ok", text: t("branding.logoRemoved") });
                   } catch (err) {
-                    fromError(err, "Could not remove the logo.");
+                    fromError(err, t("branding.logoRemoveFailed"));
                   }
                 }}
               >
-                Remove logo
+                {t("branding.removeLogo")}
               </button>
             )}
           </div>
@@ -145,22 +143,30 @@ export default function BrandingSettingsPage() {
 
       <form onSubmit={onSubmit} className="space-y-6">
         <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-          <h2 className="mb-4 text-lg font-semibold">Name and colours</h2>
+          <h2 className="mb-4 text-lg font-semibold">{t("branding.nameAndColours")}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
-              label="Display name"
+              label={t("branding.displayName")}
               name="displayName"
               defaultValue={data.schoolName}
-              hint="Leave blank to use the name your school is registered under"
+              hint={t("branding.displayNameHint")}
             />
             <FormField
-              label="Tagline"
+              label={t("branding.tagline")}
               name="tagline"
               defaultValue={data.tagline ?? ""}
-              hint="One line, shown under your name on the sign-in page"
+              hint={t("branding.taglineHint")}
             />
-            <ColorField label="Primary colour" value={primaryColor} onChange={setPrimaryColor} />
-            <ColorField label="Accent colour" value={accentColor} onChange={setAccentColor} />
+            <ColorField
+              label={t("branding.primaryColour")}
+              value={primaryColor}
+              onChange={setPrimaryColor}
+            />
+            <ColorField
+              label={t("branding.accentColour")}
+              value={accentColor}
+              onChange={setAccentColor}
+            />
           </div>
         </section>
 
@@ -196,6 +202,7 @@ function ColorField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div>
       <label className="block text-sm font-medium">{label}</label>
@@ -203,7 +210,7 @@ function ColorField({
         <input
           type="color"
           value={value}
-          aria-label={`${label} picker`}
+          aria-label={t("branding.colourPicker", { label })}
           onChange={(event) => onChange(event.target.value)}
           className="h-9 w-12 cursor-pointer rounded border border-slate-300 bg-white dark:border-slate-700"
         />
@@ -235,15 +242,16 @@ function Preview({
   accentColor: string;
   schoolName: string;
 }) {
+  const { t } = useTranslation();
   const valid = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(primaryColor);
   const ramp = valid ? brandRamp(primaryColor) : null;
 
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-      <h2 className="mb-4 text-lg font-semibold">Preview</h2>
+      <h2 className="mb-4 text-lg font-semibold">{t("branding.preview")}</h2>
       {!valid ? (
         <p className="text-sm text-amber-700 dark:text-amber-500">
-          Enter a hex colour such as #1d4ed8 to see the preview.
+          {t("branding.hexHint")}
         </p>
       ) : (
         <div
@@ -258,10 +266,10 @@ function Preview({
             className="rounded-lg px-4 py-2 text-sm font-semibold text-white"
             style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
           >
-            Primary action
+            {t("branding.primaryAction")}
           </button>
           <span className="rounded-lg bg-brand-100 px-3 py-1.5 text-sm font-medium text-brand-700">
-            Highlight
+            {t("branding.highlight")}
           </span>
         </div>
       )}

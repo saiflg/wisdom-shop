@@ -8,6 +8,8 @@ import { filterGuardians, householdSummary, neverSignedIn, unreachable, withoutE
 import { PersonPhoto } from "@/components/person-photo";
 import { GuardianInvite } from "@/components/guardian-invite";
 import { GuardianContact } from "@/components/guardian-contact";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * Every family in the school.
@@ -16,6 +18,7 @@ import { GuardianContact } from "@/components/guardian-contact";
  * three children on it rather than three near-identical rows.
  */
 export default function GuardiansPage() {
+  const { t, tPlural } = useTranslation();
   const { data: guardians, isLoading, error } = useGuardianDirectory();
   const [query, setQuery] = useState("");
 
@@ -27,23 +30,22 @@ export default function GuardiansPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Parents and guardians</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("guardians.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Search by a parent&apos;s name or by their child&apos;s — somebody ringing about a pupil rarely gives
-          their own name first.
+          {t("guardians.intro")}
         </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <label htmlFor="guardian-search" className="sr-only">
-          Search parents and children
+          {t("guardians.search")}
         </label>
         <input
           id="guardian-search"
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search a parent or a child…"
+          placeholder={t("guardians.searchPlaceholder")}
           className="min-w-[16rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         {guardians && (
@@ -57,14 +59,14 @@ export default function GuardiansPage() {
           arrived. These parents need a phone call or a letter home. */}
       {noEmail.length > 0 && (
         <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          {noEmail.length} {noEmail.length === 1 ? "family has" : "families have"} no email address on file — an
-          emailed announcement will not reach them.
+          {tPlural("guardians.noEmail", noEmail.length)}
           {cannotReach.length > 0 && (
             <>
               {" "}
               <strong>
-                {cannotReach.length} of {noEmail.length === cannotReach.length ? "those" : "them"} have no phone
-                number either, so there is no way to reach them at all.
+                {noEmail.length === cannotReach.length
+                  ? t("guardians.noPhoneEitherAll", { count: cannotReach.length })
+                  : t("guardians.noPhoneEitherSome", { count: cannotReach.length })}
               </strong>
             </>
           )}
@@ -75,15 +77,14 @@ export default function GuardiansPage() {
           families can see their child's marks, and they cannot. */}
       {waiting.length > 0 && (
         <p className="rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300">
-          {waiting.length} {waiting.length === 1 ? "parent has" : "parents have"} never signed in. Invite them
-          below so they can see attendance, homework and results.
+          {tPlural("guardians.neverSignedIn", waiting.length)}
         </p>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't load the parent directory.")}
+          {errorMessage(error, t("errs.loadParents"))}
         </p>
       )}
 

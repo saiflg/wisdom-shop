@@ -10,6 +10,8 @@ import {
   type VoucherColumn,
   type VoucherSource,
 } from "@/lib/use-voucher";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * Where a school decides what its salary voucher looks like.
@@ -19,30 +21,43 @@ import {
  * "third from the left" is the whole meaning of a column's position.
  */
 
-const STAFF_FIELDS: { value: StaffField; label: string }[] = [
-  { value: "name", label: "Name" },
-  { value: "staffNumber", label: "Staff number" },
-  { value: "bankName", label: "Bank" },
-  { value: "accountNumber", label: "Account number" },
-  { value: "jobTitle", label: "Designation" },
-  { value: "qualification", label: "Qualification" },
-  { value: "startDate", label: "Date of employment" },
-  { value: "remark", label: "Remark" },
+const STAFF_FIELDS: { value: StaffField; key: TranslationKey }[] = [
+  { value: "name", key: "voucherLayout.fieldName" },
+  { value: "staffNumber", key: "voucherLayout.fieldStaffNumber" },
+  { value: "bankName", key: "voucherLayout.fieldBank" },
+  { value: "accountNumber", key: "voucherLayout.fieldAccountNumber" },
+  { value: "jobTitle", key: "voucherLayout.fieldDesignation" },
+  { value: "qualification", key: "voucherLayout.fieldQualification" },
+  { value: "startDate", key: "voucherLayout.fieldStartDate" },
+  { value: "remark", key: "voucherLayout.fieldRemark" },
 ];
 
-/** What the column will contain, in words a bursar would use. */
-function describe(source: VoucherSource): string {
+/**
+ * What the column will contain, in words a bursar would use.
+ *
+ * `t` is passed in rather than taken from a hook: this is a plain function,
+ * not a component, and calling a hook here would break the rules of hooks.
+ */
+function describe(t: (key: TranslationKey, vars?: Record<string, string | number>) => string, source: VoucherSource): string {
   switch (source.kind) {
     case "SERIAL":
-      return "Row number";
+      return t("voucherLayout.rowNumber");
     case "PAGE_TOTAL":
-      return "Page subtotal";
-    case "STAFF":
-      return `Staff · ${STAFF_FIELDS.find((f) => f.value === source.field)?.label ?? source.field}`;
+      return t("voucherLayout.pageSubtotal");
+    case "STAFF": {
+      const field = STAFF_FIELDS.find((f) => f.value === source.field);
+      return t("voucherLayout.staffPrefix", { field: field ? t(field.key) : source.field });
+    }
     case "TOTAL":
-      return source.of === "GROSS" ? "Gross pay" : source.of === "NET" ? "Net pay" : "Total deductions";
+      return t(
+        source.of === "GROSS"
+          ? "voucherLayout.grossPay"
+          : source.of === "NET"
+            ? "voucherLayout.netPay"
+            : "voucherLayout.totalDeductions",
+      );
     case "COMPONENT":
-      return `Pay item · ${source.label}`;
+      return t("voucherLayout.payItemPrefix", { label: source.label });
   }
 }
 
@@ -54,6 +69,7 @@ function isMoney(source: VoucherSource): boolean {
 type NewKind = "COMPONENT" | "STAFF" | "TOTAL" | "SERIAL" | "PAGE_TOTAL";
 
 export default function VoucherLayoutPage() {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useVoucherSettings();
   const save = useSaveVoucherSettings();
 
@@ -100,15 +116,19 @@ export default function VoucherLayoutPage() {
 
     if (newKind === "COMPONENT") {
       if (!label) {
-        setProblem("Give the pay item a name — it must match the name on the salary, e.g. Pension.");
+        setProblem(t("errs.payItemName"));
         return;
       }
       source = { kind: "COMPONENT", label };
     } else if (newKind === "STAFF") {
       source = { kind: "STAFF", field: newField };
-      label = label || STAFF_FIELDS.find((f) => f.value === newField)!.label;
+      label = label || t(STAFF_FIELDS.find((f) => f.value === newField)!.key);
     } else if (newKind === "TOTAL") {
       source = { kind: "TOTAL", of: newTotal };
+      // Default heading text, saved into the layout and printed on the
+      // spreadsheet. A school edits these to its own wording, so they are
+      // data rather than labels — the same call as the budget starter
+      // categories and the result-template rows.
       label = label || (newTotal === "NET" ? "Net Salary" : newTotal === "GROSS" ? "Gross Salary" : "Total Deduction");
     } else if (newKind === "SERIAL") {
       source = { kind: "SERIAL" };
@@ -134,7 +154,7 @@ export default function VoucherLayoutPage() {
     } catch (err) {
       // The API returns every problem at once; showing them all beats fixing
       // one per attempt.
-      setProblem(errorMessage(err, "Couldn't save the layout."));
+      setProblem(errorMessage(err, t("errs.saveLayout")));
     }
   };
 
@@ -142,24 +162,23 @@ export default function VoucherLayoutPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Voucher layout</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("voucherLayout.title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-            Choose the columns on your salary voucher and the order they appear in. This changes the
-            document only — never what anybody is paid.
+            {t("voucherLayout.intro")}
           </p>
         </div>
         <Link
           href="/payroll/voucher"
           className="rounded-full border border-slate-300 px-4 py-1.5 text-sm transition hover:border-brand-400 dark:border-slate-700"
         >
-          Back to the voucher
+          {t("voucherLayout.back")}
         </Link>
       </div>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't load the layout.")}
+          {errorMessage(error, t("errs.loadLayout"))}
         </p>
       )}
 
@@ -167,19 +186,19 @@ export default function VoucherLayoutPage() {
         <>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-sm font-medium">Title printed above the table</span>
+              <span className="text-sm font-medium">{t("voucherLayout.printedTitle")}</span>
               <input
                 value={title}
                 onChange={(e) => {
                   setTitle(e.target.value);
                   setSaved(false);
                 }}
-                placeholder="GENERAL VOUCHER"
+                placeholder={t("voucherLayout.titlePlaceholder")}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
             </label>
             <label className="block">
-              <span className="text-sm font-medium">Rows before each subtotal</span>
+              <span className="text-sm font-medium">{t("voucherLayout.rowsBeforeSubtotal")}</span>
               <input
                 type="number"
                 min={1}
@@ -192,14 +211,14 @@ export default function VoucherLayoutPage() {
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
               <span className="mt-1 block text-xs text-slate-500">
-                How many staff fit on one printed page.
+                {t("voucherLayout.rowsHint")}
               </span>
             </label>
           </div>
 
           <div className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Columns, left to right
+              {t("voucherLayout.columns")}
             </h2>
 
             {columns.map((column, index) => (
@@ -221,7 +240,7 @@ export default function VoucherLayoutPage() {
                   className="min-w-[10rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
                 />
 
-                <span className="min-w-[11rem] text-xs text-slate-500">{describe(column.source)}</span>
+                <span className="min-w-[11rem] text-xs text-slate-500">{describe(t, column.source)}</span>
 
                 <div className="flex gap-1">
                   <button
@@ -251,7 +270,7 @@ export default function VoucherLayoutPage() {
                     aria-label={`Remove ${column.label}`}
                     className="rounded border border-slate-300 px-2 py-1 text-xs text-red-700 dark:border-slate-700 dark:text-red-400"
                   >
-                    Remove
+                    {t("shared.remove")}
                   </button>
                 </div>
               </div>
@@ -259,30 +278,30 @@ export default function VoucherLayoutPage() {
           </div>
 
           <div className="space-y-2 rounded-xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
-            <h2 className="text-sm font-semibold">Add a column</h2>
+            <h2 className="text-sm font-semibold">{t("voucherLayout.addColumn")}</h2>
             <div className="flex flex-wrap items-end gap-2">
               <label className="block">
-                <span className="text-xs text-slate-500">What it shows</span>
+                <span className="text-xs text-slate-500">{t("voucherLayout.whatItShows")}</span>
                 <select
                   value={newKind}
                   onChange={(e) => setNewKind(e.target.value as NewKind)}
                   className="mt-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
                 >
-                  <option value="COMPONENT">A pay item (allowance or deduction)</option>
-                  <option value="STAFF">Something about the person</option>
-                  <option value="TOTAL">A total</option>
-                  <option value="SERIAL">Row number</option>
-                  <option value="PAGE_TOTAL">Page subtotal</option>
+                  <option value="COMPONENT">{t("voucherLayout.aPayItem")}</option>
+                  <option value="STAFF">{t("voucherLayout.aboutPerson")}</option>
+                  <option value="TOTAL">{t("voucherLayout.aTotal")}</option>
+                  <option value="SERIAL">{t("voucherLayout.rowNumber")}</option>
+                  <option value="PAGE_TOTAL">{t("voucherLayout.pageSubtotal")}</option>
                 </select>
               </label>
 
               {newKind === "COMPONENT" && (
                 <label className="block">
-                  <span className="text-xs text-slate-500">Name on the salary</span>
+                  <span className="text-xs text-slate-500">{t("voucherLayout.nameOnSalary")}</span>
                   <input
                     value={newLabel}
                     onChange={(e) => setNewLabel(e.target.value)}
-                    placeholder="Pension"
+                    placeholder={t("voucherLayout.componentPlaceholder")}
                     className="mt-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
                   />
                 </label>
@@ -290,7 +309,7 @@ export default function VoucherLayoutPage() {
 
               {newKind === "STAFF" && (
                 <label className="block">
-                  <span className="text-xs text-slate-500">Which detail</span>
+                  <span className="text-xs text-slate-500">{t("voucherLayout.whichDetail")}</span>
                   <select
                     value={newField}
                     onChange={(e) => setNewField(e.target.value as StaffField)}
@@ -298,7 +317,7 @@ export default function VoucherLayoutPage() {
                   >
                     {STAFF_FIELDS.map((f) => (
                       <option key={f.value} value={f.value}>
-                        {f.label}
+                        {t(f.key)}
                       </option>
                     ))}
                   </select>
@@ -307,15 +326,15 @@ export default function VoucherLayoutPage() {
 
               {newKind === "TOTAL" && (
                 <label className="block">
-                  <span className="text-xs text-slate-500">Which total</span>
+                  <span className="text-xs text-slate-500">{t("voucherLayout.whichTotal")}</span>
                   <select
                     value={newTotal}
                     onChange={(e) => setNewTotal(e.target.value as "GROSS" | "DEDUCTIONS" | "NET")}
                     className="mt-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
                   >
-                    <option value="NET">Net pay</option>
-                    <option value="GROSS">Gross pay</option>
-                    <option value="DEDUCTIONS">Total deductions</option>
+                    <option value="NET">{t("voucherLayout.netPay")}</option>
+                    <option value="GROSS">{t("voucherLayout.grossPay")}</option>
+                    <option value="DEDUCTIONS">{t("voucherLayout.totalDeductions")}</option>
                   </select>
                 </label>
               )}
@@ -325,7 +344,7 @@ export default function VoucherLayoutPage() {
                 onClick={addColumn}
                 className="rounded-full border border-slate-300 px-4 py-1.5 text-sm dark:border-slate-700"
               >
-                Add
+                {t("voucher.addColumn")}
               </button>
             </div>
           </div>
@@ -337,7 +356,7 @@ export default function VoucherLayoutPage() {
           )}
           {saved && (
             <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
-              Saved. Every voucher from now on uses this layout.
+              {t("voucherLayout.saved")}
             </p>
           )}
 
@@ -348,7 +367,7 @@ export default function VoucherLayoutPage() {
               disabled={save.isPending}
               className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
             >
-              {save.isPending ? "Saving…" : "Save layout"}
+              {save.isPending ? t("shared.saving") : t("voucherLayout.save")}
             </button>
             <button
               type="button"
@@ -361,7 +380,7 @@ export default function VoucherLayoutPage() {
               }}
               className="rounded-full border border-slate-300 px-5 py-2 text-sm dark:border-slate-700"
             >
-              Undo my changes
+              {t("voucherLayout.undo")}
             </button>
           </div>
         </>

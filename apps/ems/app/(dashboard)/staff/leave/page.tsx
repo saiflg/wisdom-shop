@@ -5,15 +5,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, errorMessage } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useAuthStore } from "@/store/auth-store";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
-const TYPES = [
-  { value: "ANNUAL", label: "Annual leave" },
-  { value: "SICK", label: "Sick leave" },
-  { value: "MATERNITY", label: "Maternity leave" },
-  { value: "PATERNITY", label: "Paternity leave" },
-  { value: "COMPASSIONATE", label: "Compassionate leave" },
-  { value: "STUDY", label: "Study leave" },
-  { value: "UNPAID", label: "Unpaid leave" },
+const TYPES: { value: string; key: TranslationKey }[] = [
+  { value: "ANNUAL", key: "leave.typeANNUAL" },
+  { value: "SICK", key: "leave.typeSICK" },
+  { value: "MATERNITY", key: "leave.typeMATERNITY" },
+  { value: "PATERNITY", key: "leave.typePATERNITY" },
+  { value: "COMPASSIONATE", key: "leave.typeCOMPASSIONATE" },
+  { value: "STUDY", key: "leave.typeSTUDY" },
+  { value: "UNPAID", key: "leave.typeUNPAID" },
 ];
 
 interface LeaveRequest {
@@ -56,6 +58,7 @@ const TONE: Record<LeaveRequest["status"], string> = {
  * who will be away.
  */
 export default function LeavePage() {
+  const { t } = useTranslation();
   const { accessToken, enabled } = useAuthQueryState();
   const user = useAuthStore((state) => state.user);
   const isAdmin = user?.roles.includes("SCHOOL_ADMIN") ?? false;
@@ -119,7 +122,7 @@ export default function LeavePage() {
       setTo("");
       setReason("");
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't send that request."));
+      setProblem(errorMessage(err, t("errs.sendLeaveRequest")));
     }
   };
 
@@ -128,47 +131,46 @@ export default function LeavePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Leave</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("leave.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Weekends are not counted. Public holidays are not known to this system, so a week that contains one
-          still costs five days — adjust the dates if that matters.
+          {t("leave.intro")}
         </p>
       </div>
 
       {balance && (
         <div className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Your allowance</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("leave.yourAllowance")}</p>
           <p className="mt-1 text-lg font-bold">{balance.summary}</p>
           {balance.untracked && (
             <p className="mt-1 text-xs text-slate-500">
-              The school has not set an allowance for you. Leave is still recorded and approved as normal.
+              {t("leave.noAllowance")}
             </p>
           )}
           {!balance.untracked && balance.remainingDays < 0 && (
             <p className="mt-1 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-              More leave has been approved than the allowance covers.
+              {t("leave.overAllowance")}
             </p>
           )}
         </div>
       )}
 
       <section className="space-y-3 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-        <p className="font-semibold">Ask for time off</p>
+        <p className="font-semibold">{t("leave.askForTimeOff")}</p>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-sm font-medium">
-            Kind
+            {t("leave.kind")}
             <select
               value={type}
               onChange={(event) => setType(event.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
               {TYPES.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={option.value} value={option.value}>{t(option.key)}</option>
               ))}
             </select>
           </label>
           <label className="text-sm font-medium">
-            First day
+            {t("leave.firstDay")}
             <input
               type="date"
               value={fromDate}
@@ -180,7 +182,7 @@ export default function LeavePage() {
             />
           </label>
           <label className="text-sm font-medium">
-            Last day
+            {t("leave.lastDay")}
             <input
               type="date"
               value={toDate}
@@ -192,7 +194,7 @@ export default function LeavePage() {
         </div>
 
         <label className="block text-sm font-medium">
-          {type === "UNPAID" ? "Why (required for unpaid leave)" : "Anything the school should know (optional)"}
+          {type === "UNPAID" ? t("leave.whyUnpaid") : t("leave.anythingToKnow")}
           <input
             value={reason}
             onChange={(event) => setReason(event.target.value)}
@@ -208,14 +210,14 @@ export default function LeavePage() {
           disabled={ask.isPending || !fromDate || !toDate}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
-          {ask.isPending ? "Sending…" : "Send the request"}
+          {ask.isPending ? t("leave.sending") : t("leave.sendRequest")}
         </button>
       </section>
 
       {isAdmin && office.data && (
         <section>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Waiting for a decision
+            {t("leave.waitingForDecision")}
             {office.data.pendingDays > 0 && (
               <span className="ms-2 font-normal normal-case text-slate-400">
                 {office.data.pendingDays} days in total
@@ -223,7 +225,7 @@ export default function LeavePage() {
             )}
           </h2>
           {office.data.pending.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">Nothing waiting.</p>
+            <p className="mt-2 text-sm text-slate-500">{t("leave.nothingWaiting")}</p>
           ) : (
             <ul className="mt-2 space-y-2">
               {office.data.pending.map((request) => (
@@ -248,7 +250,7 @@ export default function LeavePage() {
                       disabled={decide.isPending}
                       className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                     >
-                      Approve
+                      {t("leave.approve")}
                     </button>
                     <button
                       type="button"
@@ -256,7 +258,7 @@ export default function LeavePage() {
                       disabled={decide.isPending}
                       className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold dark:border-slate-700"
                     >
-                      Decline
+                      {t("leave.decline")}
                     </button>
                   </div>
                 </li>
@@ -266,7 +268,7 @@ export default function LeavePage() {
 
           {office.data.upcoming.length > 0 && (
             <>
-              <h2 className="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">Away soon</h2>
+              <h2 className="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">{t("leave.awaySoon")}</h2>
               <ul className="mt-2 space-y-1">
                 {office.data.upcoming.map((request) => (
                   <li key={request.id} className="flex flex-wrap justify-between gap-2 text-sm">
@@ -284,9 +286,9 @@ export default function LeavePage() {
       )}
 
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Your requests</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("leave.yourRequests")}</h2>
         {(mine.data?.requests.length ?? 0) === 0 ? (
-          <p className="mt-2 text-sm text-slate-500">You have not asked for any leave.</p>
+          <p className="mt-2 text-sm text-slate-500">{t("leave.noRequests")}</p>
         ) : (
           <ul className="mt-2 space-y-2">
             {mine.data?.requests.map((request) => (
@@ -302,7 +304,7 @@ export default function LeavePage() {
                   {request.reason && <p className="text-xs italic text-slate-500">“{request.reason}”</p>}
                   {request.decidedByName && (
                     <p className="text-xs text-slate-500">
-                      {request.status === "APPROVED" ? "Approved" : "Declined"} by {request.decidedByName}
+                      {request.status === "APPROVED" ? t("leave.approved") : t("leave.declined")} by {request.decidedByName}
                       {request.decisionNote ? ` — “${request.decisionNote}”` : ""}
                     </p>
                   )}
@@ -317,7 +319,7 @@ export default function LeavePage() {
                       onClick={() => void cancel.mutateAsync(request.id).catch(() => undefined)}
                       className="text-xs font-semibold text-brand-600 hover:underline"
                     >
-                      Take it back
+                      {t("leave.takeItBack")}
                     </button>
                   )}
                 </div>

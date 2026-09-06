@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,18 +9,24 @@ import { ApiError } from "@/lib/api";
 import { useStudent } from "@/lib/use-students";
 import { useLinkGuardian, useUnlinkGuardian } from "@/lib/use-guardians";
 import { FormField } from "@/components/form-field";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
-const linkGuardianSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  relationship: z.string().min(1, "Relationship is required"),
-  password: z.string().optional(),
-});
+function linkGuardianSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    email: z.string().email(t("valid.emailInvalid")),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    relationship: z.string().min(1, t("valid.relationshipRequired")),
+    password: z.string().optional(),
+  });
+}
 
-type LinkGuardianValues = z.infer<typeof linkGuardianSchema>;
+type LinkGuardianValues = z.infer<ReturnType<typeof linkGuardianSchemaFor>>;
 
 export default function StudentDetailPage() {
+  const { t } = useTranslation();
+  const schema = useMemo(() => linkGuardianSchemaFor(t), [t]);
   const params = useParams<{ id: string }>();
   const { data: student, isLoading, error } = useStudent(params.id);
   const linkGuardian = useLinkGuardian();
@@ -28,7 +34,7 @@ export default function StudentDetailPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const form = useForm<LinkGuardianValues>({ resolver: zodResolver(linkGuardianSchema) });
+  const form = useForm<LinkGuardianValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
@@ -37,11 +43,11 @@ export default function StudentDetailPage() {
       form.reset();
       setShowForm(false);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't link that guardian.");
+      setFormError(err instanceof ApiError ? err.message : t("studentDetail.linkFailed"));
     }
   });
 
-  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
   if (error) {
     return (
       <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
@@ -63,9 +69,9 @@ export default function StudentDetailPage() {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold">Classes</h2>
+        <h2 className="text-lg font-semibold">{t("studentDetail.classes")}</h2>
         {student.enrollments.length === 0 && (
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Not enrolled in any class yet.</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{t("studentDetail.notEnrolled")}</p>
         )}
         {student.enrollments.length > 0 && (
           <ul className="mt-3 space-y-2">
@@ -80,34 +86,33 @@ export default function StudentDetailPage() {
 
       <div>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Guardians</h2>
+          <h2 className="text-lg font-semibold">{t("studentDetail.guardians")}</h2>
           <button
             type="button"
             onClick={() => setShowForm((v) => !v)}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium transition hover:border-brand-400 dark:border-slate-700"
           >
-            {showForm ? "Cancel" : "Link a guardian"}
+            {showForm ? t("common.cancel") : t("studentDetail.linkGuardian")}
           </button>
         </div>
 
         {showForm && (
           <form onSubmit={onSubmit} className="mt-3 space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-            <FormField label="Email" type="email" error={form.formState.errors.email?.message} {...form.register("email")} />
+            <FormField label={t("studentDetail.email")} type="email" error={form.formState.errors.email?.message} {...form.register("email")} />
             <p className="text-xs text-slate-500">
-              If this email already belongs to a guardian, they&apos;re linked directly. Otherwise fill in the fields
-              below to create a new one.
+              {t("studentDetail.guardianEmailHint")}
             </p>
-            <FormField label="First name" error={form.formState.errors.firstName?.message} {...form.register("firstName")} />
-            <FormField label="Last name" error={form.formState.errors.lastName?.message} {...form.register("lastName")} />
+            <FormField label={t("studentDetail.firstName")} error={form.formState.errors.firstName?.message} {...form.register("firstName")} />
+            <FormField label={t("studentDetail.lastName")} error={form.formState.errors.lastName?.message} {...form.register("lastName")} />
             <FormField
-              label="Password (new guardian only)"
+              label={t("studentDetail.passwordNewOnly")}
               type="password"
               error={form.formState.errors.password?.message}
               {...form.register("password")}
             />
             <FormField
-              label="Relationship"
-              placeholder="Mother"
+              label={t("studentDetail.relationship")}
+              placeholder={t("studentDetail.relationshipPlaceholder")}
               error={form.formState.errors.relationship?.message}
               {...form.register("relationship")}
             />
@@ -121,13 +126,13 @@ export default function StudentDetailPage() {
               disabled={form.formState.isSubmitting}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              Link guardian
+              {t("studentDetail.linkButton")}
             </button>
           </form>
         )}
 
         {student.guardianLinks.length === 0 && (
-          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">No guardians linked yet.</p>
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t("studentDetail.noGuardians")}</p>
         )}
         {student.guardianLinks.length > 0 && (
           <ul className="mt-3 space-y-2">
@@ -145,7 +150,7 @@ export default function StudentDetailPage() {
                   disabled={unlinkGuardian.isPending}
                   className="text-red-600 hover:underline disabled:opacity-60 dark:text-red-400"
                 >
-                  Unlink
+                  {t("studentDetail.unlink")}
                 </button>
               </li>
             ))}

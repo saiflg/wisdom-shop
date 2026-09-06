@@ -14,6 +14,8 @@ import {
   type ResultTemplate,
   type ResultTemplateComponent,
 } from "@/lib/use-result-templates";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * The shape of a term's assessments, stored once and applied.
@@ -24,24 +26,24 @@ import {
  * card — you only see it by adding up a column nobody adds up.
  */
 export default function ResultTemplatesPage() {
+  const { t } = useTranslation();
   const { data: templates, isLoading } = useResultTemplates();
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Result templates</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("resultTemplates.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          How a term is marked — the tests, what each is out of, and what each is worth. Apply one to a class
-          and it creates those assessments for every subject you choose.
+          {t("resultTemplates.intro")}
         </p>
       </div>
 
       <NewTemplate />
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {templates?.length === 0 && (
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          No templates yet. Most schools have one for continuous assessment plus an exam.
+          {t("resultTemplates.none")}
         </p>
       )}
 
@@ -62,6 +64,7 @@ const BLANK: ResultTemplateComponent[] = [
 ];
 
 function NewTemplate() {
+  const { t } = useTranslation();
   const create = useCreateResultTemplate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -84,7 +87,7 @@ function NewTemplate() {
     } catch (err) {
       // The weight message from the API names the actual total, which is the
       // one thing a person needs in order to fix it.
-      setError(err instanceof ApiError ? err.message : "Could not save that template");
+      setError(err instanceof ApiError ? err.message : t("resultTemplates.saveFailed"));
     }
   };
 
@@ -95,21 +98,21 @@ function NewTemplate() {
         onClick={() => setOpen(true)}
         className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
       >
-        New template
+        {t("resultTemplates.new")}
       </button>
     );
   }
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">New template</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("resultTemplates.new")}</h2>
       <input
         value={name}
         onChange={(event) => setName(event.target.value)}
         required
         maxLength={120}
-        placeholder="Junior CA and Exam"
-        aria-label="Template name"
+        placeholder={t("resultTemplates.namePlaceholder")}
+        aria-label={t("resultTemplates.name")}
         className="mt-3 w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
       />
 
@@ -119,11 +122,11 @@ function NewTemplate() {
             <input
               value={row.name}
               onChange={(event) => setRow(index, { name: event.target.value })}
-              aria-label={`Component ${index + 1} name`}
+              aria-label={t("resultTemplates.componentName", { number: index + 1 })}
               className="w-32 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
             <label className="text-xs text-slate-500">
-              out of
+              {t("resultTemplates.outOf")}
               <input
                 type="number"
                 min={1}
@@ -151,7 +154,7 @@ function NewTemplate() {
               onClick={() => setRows(rows.filter((_, i) => i !== index))}
               className="text-xs text-slate-500 underline"
             >
-              Remove
+              {t("shared.remove")}
             </button>
           </li>
         ))}
@@ -163,7 +166,7 @@ function NewTemplate() {
           onClick={() => setRows([...rows, { name: "", maxScoreHundredths: 1000, weightPercent: 0 }])}
           className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
         >
-          Add row
+          {t("resultTemplates.addRow")}
         </button>
         {/* Shown live rather than only on submit: the total is the whole
             point of the screen, and finding out it was 90 after saving is
@@ -179,14 +182,14 @@ function NewTemplate() {
           disabled={create.isPending || total !== 100 || !name.trim()}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {create.isPending ? "Saving…" : "Save template"}
+          {create.isPending ? t("shared.saving") : t("resultTemplates.save")}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -195,6 +198,7 @@ function NewTemplate() {
 }
 
 function TemplateRow({ template }: { template: ResultTemplate }) {
+  const { t } = useTranslation();
   const remove = useDeleteResultTemplate();
   const [applying, setApplying] = useState(false);
 
@@ -219,7 +223,7 @@ function TemplateRow({ template }: { template: ResultTemplate }) {
             aria-expanded={applying}
             className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
           >
-            {applying ? "Close" : "Apply to a class"}
+            {applying ? t("shared.close") : t("resultTemplates.applyToClass")}
           </button>
           <button
             type="button"
@@ -227,7 +231,7 @@ function TemplateRow({ template }: { template: ResultTemplate }) {
             disabled={remove.isPending}
             className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 disabled:opacity-50 dark:border-red-900"
           >
-            Remove
+            {t("shared.remove")}
           </button>
         </div>
       </div>
@@ -238,6 +242,7 @@ function TemplateRow({ template }: { template: ResultTemplate }) {
 }
 
 function ApplyPanel({ template }: { template: ResultTemplate }) {
+  const { t } = useTranslation();
   const { data: classes } = useClasses();
   const { data: subjects } = useSubjects();
   const apply = useApplyResultTemplate(template.id);
@@ -269,7 +274,7 @@ function ApplyPanel({ template }: { template: ResultTemplate }) {
           : `${result.created} assessments created.`,
       );
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not apply that template");
+      setNote(err instanceof ApiError ? err.message : t("resultTemplates.applyFailed"));
     }
   };
 
@@ -277,13 +282,13 @@ function ApplyPanel({ template }: { template: ResultTemplate }) {
     <div className="mt-4 space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
       <div className="flex flex-wrap gap-3">
         <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Class
+          {t("resultTemplates.class")}
           <select
             value={classId}
             onChange={(event) => setClassId(event.target.value)}
             className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal normal-case dark:border-slate-700 dark:bg-slate-900"
           >
-            <option value="">Choose a class</option>
+            <option value="">{t("resultTemplates.chooseClass")}</option>
             {classes?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} · {c.academicYear}
@@ -292,21 +297,21 @@ function ApplyPanel({ template }: { template: ResultTemplate }) {
           </select>
         </label>
         <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Term
+          {t("resultTemplates.term")}
           <select
             value={term}
             onChange={(event) => setTerm(event.target.value)}
             className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal normal-case dark:border-slate-700 dark:bg-slate-900"
           >
-            <option>First</option>
-            <option>Second</option>
-            <option>Third</option>
+            <option>{t("resultTemplates.termFirst")}</option>
+            <option>{t("resultTemplates.termSecond")}</option>
+            <option>{t("resultTemplates.termThird")}</option>
           </select>
         </label>
       </div>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subjects</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("resultTemplates.subjects")}</p>
         <ul className="mt-2 grid gap-1 sm:grid-cols-2">
           {subjects?.map((subject) => (
             <li key={subject.id}>
@@ -337,7 +342,7 @@ function ApplyPanel({ template }: { template: ResultTemplate }) {
           disabled={apply.isPending || !classId || chosen.length === 0}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {apply.isPending ? "Applying…" : "Apply"}
+          {apply.isPending ? t("resultTemplates.applying") : t("resultTemplates.apply")}
         </button>
         {/* Said before, not after. Forty-eight rows is a lot to create on
             somebody's behalf without telling them the number first. */}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useForm, useFieldArray } from "react-hook-form";
 import { ApiError } from "@/lib/api";
 import { useQuiz, useUpdateQuiz, usePublishQuiz, QUIZ_QUESTION_TYPES, type QuizQuestionType } from "@/lib/use-quizzes";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 interface QuestionFormValues {
   prompt: string;
@@ -36,6 +37,7 @@ function linesToList(value: string): string[] {
 }
 
 export default function QuizDetailPage() {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const { data: quiz, isLoading, error } = useQuiz(params.id);
   const update = useUpdateQuiz(params.id);
@@ -80,7 +82,7 @@ export default function QuizDetailPage() {
       });
       setSaved(true);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't save this quiz.");
+      setFormError(err instanceof ApiError ? err.message : t("quizEdit.saveFailed"));
     }
   });
 
@@ -89,11 +91,11 @@ export default function QuizDetailPage() {
     try {
       await publish.mutateAsync();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't publish this quiz.");
+      setFormError(err instanceof ApiError ? err.message : t("quizEdit.publishFailed"));
     }
   };
 
-  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
   if (error) {
     return (
       <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
@@ -114,13 +116,13 @@ export default function QuizDetailPage() {
               href={`/schemes-of-work/${quiz.schemeOfWork.id}`}
               className="text-sm text-slate-600 hover:underline dark:text-slate-400"
             >
-              ← {quiz.schemeOfWork.subject?.name ?? "Subject"} · {quiz.schemeOfWork.academicYear} ·{" "}
+              ← {quiz.schemeOfWork.subject?.name ?? t("quizzes.subjectFallback")} · {quiz.schemeOfWork.academicYear} ·{" "}
               {quiz.schemeOfWork.term}
             </Link>
           )}
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{quiz.title}</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Week {quiz.weekNumber} · {quiz.source === "AI_GENERATED" ? "Wisdom generated" : "Manual"} · {totalMarks} marks
+            Week {quiz.weekNumber} · {quiz.source === "AI_GENERATED" ? t("quizzes.wisdomGenerated") : t("quizzes.manual")} · {totalMarks} marks
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -140,7 +142,7 @@ export default function QuizDetailPage() {
               disabled={publish.isPending}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              Publish
+              {t("quizEdit.publish")}
             </button>
           )}
         </div>
@@ -149,7 +151,7 @@ export default function QuizDetailPage() {
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <label htmlFor="title" className="block text-sm font-medium">
-            Title
+            {t("quizEdit.title")}
           </label>
           <input
             id="title"
@@ -168,14 +170,14 @@ export default function QuizDetailPage() {
                   onClick={() => remove(index)}
                   className="text-sm text-red-600 hover:underline dark:text-red-400"
                 >
-                  Remove question
+                  {t("quizEdit.removeQuestion")}
                 </button>
               )}
             </div>
 
             <div>
               <label htmlFor={`question-${index}-prompt`} className="block text-sm font-medium">
-                Prompt
+                {t("quizEdit.prompt")}
               </label>
               <textarea
                 id={`question-${index}-prompt`}
@@ -188,7 +190,7 @@ export default function QuizDetailPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label htmlFor={`question-${index}-type`} className="block text-sm font-medium">
-                  Type
+                  {t("quizEdit.type")}
                 </label>
                 <select
                   id={`question-${index}-type`}
@@ -197,7 +199,7 @@ export default function QuizDetailPage() {
                 >
                   {QUIZ_QUESTION_TYPES.map((type) => (
                     <option key={type} value={type}>
-                      {type === "MULTIPLE_CHOICE" ? "Multiple choice" : "Short answer"}
+                      {type === "MULTIPLE_CHOICE" ? t("quizEdit.multipleChoice") : t("quizEdit.shortAnswer")}
                     </option>
                   ))}
                 </select>
@@ -205,7 +207,7 @@ export default function QuizDetailPage() {
 
               <div>
                 <label htmlFor={`question-${index}-marks`} className="block text-sm font-medium">
-                  Marks
+                  {t("quizEdit.marks")}
                 </label>
                 <input
                   id={`question-${index}-marks`}
@@ -231,7 +233,7 @@ export default function QuizDetailPage() {
 
             <div>
               <label htmlFor={`question-${index}-correctAnswer`} className="block text-sm font-medium">
-                Correct answer
+                {t("quizEdit.correctAnswer")}
               </label>
               <input
                 id={`question-${index}-correctAnswer`}
@@ -247,7 +249,7 @@ export default function QuizDetailPage() {
           onClick={() => append(EMPTY_QUESTION)}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
         >
-          Add question
+          {t("quizEdit.addQuestion")}
         </button>
 
         {formError && (
@@ -255,7 +257,7 @@ export default function QuizDetailPage() {
             {formError}
           </p>
         )}
-        {saved && !formError && <p className="text-sm text-emerald-600 dark:text-emerald-400">Saved.</p>}
+        {saved && !formError && <p className="text-sm text-emerald-600 dark:text-emerald-400">{t("quizEdit.saved")}</p>}
 
         <div>
           <button
@@ -263,7 +265,7 @@ export default function QuizDetailPage() {
             disabled={form.formState.isSubmitting}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            Save changes
+            {t("quizEdit.saveChanges")}
           </button>
         </div>
       </form>

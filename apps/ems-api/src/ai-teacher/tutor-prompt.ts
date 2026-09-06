@@ -22,6 +22,16 @@ export interface TutorContext {
    * note saying why it is needed. See accessibility-prompt.ts.
    */
   accessibility?: AccessibilityNeeds | null;
+  /**
+   * The language to teach in, named in English — "Arabic", "Hausa".
+   *
+   * Without this the model answers in whatever language the last message
+   * happened to be in, which for a class taught by pressing buttons is
+   * whatever language those buttons were written in. A school running the
+   * portal in Arabic got English lessons, and nothing on the screen
+   * explained why.
+   */
+  language?: string | null;
 }
 
 export interface TranscriptTurn {
@@ -60,6 +70,18 @@ function describeLearner(context: TutorContext): string {
   return grade ? `a ${grade} student` : "a school student";
 }
 
+/**
+ * The line that pins the reply language.
+ *
+ * First, not last: an instruction buried under nine teaching rules is one
+ * the model drops as the transcript grows.
+ */
+function languageLine(context: TutorContext): string | null {
+  const language = context.language?.trim();
+  if (!language || language === "English") return null;
+  return `Write every reply in ${language}. The student reads ${language}, so explanations, examples and questions are all in ${language}.`;
+}
+
 export function buildTutorPrompt(
   context: TutorContext,
   transcript: TranscriptTurn[],
@@ -70,6 +92,8 @@ export function buildTutorPrompt(
   lines.push(
     `You are a patient, encouraging teacher helping ${describeLearner(context)} with ${context.subjectName}.`,
   );
+  const tutorLanguage = languageLine(context);
+  if (tutorLanguage) lines.push(tutorLanguage);
 
   const standard = context.curriculumStandard?.trim();
   const country = context.country?.trim();
@@ -178,6 +202,8 @@ export function buildCoursePrompt(context: TutorContext, lessonCount: { min: num
   lines.push(
     `Plan a short course teaching ${describeLearner(context)} about "${context.topic.trim()}" in ${context.subjectName}.`,
   );
+  const courseLanguage = languageLine(context);
+  if (courseLanguage) lines.push(courseLanguage);
 
   const standard = context.curriculumStandard?.trim();
   const country = context.country?.trim();
@@ -217,6 +243,8 @@ export function buildLessonPrompt(
   lines.push(
     `You are teaching ${describeLearner(context)} a course on "${context.topic.trim()}" in ${context.subjectName}.`,
   );
+  const lessonLanguage = languageLine(context);
+  if (lessonLanguage) lines.push(lessonLanguage);
   lines.push(`This is lesson ${progress.index + 1} of ${progress.total}: ${course.title}`);
 
   const objectives = course.objectives.map((o) => o.trim()).filter(Boolean);
@@ -288,6 +316,9 @@ export function buildLessonPrompt(
 export function buildDiagramPrompt(context: TutorContext, lessonText: string): string {
   return [
     `You are illustrating a ${context.subjectName} lesson for a student in ${context.gradeLevel ?? "school"}.`,
+    // A diagram carries words too - axis labels, callouts - and they have to
+    // be in the same language as the lesson beside it.
+    languageLine(context) ?? "",
     "",
     "Here is what the teacher just said:",
     lessonText,

@@ -11,6 +11,8 @@ import {
   type LoanRow,
   type LoanStatus,
 } from "@/lib/use-loans";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * Loans and salary advances.
@@ -21,11 +23,11 @@ import {
  * case and adding a loan is the rare one.
  */
 
-const STATUS_LABEL: Record<LoanStatus, string> = {
-  ACTIVE: "Being repaid",
-  SETTLED: "Repaid in full",
-  WRITTEN_OFF: "Written off",
-  CANCELLED: "Cancelled",
+const STATUS_LABEL: Record<LoanStatus, TranslationKey> = {
+  ACTIVE: "loans.statusACTIVE",
+  SETTLED: "loans.statusSETTLED",
+  WRITTEN_OFF: "loans.statusWRITTEN_OFF",
+  CANCELLED: "loans.statusCANCELLED",
 };
 
 const STATUS_STYLE: Record<LoanStatus, string> = {
@@ -46,6 +48,7 @@ function toCents(value: string): number | null {
 }
 
 export default function LoansPage() {
+  const { t, tPlural } = useTranslation();
   const [includeSettled, setIncludeSettled] = useState(false);
   const { data, isLoading, error } = useLoans(includeSettled);
   const { data: staff } = useStaff();
@@ -72,11 +75,11 @@ export default function LoansPage() {
     const monthlyDeductionCents = form.instalment.trim() ? toCents(form.instalment) : 0;
 
     if (principalCents === null || principalCents <= 0) {
-      setProblem("Enter the amount lent, e.g. 50000 or 50000.00");
+      setProblem(t("loans.enterPrincipal"));
       return;
     }
     if (monthlyDeductionCents === null) {
-      setProblem("The monthly deduction must be an amount, e.g. 5000");
+      setProblem(t("loans.enterInstalment"));
       return;
     }
 
@@ -91,7 +94,7 @@ export default function LoansPage() {
       setForm({ staffProfileId: "", kind: "LOAN", principal: "", instalment: "", note: "" });
       setShowForm(false);
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't record that loan."));
+      setProblem(errorMessage(err, t("loans.createFailed")));
     }
   };
 
@@ -100,7 +103,7 @@ export default function LoansPage() {
     setProblem(null);
     const amountCents = toCents(repayAmount);
     if (amountCents === null || amountCents <= 0) {
-      setProblem("Enter the amount repaid, e.g. 5000");
+      setProblem(t("loans.enterRepayment"));
       return;
     }
     try {
@@ -108,7 +111,7 @@ export default function LoansPage() {
       setRepaying(null);
       setRepayAmount("");
     } catch (err) {
-      setProblem(errorMessage(err, "Couldn't record that repayment."));
+      setProblem(errorMessage(err, t("loans.repayFailed")));
     }
   };
 
@@ -116,10 +119,9 @@ export default function LoansPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Loans and salary advances</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("loans.title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-            What staff owe the school, and what payroll will recover this month. The final instalment is
-            always the remainder, never the full amount.
+            {t("loans.intro")}
           </p>
         </div>
         <button
@@ -127,7 +129,7 @@ export default function LoansPage() {
           onClick={() => setShowForm((v) => !v)}
           className="rounded-full bg-brand-gradient px-4 py-1.5 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          {showForm ? "Cancel" : "New loan"}
+          {showForm ? t("common.cancel") : t("loans.newLoan")}
         </button>
       </div>
 
@@ -135,19 +137,19 @@ export default function LoansPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
             <p className="text-2xl font-bold tabular-nums">{data.totals.count}</p>
-            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">Loans</p>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{t("loans.count")}</p>
           </div>
           <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
             <p className="text-2xl font-bold tabular-nums">{money(data.totals.outstandingCents)}</p>
-            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">Still owed</p>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{t("loans.stillOwed")}</p>
           </div>
           <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
             <p className="text-2xl font-bold tabular-nums">{money(data.totals.dueThisMonthCents)}</p>
-            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">Due this month</p>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{t("loans.dueThisMonth")}</p>
           </div>
           <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
             <p className="text-2xl font-bold tabular-nums">{money(data.totals.repaidCents)}</p>
-            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">Repaid to date</p>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{t("loans.repaidToDate")}</p>
           </div>
         </div>
       )}
@@ -156,13 +158,13 @@ export default function LoansPage() {
         <div className="space-y-3 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="text-sm font-medium">Staff member</span>
+              <span className="text-sm font-medium">{t("loans.staffMember")}</span>
               <select
                 value={form.staffProfileId}
                 onChange={(e) => setForm({ ...form, staffProfileId: e.target.value })}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               >
-                <option value="">Choose…</option>
+                <option value="">{t("shared.choose")}</option>
                 {/* Only people with an employment record can hold a loan, so
                     anyone without one is left out rather than offered and
                     then rejected on save. */}
@@ -177,19 +179,19 @@ export default function LoansPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium">Type</span>
+              <span className="text-sm font-medium">{t("loans.type")}</span>
               <select
                 value={form.kind}
                 onChange={(e) => setForm({ ...form, kind: e.target.value as "LOAN" | "SALARY_ADVANCE" })}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               >
-                <option value="LOAN">Loan</option>
-                <option value="SALARY_ADVANCE">Salary advance</option>
+                <option value="LOAN">{t("loans.kindLoan")}</option>
+                <option value="SALARY_ADVANCE">{t("loans.kindAdvance")}</option>
               </select>
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium">Amount lent</span>
+              <span className="text-sm font-medium">{t("loans.amountLent")}</span>
               <input
                 value={form.principal}
                 onChange={(e) => setForm({ ...form, principal: e.target.value })}
@@ -200,7 +202,7 @@ export default function LoansPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium">Deduct each month</span>
+              <span className="text-sm font-medium">{t("loans.deductMonthly")}</span>
               <input
                 value={form.instalment}
                 onChange={(e) => setForm({ ...form, instalment: e.target.value })}
@@ -209,13 +211,13 @@ export default function LoansPage() {
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
               <span className="mt-1 block text-xs text-slate-500">
-                Leave blank to recover the whole amount in one month.
+                {t("loans.instalmentHint")}
               </span>
             </label>
           </div>
 
           <label className="block">
-            <span className="text-sm font-medium">Note (optional)</span>
+            <span className="text-sm font-medium">{t("loans.note")}</span>
             <input
               value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
@@ -229,7 +231,7 @@ export default function LoansPage() {
             disabled={!form.staffProfileId || createLoan.isPending}
             className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            {createLoan.isPending ? "Recording…" : "Record loan"}
+            {createLoan.isPending ? t("loans.recording") : t("loans.recordLoan")}
           </button>
         </div>
       )}
@@ -246,19 +248,19 @@ export default function LoansPage() {
           checked={includeSettled}
           onChange={(e) => setIncludeSettled(e.target.checked)}
         />
-        Show loans that are already repaid
+        {t("loans.showSettled")}
       </label>
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't load the loan register.")}
+          {errorMessage(error, t("loans.loadFailed"))}
         </p>
       )}
 
       {data && data.rows.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          Nobody owes the school anything.
+          {t("loans.none")}
         </p>
       )}
 
@@ -267,14 +269,14 @@ export default function LoansPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-start dark:bg-slate-900">
               <tr>
-                <th className="px-3 py-2 font-medium">Staff</th>
-                <th className="px-3 py-2 font-medium">Reference</th>
-                <th className="px-3 py-2 text-end font-medium">Lent</th>
-                <th className="px-3 py-2 text-end font-medium">Repaid</th>
-                <th className="px-3 py-2 text-end font-medium">Outstanding</th>
-                <th className="px-3 py-2 text-end font-medium">Monthly</th>
-                <th className="px-3 py-2 font-medium">Left</th>
-                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">{t("loans.colStaff")}</th>
+                <th className="px-3 py-2 font-medium">{t("loans.colReference")}</th>
+                <th className="px-3 py-2 text-end font-medium">{t("loans.colLent")}</th>
+                <th className="px-3 py-2 text-end font-medium">{t("loans.colRepaid")}</th>
+                <th className="px-3 py-2 text-end font-medium">{t("loans.colOutstanding")}</th>
+                <th className="px-3 py-2 text-end font-medium">{t("loans.colMonthly")}</th>
+                <th className="px-3 py-2 font-medium">{t("loans.colLeft")}</th>
+                <th className="px-3 py-2 font-medium">{t("loans.colStatus")}</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -284,7 +286,7 @@ export default function LoansPage() {
                   <td className="px-3 py-2">
                     {row.staffName}
                     {row.kind === "SALARY_ADVANCE" && (
-                      <span className="ms-2 text-xs text-slate-500">advance</span>
+                      <span className="ms-2 text-xs text-slate-500">{t("loans.advanceTag")}</span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-slate-500">{row.reference}</td>
@@ -302,15 +304,15 @@ export default function LoansPage() {
                         number to render as infinity. */}
                     {row.monthsRemaining === null
                       ? row.status === "ACTIVE"
-                        ? "no schedule"
+                        ? t("loans.noSchedule")
                         : "—"
                       : row.monthsRemaining === 0
                         ? "—"
-                        : `${row.monthsRemaining} mo`}
+                        : tPlural("loans.monthsLeft", row.monthsRemaining)}
                   </td>
                   <td className="px-3 py-2">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[row.status]}`}>
-                      {STATUS_LABEL[row.status]}
+                      {t(STATUS_LABEL[row.status])}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-end">
@@ -328,19 +330,27 @@ export default function LoansPage() {
                           }}
                           className="text-xs underline"
                         >
-                          Record payment
+                          {t("loans.recordPayment")}
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            if (!confirm(`Write off the remaining ${money(row.outstandingCents)} for ${row.staffName}? This forgives the debt and stops all further deductions.`)) return;
+                            if (
+                              !confirm(
+                                t("loans.writeOffConfirm", {
+                                  amount: money(row.outstandingCents),
+                                  name: row.staffName,
+                                }),
+                              )
+                            )
+                              return;
                             closeLoan
                               .mutateAsync({ loanId: row.loanId, status: "WRITTEN_OFF" })
-                              .catch((err) => setProblem(errorMessage(err, "Couldn't close that loan.")));
+                              .catch((err) => setProblem(errorMessage(err, t("loans.closeFailed"))));
                           }}
                           className="text-xs text-slate-500 underline"
                         >
-                          Write off
+                          {t("loans.writeOff")}
                         </button>
                       </div>
                     )}
@@ -355,9 +365,9 @@ export default function LoansPage() {
       {repaying && (
         <div className="space-y-3 rounded-2xl border border-brand-300 p-5 dark:border-brand-800">
           <p className="font-medium">
-            Record a payment from {repaying.staffName}
+            {t("loans.recordPaymentFrom", { name: repaying.staffName })}
             <span className="ms-2 text-sm font-normal text-slate-500">
-              {money(repaying.outstandingCents)} outstanding
+              {t("loans.amountOutstanding", { amount: money(repaying.outstandingCents) })}
             </span>
           </p>
           <div className="flex flex-wrap gap-2">
@@ -373,19 +383,18 @@ export default function LoansPage() {
               disabled={repay.isPending}
               className="rounded-full bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
             >
-              {repay.isPending ? "Saving…" : "Save"}
+              {repay.isPending ? t("shared.saving") : t("shared.save")}
             </button>
             <button
               type="button"
               onClick={() => setRepaying(null)}
               className="rounded-full border border-slate-300 px-4 py-2 text-sm dark:border-slate-700"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
           <p className="text-xs text-slate-500">
-            Anything larger than the balance is reduced to the balance — the school never recovers more
-            than it is owed.
+            {t("loans.overpaymentHint")}
           </p>
         </div>
       )}

@@ -255,7 +255,7 @@ export function Breadcrumbs() {
   const active = useMemo(() => findActiveLeaf(groups, pathname), [groups, pathname]);
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-sm text-slate-500">
+    <nav aria-label={t("header.breadcrumb")} className="mb-4 flex items-center gap-1.5 text-sm text-slate-500">
       <Link href="/dashboard" className="hover:underline">
         {t("breadcrumb.home")}
       </Link>

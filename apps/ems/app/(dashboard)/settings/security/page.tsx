@@ -13,6 +13,8 @@ import {
   useSignOutUser,
   type Session,
 } from "@/lib/use-security";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /**
  * The devices that can reach your account.
@@ -24,36 +26,37 @@ import {
  * seeing their devices or the addresses they signed in from.
  */
 export default function SecurityPage() {
+  const { t } = useTranslation();
   const { data, isLoading } = useSessions();
   const isAdmin = useIsSchoolAdmin();
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Security</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("security.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Everything currently signed in to your account. If you do not recognise one, end it.
+          {t("security.intro")}
         </p>
       </div>
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
 
       {data && (
         <>
           <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
             <div className="flex flex-wrap gap-8">
-              <Stat label="Signed in" value={data.summary.active} />
-              <Stat label="Ended" value={data.summary.revoked} />
-              <Stat label="Expired" value={data.summary.expired} />
+              <Stat label={t("security.signedIn")} value={data.summary.active} />
+              <Stat label={t("security.ended")} value={data.summary.revoked} />
+              <Stat label={t("security.expired")} value={data.summary.expired} />
             </div>
           </section>
 
           <SignOutEverywhere active={data.summary.active} />
 
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Sessions</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("security.sessions")}</h2>
             {data.sessions.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">Nothing recorded yet.</p>
+              <p className="mt-2 text-sm text-slate-500">{t("security.none")}</p>
             ) : (
               <ul className="mt-2 divide-y divide-slate-200 dark:divide-slate-800">
                 {data.sessions.map((session) => (
@@ -80,6 +83,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 function SessionRow({ session }: { session: Session }) {
+  const { t } = useTranslation();
   const end = useEndSession();
   const [note, setNote] = useState<string | null>(null);
 
@@ -90,9 +94,9 @@ function SessionRow({ session }: { session: Session }) {
       // Told, not treated as a failure: somebody clicking twice because the
       // first click seemed not to work should not be left wondering whether
       // their account is still reachable.
-      if (result.alreadyEnded) setNote("That one had already ended.");
+      if (result.alreadyEnded) setNote(t("errs.sessionAlreadyEnded"));
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not end that session");
+      setNote(err instanceof ApiError ? err.message : t("security.endSessionFailed"));
     }
   };
 
@@ -119,7 +123,7 @@ function SessionRow({ session }: { session: Session }) {
           disabled={end.isPending}
           className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700"
         >
-          End this
+          {t("security.endThis")}
         </button>
       )}
     </li>
@@ -127,6 +131,7 @@ function SessionRow({ session }: { session: Session }) {
 }
 
 function SignOutEverywhere({ active }: { active: number }) {
+  const { t } = useTranslation();
   const signOut = useSignOutEverywhere();
   const [confirming, setConfirming] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -137,19 +142,19 @@ function SignOutEverywhere({ active }: { active: number }) {
       const result = await signOut.mutateAsync();
       setNote(`${result.ended} session${result.ended === 1 ? "" : "s"} ended. You will be signed out here too.`);
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not sign out");
+      setNote(err instanceof ApiError ? err.message : t("security.signOutFailed"));
     }
   };
 
   return (
     <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Sign out everywhere</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("security.signOutEverywhere")}</h2>
       {/* Said before the button, not after. The honest description of what
           this does — the server cannot tell which session is asking, so
           "everywhere else" would be a guess about the one thing somebody
           using this most needs to be right. */}
       <p className="mt-1 text-xs text-slate-500">
-        This ends every session on your account, including this one. You will have to sign in again.
+        {t("security.signOutWarning")}
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -161,14 +166,14 @@ function SignOutEverywhere({ active }: { active: number }) {
               disabled={signOut.isPending}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {signOut.isPending ? "Ending…" : `Yes, end all ${active}`}
+              {signOut.isPending ? t("security.ending") : `Yes, end all ${active}`}
             </button>
             <button
               type="button"
               onClick={() => setConfirming(false)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </>
         ) : (
@@ -178,7 +183,7 @@ function SignOutEverywhere({ active }: { active: number }) {
             disabled={active === 0}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-40 dark:border-slate-700"
           >
-            Sign out everywhere
+            {t("security.signOutEverywhere")}
           </button>
         )}
       </div>
@@ -189,6 +194,7 @@ function SignOutEverywhere({ active }: { active: number }) {
 
 /** For a lost laptop. Deliberately gives back a count and nothing else. */
 function SignOutSomebody() {
+  const { t } = useTranslation();
   const signOut = useSignOutUser();
   const { data: staff } = useStaff();
   const me = useAuthStore((state) => state.user?.id ?? null);
@@ -202,28 +208,27 @@ function SignOutSomebody() {
       setNote(`${result.ended} session${result.ended === 1 ? "" : "s"} ended.`);
       setUserId("");
     } catch (err) {
-      setNote(err instanceof ApiError ? err.message : "Could not sign them out");
+      setNote(err instanceof ApiError ? err.message : t("security.signThemOutFailed"));
     }
   };
 
   return (
     <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-        Sign somebody else out
+        {t("security.signSomebodyOut")}
       </h2>
       <p className="mt-1 text-xs text-slate-500">
-        For a lost laptop or an account somebody else has got into. You will see how many sessions ended, and
-        nothing else — not their devices, and not where they signed in from.
+        {t("security.signSomebodyOutNote")}
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <select
           value={userId}
           onChange={(event) => setUserId(event.target.value)}
-          aria-label="Member of staff"
+          aria-label={t("security.memberOfStaff")}
           className="w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
-          <option value="">Choose somebody…</option>
+          <option value="">{t("security.chooseSomebody")}</option>
           {staff
             ?.filter((member) => member.id !== me)
             .map((member) => (
@@ -238,7 +243,7 @@ function SignOutSomebody() {
           disabled={signOut.isPending || !userId}
           className="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50 dark:border-red-900"
         >
-          {signOut.isPending ? "Ending…" : "Sign them out"}
+          {signOut.isPending ? t("security.ending") : t("security.signThemOut")}
         </button>
       </div>
       {note && <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{note}</p>}

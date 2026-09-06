@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,26 +9,31 @@ import { ApiError } from "@/lib/api";
 import { useTeachers, useCreateTeacher } from "@/lib/use-teachers";
 import { FormField } from "@/components/form-field";
 import { DataExchangeBar } from "@/components/data-exchange-bar";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const createTeacherSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Enter a valid email address"),
-  password: z
-    .string()
-    .min(10, "At least 10 characters")
-    .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/, "Needs an uppercase letter, lowercase letter, number, and symbol"),
-});
+function createTeacherSchemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    firstName: z.string().min(1, t("valid.firstNameRequired")),
+    lastName: z.string().min(1, t("valid.lastNameRequired")),
+    email: z.string().email(t("valid.emailInvalid")),
+    password: z
+      .string()
+      .min(10, t("valid.passwordLength"))
+      .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/, t("valid.passwordStrength")),
+  });
+}
 
-type CreateTeacherValues = z.infer<typeof createTeacherSchema>;
+type CreateTeacherValues = z.infer<ReturnType<typeof createTeacherSchemaFor>>;
 
 export default function TeachersPage() {
+  const { t } = useTranslation();
+  const schema = useMemo(() => createTeacherSchemaFor(t), [t]);
   const { data: teachers, isLoading, error } = useTeachers();
   const createTeacher = useCreateTeacher();
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const form = useForm<CreateTeacherValues>({ resolver: zodResolver(createTeacherSchema) });
+  const form = useForm<CreateTeacherValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
@@ -36,13 +42,13 @@ export default function TeachersPage() {
       form.reset();
       setShowForm(false);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't create that teacher.");
+      setFormError(err instanceof ApiError ? err.message : t("teachers.createFailed"));
     }
   });
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Teachers</h1>
+      <h1 className="text-2xl font-bold tracking-tight">{t("teachers.title")}</h1>
 
       <DataExchangeBar entity="staff">
         <button
@@ -50,19 +56,19 @@ export default function TeachersPage() {
           onClick={() => setShowForm((v) => !v)}
           className="rounded-full bg-brand-gradient px-4 py-1.5 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          {showForm ? "Cancel" : "New teacher"}
+          {showForm ? t("common.cancel") : t("teachers.new")}
         </button>
       </DataExchangeBar>
 
       {showForm && (
         <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
-          <FormField label="First name" error={form.formState.errors.firstName?.message} {...form.register("firstName")} />
-          <FormField label="Last name" error={form.formState.errors.lastName?.message} {...form.register("lastName")} />
-          <FormField label="Email" type="email" error={form.formState.errors.email?.message} {...form.register("email")} />
+          <FormField label={t("teachers.firstName")} error={form.formState.errors.firstName?.message} {...form.register("firstName")} />
+          <FormField label={t("teachers.lastName")} error={form.formState.errors.lastName?.message} {...form.register("lastName")} />
+          <FormField label={t("teachers.email")} type="email" error={form.formState.errors.email?.message} {...form.register("email")} />
           <FormField
-            label="Password"
+            label={t("teachers.password")}
             type="password"
-            hint="Min 10 chars, upper/lower/number/symbol"
+            hint={t("teachers.passwordHint")}
             error={form.formState.errors.password?.message}
             {...form.register("password")}
           />
@@ -76,12 +82,12 @@ export default function TeachersPage() {
             disabled={form.formState.isSubmitting}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            Create teacher
+            {t("teachers.create")}
           </button>
         </form>
       )}
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           Couldn&apos;t load teachers: {error.message}
@@ -89,7 +95,7 @@ export default function TeachersPage() {
       )}
 
       {teachers && teachers.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">No teachers yet.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("teachers.none")}</p>
       )}
 
       {teachers && teachers.length > 0 && (

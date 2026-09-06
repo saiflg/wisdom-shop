@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /** Mirrors the API's allowlist. The server decides; this only filters the picker. */
 export const ACCEPTED_UPLOADS = "image/png,image/jpeg,image/webp,image/gif,application/pdf";
@@ -16,6 +17,7 @@ const MAX_VOICE_SECONDS = 120;
  * thing that ends up in a newspaper, and a school is exactly where it would.
  */
 export function useVoiceRecorder() {
+  const { t } = useTranslation();
   const [supported, setSupported] = useState(false);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -66,7 +68,7 @@ export function useVoiceRecorder() {
         });
       }, 1000);
     } catch {
-      setError("The microphone is not available. Check the permission for this site.");
+      setError(t("errs.microphone"));
       releaseEverything();
     }
   };

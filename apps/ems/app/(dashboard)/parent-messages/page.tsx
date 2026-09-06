@@ -5,6 +5,7 @@ import { errorMessage } from "@/lib/api";
 import { useParentThreads } from "@/lib/use-parent-messages";
 import { ParentThread } from "@/components/parent-thread";
 import { PersonPhoto } from "@/components/person-photo";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * The school's side of its conversations with families.
@@ -15,6 +16,7 @@ import { PersonPhoto } from "@/components/person-photo";
  * needs to see, and chronological order buries it.
  */
 export default function ParentMessagesPage() {
+  const { t } = useTranslation();
   const { data: threads, isLoading, error } = useParentThreads();
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -23,10 +25,9 @@ export default function ParentMessagesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Messages from families</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("parentMessages.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Every conversation is about one child and is shared by that child&apos;s teachers and the office — a
-          family is never left waiting because one person is away.
+          {t("parentMessages.intro")}
         </p>
       </div>
 
@@ -36,16 +37,16 @@ export default function ParentMessagesPage() {
         </p>
       )}
 
-      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
       {error && (
         <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {errorMessage(error, "Couldn't load these conversations.")}
+          {errorMessage(error, t("errs.loadConversations"))}
         </p>
       )}
 
       {threads && threads.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-          No family has written yet.
+          {t("parentMessages.none")}
         </p>
       )}
 
@@ -67,7 +68,7 @@ export default function ParentMessagesPage() {
                   {thread.className && <span className="text-xs text-slate-500">{thread.className}</span>}
                   {thread.awaitingSchool && (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                      waiting for a reply
+                      {t("parentMessages.awaitingReply")}
                     </span>
                   )}
                 </span>

@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api";
 import { useSchemeOfWork, useUpdateSchemeOfWork, usePublishSchemeOfWork } from "@/lib/use-schemes-of-work";
 import { useLessonPlans } from "@/lib/use-lesson-plans";
 import { useQuizzes } from "@/lib/use-quizzes";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 interface WeekFormValues {
   topic: string;
@@ -29,6 +30,7 @@ function linesToList(value: string): string[] {
 const EMPTY_WEEK: WeekFormValues = { topic: "", objectivesText: "", activitiesText: "" };
 
 export default function SchemeOfWorkDetailPage() {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const { data: sow, isLoading, error } = useSchemeOfWork(params.id);
   const { data: lessonPlans } = useLessonPlans(params.id);
@@ -66,7 +68,7 @@ export default function SchemeOfWorkDetailPage() {
       });
       setSaved(true);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't save this scheme of work.");
+      setFormError(err instanceof ApiError ? err.message : t("schemeEdit.saveFailed"));
     }
   });
 
@@ -75,11 +77,11 @@ export default function SchemeOfWorkDetailPage() {
     try {
       await publish.mutateAsync();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't publish this scheme of work.");
+      setFormError(err instanceof ApiError ? err.message : t("schemeEdit.publishFailed"));
     }
   };
 
-  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
   if (error) {
     return (
       <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
@@ -94,10 +96,10 @@ export default function SchemeOfWorkDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {sow.subject?.name ?? "Subject"} · {sow.academicYear} · {sow.term}
+            {sow.subject?.name ?? t("shared.subjectFallback")} · {sow.academicYear} · {sow.term}
           </h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {sow.source === "AI_GENERATED" ? "Wisdom generated" : "Manual"}
+            {sow.source === "AI_GENERATED" ? t("shared.wisdomGenerated") : t("shared.manual")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -117,7 +119,7 @@ export default function SchemeOfWorkDetailPage() {
               disabled={publish.isPending}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              Publish
+              {t("shared.publish")}
             </button>
           )}
         </div>
@@ -134,14 +136,14 @@ export default function SchemeOfWorkDetailPage() {
                   onClick={() => remove(index)}
                   className="text-sm text-red-600 hover:underline dark:text-red-400"
                 >
-                  Remove week
+                  {t("schemeEdit.removeWeek")}
                 </button>
               )}
             </div>
 
             <div>
               <label htmlFor={`week-${index}-topic`} className="block text-sm font-medium">
-                Topic
+                {t("schemeEdit.topic")}
               </label>
               <input
                 id={`week-${index}-topic`}
@@ -223,7 +225,7 @@ export default function SchemeOfWorkDetailPage() {
           onClick={() => append(EMPTY_WEEK)}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
         >
-          Add week
+          {t("schemeEdit.addWeek")}
         </button>
 
         {formError && (
@@ -231,7 +233,7 @@ export default function SchemeOfWorkDetailPage() {
             {formError}
           </p>
         )}
-        {saved && !formError && <p className="text-sm text-emerald-600 dark:text-emerald-400">Saved.</p>}
+        {saved && !formError && <p className="text-sm text-emerald-600 dark:text-emerald-400">{t("shared.savedShort")}</p>}
 
         <div>
           <button
@@ -239,7 +241,7 @@ export default function SchemeOfWorkDetailPage() {
             disabled={form.formState.isSubmitting}
             className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            Save changes
+            {t("shared.saveChanges")}
           </button>
         </div>
       </form>

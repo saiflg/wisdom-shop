@@ -6,10 +6,10 @@ import { useIsSchoolAdmin } from "@/lib/use-can-author";
 import { useStaff } from "@/lib/use-staff";
 import { useAuthStore } from "@/store/auth-store";
 import {
-  STATUS_LABEL,
+  STATUS_KEY,
   STATUS_STYLE,
   SUGGESTED_AREAS,
-  TRANSITION_LABEL,
+  TRANSITION_KEY,
   useAppraisals,
   useCreateAppraisal,
   useTransitionAppraisal,
@@ -18,6 +18,7 @@ import {
   type AppraisalRating,
   type AppraisalStatus,
 } from "@/lib/use-appraisals";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Staff appraisals.
@@ -28,6 +29,7 @@ import {
  * from the same function that decides, and it refuses everybody else.
  */
 export default function AppraisalsPage() {
+  const { t } = useTranslation();
   const isAdmin = useIsSchoolAdmin();
   const me = useAuthStore((state) => state.user?.id ?? null);
   const { data: appraisals, isLoading } = useAppraisals();
@@ -39,19 +41,27 @@ export default function AppraisalsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Appraisals</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("appraisals.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Nobody writes their own, and only the person being appraised can say they have seen it.
+          {t("appraisals.intro")}
         </p>
       </div>
 
       {isAdmin && <NewAppraisal />}
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
 
-      <Group title="About me" appraisals={mine} emptyText="Nothing has been shared with you." />
-      <Group title="Written by me" appraisals={written} emptyText="You have not written any." />
-      {isAdmin && others.length > 0 && <Group title="Everyone else" appraisals={others} emptyText="" />}
+      <Group
+        title={t("appraisals.aboutMe")}
+        appraisals={mine}
+        emptyText={t("appraisals.noneShared")}
+      />
+      <Group
+        title={t("appraisals.writtenByMe")}
+        appraisals={written}
+        emptyText={t("appraisals.noneWritten")}
+      />
+      {isAdmin && others.length > 0 && <Group title={t("appraisals.everyoneElse")} appraisals={others} emptyText="" />}
     </div>
   );
 }
@@ -83,6 +93,7 @@ function Group({
 }
 
 function NewAppraisal() {
+  const { t } = useTranslation();
   const create = useCreateAppraisal();
   const { data: staff } = useStaff();
   const me = useAuthStore((state) => state.user?.id ?? null);
@@ -101,22 +112,22 @@ function NewAppraisal() {
       await create.mutateAsync({ subjectUserId, periodLabel: periodLabel.trim() });
       setSubjectUserId("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not start that appraisal");
+      setError(err instanceof ApiError ? err.message : t("appraisals.startFailed"));
     }
   };
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Start an appraisal</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("appraisals.startOne")}</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         <select
           value={subjectUserId}
           onChange={(event) => setSubjectUserId(event.target.value)}
           required
-          aria-label="Who is being appraised"
+          aria-label={t("appraisals.whoAppraised")}
           className="w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
-          <option value="">Choose somebody…</option>
+          <option value="">{t("appraisals.chooseSomebody")}</option>
           {candidates.map((member) => (
             <option key={member.id} value={member.id}>
               {member.firstName} {member.lastName}
@@ -128,7 +139,7 @@ function NewAppraisal() {
           onChange={(event) => setPeriodLabel(event.target.value)}
           required
           maxLength={120}
-          aria-label="Period"
+          aria-label={t("appraisals.period")}
           className="w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <button
@@ -136,7 +147,7 @@ function NewAppraisal() {
           disabled={create.isPending || !subjectUserId}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          Start
+          {t("appraisals.start")}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -145,6 +156,7 @@ function NewAppraisal() {
 }
 
 function AppraisalCard({ appraisal }: { appraisal: Appraisal }) {
+  const { t, locale } = useTranslation();
   const me = useAuthStore((state) => state.user?.id ?? null);
   const [open, setOpen] = useState(false);
   const isSubject = appraisal.subjectUserId === me;
@@ -156,24 +168,31 @@ function AppraisalCard({ appraisal }: { appraisal: Appraisal }) {
           <p className="font-medium">
             {appraisal.subject
               ? `${appraisal.subject.firstName} ${appraisal.subject.lastName}`
-              : "This appraisal"}
+              : t("appraisals.thisOne")}
             <span className="ms-2 text-sm font-normal text-slate-500">{appraisal.periodLabel}</span>
           </p>
           <p className="mt-0.5 text-xs text-slate-500">
-            Reviewer {appraisal.reviewerName}
-            {appraisal.sharedAt && ` · shared ${new Date(appraisal.sharedAt).toLocaleDateString()}`}
+            {t("appraisals.reviewer", { name: appraisal.reviewerName })}
+            {appraisal.sharedAt &&
+              ` · ${t("appraisals.sharedOn", {
+                date: new Date(appraisal.sharedAt).toLocaleDateString(locale),
+              })}`}
             {appraisal.acknowledgedAt &&
-              ` · acknowledged ${new Date(appraisal.acknowledgedAt).toLocaleDateString()}`}
+              ` · ${t("appraisals.acknowledgedOn", {
+                date: new Date(appraisal.acknowledgedAt).toLocaleDateString(locale),
+              })}`}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {/* Null, not zero: zero is off the 1–5 scale and would read as the
               worst possible appraisal. */}
           <span className="text-sm tabular-nums text-slate-600 dark:text-slate-400">
-            {appraisal.overall === null ? "not rated" : `${appraisal.overall} / 5`}
+            {appraisal.overall === null
+              ? t("appraisals.notRated")
+              : t("appraisals.outOfFive", { score: appraisal.overall })}
           </span>
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[appraisal.status]}`}>
-            {STATUS_LABEL[appraisal.status]}
+            {t(STATUS_KEY[appraisal.status])}
           </span>
           <button
             type="button"
@@ -181,7 +200,7 @@ function AppraisalCard({ appraisal }: { appraisal: Appraisal }) {
             aria-expanded={open}
             className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold dark:border-slate-700"
           >
-            {open ? "Close" : "Open"}
+            {open ? t("appraisals.close") : t("appraisals.open")}
           </button>
         </div>
       </div>
@@ -192,6 +211,7 @@ function AppraisalCard({ appraisal }: { appraisal: Appraisal }) {
 }
 
 function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boolean }) {
+  const { t } = useTranslation();
   const update = useUpdateAppraisal(appraisal.id);
   const move = useTransitionAppraisal(appraisal.id);
   const [ratings, setRatings] = useState<AppraisalRating[]>(
@@ -213,9 +233,9 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
     setMessage(null);
     try {
       await update.mutateAsync({ ...text, ratings });
-      setMessage("Saved.");
+      setMessage(t("appraisals.saved"));
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : "Could not save");
+      setMessage(err instanceof ApiError ? err.message : t("appraisals.couldNotSave"));
     }
   };
 
@@ -226,14 +246,14 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
       setNote("");
     } catch (err) {
       // Where "only the person being appraised can acknowledge it" surfaces.
-      setMessage(err instanceof ApiError ? err.message : "Could not do that");
+      setMessage(err instanceof ApiError ? err.message : t("appraisals.couldNotDo"));
     }
   };
 
   return (
     <div className="mt-4 space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ratings</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("appraisals.ratings")}</p>
         <ul className="mt-2 space-y-1">
           {ratings.map((rating, index) => (
             <li key={index} className="flex flex-wrap items-center gap-2">
@@ -246,7 +266,7 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
                       ratings.map((r, i) => (i === index ? { ...r, score: Number(event.target.value) } : r)),
                     )
                   }
-                  aria-label={`${rating.area} score`}
+                  aria-label={t("appraisals.areaScore", { area: rating.area })}
                   className="rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
                 >
                   {[1, 2, 3, 4, 5].map((score) => (
@@ -256,7 +276,9 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
                   ))}
                 </select>
               ) : (
-                <span className="text-sm tabular-nums">{rating.score} / 5</span>
+                <span className="text-sm tabular-nums">
+                  {t("appraisals.outOfFive", { score: rating.score })}
+                </span>
               )}
             </li>
           ))}
@@ -265,13 +287,13 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
 
       <div className="grid gap-3 md:grid-cols-2">
         <Field
-          label="Strengths"
+          label={t("appraisals.strengths")}
           value={text.strengths}
           editable={editable}
           onChange={(strengths) => setText({ ...text, strengths })}
         />
         <Field
-          label="Where to develop"
+          label={t("appraisals.development")}
           value={text.development}
           editable={editable}
           onChange={(development) => setText({ ...text, development })}
@@ -280,7 +302,7 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
 
       {appraisal.acknowledgementNote && (
         <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Their reply</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("appraisals.theirReply")}</p>
           <p className="mt-1 whitespace-pre-wrap text-sm">{appraisal.acknowledgementNote}</p>
         </div>
       )}
@@ -292,7 +314,7 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
           value={note}
           onChange={(event) => setNote(event.target.value)}
           maxLength={2000}
-          placeholder="Anything you want to say about it (optional)"
+          placeholder={t("appraisals.notePlaceholder")}
           className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       )}
@@ -305,7 +327,7 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
             disabled={update.isPending}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50 dark:border-slate-700"
           >
-            {update.isPending ? "Saving…" : "Save"}
+            {update.isPending ? t("shared.saving") : t("shared.save")}
           </button>
         )}
         {moves.map((to) => (
@@ -320,7 +342,7 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
                 : "border border-slate-300 dark:border-slate-700"
             }`}
           >
-            {TRANSITION_LABEL[to]}
+            {t(TRANSITION_KEY[to])}
           </button>
         ))}
       </div>
@@ -329,7 +351,7 @@ function Detail({ appraisal, isSubject }: { appraisal: Appraisal; isSubject: boo
         // Said plainly rather than leaving a head teacher hunting for a
         // button that was never going to be there.
         <p className="text-xs text-slate-500">
-          Waiting for them to acknowledge it. Only the person being appraised can do that.
+          {t("appraisals.awaitingAck")}
         </p>
       )}
 
@@ -349,6 +371,7 @@ function Field({
   editable: boolean;
   onChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
       {label}
@@ -362,7 +385,7 @@ function Field({
         />
       ) : (
         <p className="mt-1 whitespace-pre-wrap text-sm font-normal normal-case text-slate-700 dark:text-slate-300">
-          {value || <span className="italic text-slate-400">Nothing written.</span>}
+          {value || <span className="italic text-slate-400">{t("appraisals.nothingWritten")}</span>}
         </p>
       )}
     </label>

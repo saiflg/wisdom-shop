@@ -4,10 +4,10 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import {
   formatAmount,
-  STATUS_LABEL,
+  STATUS_KEY,
   STATUS_STYLE,
   toMinorUnits,
-  TRANSITION_LABEL,
+  TRANSITION_KEY,
   useCreateExpense,
   useDecideExpense,
   useExpenses,
@@ -15,6 +15,7 @@ import {
   type ExpenseStatus,
   type ExpenseSummary,
 } from "@/lib/use-expenses";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * Money going out.
@@ -27,16 +28,16 @@ import {
  * request.
  */
 export default function ExpensesPage() {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<ExpenseStatus | undefined>(undefined);
   const { data, isLoading } = useExpenses(status ? { status } : {});
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Expenses</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("expenses.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          What the school spends. A request nobody has approved is not spending yet, and is counted
-          separately.
+          {t("expenses.intro")}
         </p>
       </div>
 
@@ -45,20 +46,20 @@ export default function ExpensesPage() {
       {data && <Summary summary={data.summary} />}
 
       <div className="flex flex-wrap gap-2">
-        <Filter label="All" active={status === undefined} onClick={() => setStatus(undefined)} />
+        <Filter label={t("expenses.all")} active={status === undefined} onClick={() => setStatus(undefined)} />
         {(["REQUESTED", "APPROVED", "PAID", "REJECTED"] as ExpenseStatus[]).map((option) => (
           <Filter
             key={option}
-            label={STATUS_LABEL[option]}
+            label={t(STATUS_KEY[option])}
             active={status === option}
             onClick={() => setStatus(option)}
           />
         ))}
       </div>
 
-      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">Loading…</p>}
+      {isLoading && <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>}
       {data?.expenses.length === 0 && (
-        <p className="text-sm text-slate-600 dark:text-slate-400">Nothing here for that choice.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{t("expenses.noneForChoice")}</p>
       )}
 
       <div className="space-y-3">
@@ -87,37 +88,38 @@ function Filter({ label, active, onClick }: { label: string; active: boolean; on
 }
 
 function Summary({ summary }: { summary: ExpenseSummary }) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
       <div className="flex flex-wrap gap-8">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Committed</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("expenses.committed")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums">{formatAmount(summary.committedCents)}</p>
-          <p className="text-xs text-slate-500">approved and paid</p>
+          <p className="text-xs text-slate-500">{t("expenses.approvedAndPaid")}</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Paid</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("expenses.paid")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">
             {formatAmount(summary.paidCents)}
           </p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Outstanding</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("expenses.outstanding")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-amber-600">
             {formatAmount(summary.outstandingCents)}
           </p>
-          <p className="text-xs text-slate-500">approved, not yet paid</p>
+          <p className="text-xs text-slate-500">{t("expenses.approvedNotPaid")}</p>
         </div>
         <div>
           {/* Kept out of every other figure. A request nobody approved is
               somebody asking, not money the school has spent, and folding it
               in would overstate spending in the direction that makes
               somebody cut what they did not need to. */}
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Waiting</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("expenses.waiting")}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-slate-500">
             {formatAmount(summary.pendingCents)}
           </p>
-          <p className="text-xs text-slate-500">not spending yet</p>
+          <p className="text-xs text-slate-500">{t("expenses.notSpendingYet")}</p>
         </div>
       </div>
 
@@ -131,6 +133,7 @@ function Summary({ summary }: { summary: ExpenseSummary }) {
 }
 
 function NewExpense() {
+  const { t } = useTranslation();
   const create = useCreateExpense();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -159,7 +162,7 @@ function NewExpense() {
       setForm({ ...form, category: "", description: "", amount: "", payee: "" });
       setOpen(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save that");
+      setError(err instanceof ApiError ? err.message : t("expenses.saveFailed"));
     }
   };
 
@@ -170,29 +173,29 @@ function NewExpense() {
         onClick={() => setOpen(true)}
         className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white"
       >
-        Ask for money
+        {t("expenses.askForMoney")}
       </button>
     );
   }
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">New expense</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("expenses.new")}</h2>
 
       <div className="mt-3 flex flex-wrap gap-3">
         <label className="text-xs text-slate-500">
-          Category
+          {t("expenses.category")}
           <input
             value={form.category}
             onChange={(event) => setForm({ ...form, category: event.target.value })}
             required
             maxLength={80}
-            placeholder="Diesel"
+            placeholder={t("expenses.categoryPlaceholder")}
             className="mt-1 block w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
         <label className="text-xs text-slate-500">
-          Amount
+          {t("shared.amount")}
           <input
             value={form.amount}
             onChange={(event) => setForm({ ...form, amount: event.target.value })}
@@ -212,31 +215,31 @@ function NewExpense() {
           />
         </label>
         <label className="text-xs text-slate-500">
-          Paid to
+          {t("expenses.paidTo")}
           <input
             value={form.payee}
             onChange={(event) => setForm({ ...form, payee: event.target.value })}
             maxLength={200}
-            placeholder="Ikeja Fuels Ltd"
+            placeholder={t("expenses.payeePlaceholder")}
             className="mt-1 block w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
         </label>
       </div>
 
       <label className="mt-3 block text-xs text-slate-500">
-        What for
+        {t("expenses.whatFor")}
         <input
           value={form.description}
           onChange={(event) => setForm({ ...form, description: event.target.value })}
           required
           maxLength={500}
-          placeholder="Generator diesel for September"
+          placeholder={t("expenses.descriptionPlaceholder")}
           className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </label>
 
       <p className="mt-2 text-xs text-slate-500">
-        Somebody else has to approve this. You will not be able to approve it yourself.
+        {t("expenses.somebodyElseApproves")}
       </p>
 
       <div className="mt-3 flex gap-2">
@@ -245,14 +248,14 @@ function NewExpense() {
           disabled={create.isPending || !valid}
           className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {create.isPending ? "Saving…" : "Submit"}
+          {create.isPending ? t("shared.saving") : t("expenses.submit")}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-slate-700"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -261,6 +264,7 @@ function NewExpense() {
 }
 
 function ExpenseRow({ expense }: { expense: Expense }) {
+  const { t } = useTranslation();
   const decide = useDecideExpense(expense.id);
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -274,7 +278,7 @@ function ExpenseRow({ expense }: { expense: Expense }) {
     } catch (err) {
       // Where "spending cannot be approved by the person who asked for it"
       // surfaces, if somebody reaches it another way.
-      setMessage(err instanceof ApiError ? err.message : "Could not do that");
+      setMessage(err instanceof ApiError ? err.message : t("expenses.actionFailed"));
     }
   };
 
@@ -298,7 +302,7 @@ function ExpenseRow({ expense }: { expense: Expense }) {
           {expense.decisionNote && <p className="mt-1 text-xs text-amber-600">{expense.decisionNote}</p>}
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[expense.status]}`}>
-          {STATUS_LABEL[expense.status]}
+          {t(STATUS_KEY[expense.status])}
         </span>
       </div>
 
@@ -309,7 +313,7 @@ function ExpenseRow({ expense }: { expense: Expense }) {
               value={note}
               onChange={(event) => setNote(event.target.value)}
               maxLength={500}
-              placeholder="Why? (required to turn down)"
+              placeholder={t("expenses.rejectReason")}
               className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
           )}
@@ -326,7 +330,7 @@ function ExpenseRow({ expense }: { expense: Expense }) {
                     : "border border-slate-300 dark:border-slate-700"
                 }`}
               >
-                {TRANSITION_LABEL[to]}
+                {t(TRANSITION_KEY[to])}
               </button>
             ))}
           </div>
@@ -337,7 +341,7 @@ function ExpenseRow({ expense }: { expense: Expense }) {
         // Said plainly rather than leaving somebody hunting for a button that
         // was never going to be there.
         <p className="mt-2 text-xs text-slate-500">
-          Waiting for somebody else. Spending cannot be approved by the person who asked for it.
+          {t("expenses.waitingForSomeoneElse")}
         </p>
       )}
 

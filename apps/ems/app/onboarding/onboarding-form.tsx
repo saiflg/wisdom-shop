@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { TranslationKey } from "@/lib/i18n";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,22 +9,25 @@ import { z } from "zod";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useAuthStore, type SessionUser } from "@/store/auth-store";
 import { FormField } from "@/components/form-field";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
-const schema = z.object({
-  schoolName: z.string().min(1, "School name is required"),
-  schoolSlug: z
-    .string()
-    .regex(/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/, "Lowercase letters, digits and hyphens only (3-32 chars)"),
-  adminEmail: z.string().email("Enter a valid email address"),
-  adminPassword: z
-    .string()
-    .min(10, "At least 10 characters")
-    .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/, "Needs an uppercase letter, lowercase letter, number, and symbol"),
-  adminFirstName: z.string().min(1, "First name is required"),
-  adminLastName: z.string().min(1, "Last name is required"),
-});
+function schemaFor(t: (key: TranslationKey) => string) {
+  return z.object({
+    schoolName: z.string().min(1, t("valid.schoolNameRequired")),
+    schoolSlug: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/, t("valid.slugRules")),
+    adminEmail: z.string().email(t("valid.emailInvalid")),
+    adminPassword: z
+      .string()
+      .min(10, t("valid.passwordLength"))
+      .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])/, t("valid.passwordStrength")),
+    adminFirstName: z.string().min(1, t("valid.firstNameRequired")),
+    adminLastName: z.string().min(1, t("valid.lastNameRequired")),
+  });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof schemaFor>>;
 
 type OnboardResponse =
   | { alreadyOnboarded: true; schoolSlug: string }
@@ -32,6 +36,7 @@ type OnboardResponse =
 const shopUrl = process.env.NEXT_PUBLIC_SHOP_URL ?? "http://localhost:3000";
 
 export function OnboardingForm() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -40,20 +45,21 @@ export function OnboardingForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [alreadyOnboardedSlug, setAlreadyOnboardedSlug] = useState<string | null>(null);
 
+  const schema = useMemo(() => schemaFor(t), [t]);
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   if (!token) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700">
-        <p className="font-medium">This page needs a School Setup link</p>
+        <p className="font-medium">{t("onboarding.needsLink")}</p>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          Go to your Wisdom Shop account and click &quot;Complete Your School Setup&quot; on your license.
+          {t("onboarding.needsLinkHint")}
         </p>
         <a
           href={`${shopUrl}/account/licenses`}
           className="mt-4 inline-block rounded-full bg-brand-gradient px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          Go to your licenses
+          {t("onboarding.goToLicenses")}
         </a>
       </div>
     );
@@ -62,15 +68,15 @@ export function OnboardingForm() {
   if (alreadyOnboardedSlug) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700">
-        <p className="font-medium">This school is already set up</p>
+        <p className="font-medium">{t("onboarding.alreadySetUp")}</p>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          Sign in with your school identifier <strong>{alreadyOnboardedSlug}</strong> to continue.
+          {t("onboarding.signInWith", { slug: alreadyOnboardedSlug })}
         </p>
         <a
           href={`/login?schoolSlug=${encodeURIComponent(alreadyOnboardedSlug)}`}
           className="mt-4 inline-block rounded-full bg-brand-gradient px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          Sign in
+          {t("onboarding.signIn")}
         </a>
       </div>
     );
@@ -95,7 +101,7 @@ export function OnboardingForm() {
       router.refresh();
     } catch (error) {
       setFormError(
-        error instanceof ApiError ? error.message : "Couldn't set up your school. Please try again.",
+        error instanceof ApiError ? error.message : t("errs.setUpSchool"),
       );
     }
   });
@@ -103,37 +109,37 @@ export function OnboardingForm() {
   return (
     <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
       <FormField
-        label="School name"
+        label={t("onboarding.schoolName")}
         error={form.formState.errors.schoolName?.message}
         {...form.register("schoolName")}
       />
       <FormField
-        label="School identifier"
-        hint="Lowercase letters, digits and hyphens — this is what you&apos;ll use to sign in"
+        label={t("onboarding.schoolSlug")}
+        hint={t("onboarding.schoolSlugHint")}
         placeholder="my-school"
         error={form.formState.errors.schoolSlug?.message}
         {...form.register("schoolSlug")}
       />
       <FormField
-        label="Your first name"
+        label={t("onboarding.firstName")}
         error={form.formState.errors.adminFirstName?.message}
         {...form.register("adminFirstName")}
       />
       <FormField
-        label="Your last name"
+        label={t("onboarding.lastName")}
         error={form.formState.errors.adminLastName?.message}
         {...form.register("adminLastName")}
       />
       <FormField
-        label="Your email"
+        label={t("onboarding.email")}
         type="email"
         error={form.formState.errors.adminEmail?.message}
         {...form.register("adminEmail")}
       />
       <FormField
-        label="Choose a password"
+        label={t("onboarding.password")}
         type="password"
-        hint="Min 10 chars, upper/lower/number/symbol"
+        hint={t("onboarding.passwordHint")}
         error={form.formState.errors.adminPassword?.message}
         {...form.register("adminPassword")}
       />
@@ -147,7 +153,7 @@ export function OnboardingForm() {
         disabled={form.formState.isSubmitting}
         className="w-full rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
       >
-        {form.formState.isSubmitting ? "Setting up your school…" : "Complete setup"}
+        {form.formState.isSubmitting ? t("onboarding.settingUp") : t("onboarding.completeSetup")}
       </button>
     </form>
   );

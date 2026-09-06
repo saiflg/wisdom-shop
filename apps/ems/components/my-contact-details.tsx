@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { errorMessage } from "@/lib/api";
 import { useMyContact, useUpdateMyContact } from "@/lib/use-guardians";
+import { useTranslation } from "@/lib/i18n/i18n-provider";
 
 /**
  * What the school holds for this parent, and the one part of it they may
@@ -15,6 +16,7 @@ import { useMyContact, useUpdateMyContact } from "@/lib/use-guardians";
  * to. Saying so beside the field is kinder than a refusal after typing.
  */
 export function MyContactDetails() {
+  const { t } = useTranslation();
   const { data: contact, isLoading } = useMyContact();
   const update = useUpdateMyContact();
 
@@ -39,17 +41,17 @@ export function MyContactDetails() {
       setEditing(false);
       setSaved(true);
     } catch (err) {
-      setMessage(errorMessage(err, "Couldn't save your number."));
+      setMessage(errorMessage(err, t("errs.saveNumber")));
     }
   };
 
   return (
     <section className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Your contact details</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("myContact.title")}</h2>
         {!editing && (
           <button type="button" onClick={start} className="text-xs font-semibold text-brand-600 hover:underline">
-            Change my phone number
+            {t("myContact.changePhone")}
           </button>
         )}
       </div>
@@ -58,20 +60,20 @@ export function MyContactDetails() {
           school cannot ring if their child is taken ill. */}
       {!contact.phone && !editing && (
         <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          The school has no phone number for you. Please add one so they can reach you about your child.
+          {t("myContact.noPhone")}
         </p>
       )}
 
       {editing ? (
         <div className="mt-3 space-y-2">
           <label className="block text-xs font-medium">
-            Phone number
+            {t("myContact.phoneNumber")}
             <input
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               type="tel"
               autoFocus
-              placeholder="e.g. 0803 123 4567"
+              placeholder={t("myContact.phonePlaceholder")}
               className="mt-1 w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
@@ -89,36 +91,36 @@ export function MyContactDetails() {
               disabled={update.isPending}
               className="rounded-lg bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
             >
-              {update.isPending ? "Saving…" : "Save"}
+              {update.isPending ? t("shared.saving") : t("shared.save")}
             </button>
             <button
               type="button"
               onClick={() => setEditing(false)}
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
       ) : (
         <dl className="mt-2 space-y-1 text-sm">
           <div className="flex gap-2">
-            <dt className="w-20 shrink-0 text-slate-500">Phone</dt>
-            <dd>{contact.phone ?? <span className="text-slate-400">Not on file</span>}</dd>
+            <dt className="w-20 shrink-0 text-slate-500">{t("myContact.phone")}</dt>
+            <dd>{contact.phone ?? <span className="text-slate-400">{t("myContact.notOnFile")}</span>}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="w-20 shrink-0 text-slate-500">Email</dt>
+            <dt className="w-20 shrink-0 text-slate-500">{t("myContact.email")}</dt>
             <dd className="min-w-0">
-              {contact.email ?? <span className="text-slate-400">Not on file</span>}
+              {contact.email ?? <span className="text-slate-400">{t("myContact.notOnFile")}</span>}
               <span className="mt-0.5 block text-xs text-slate-500">
-                You sign in with this. Ask the school office to change it.
+                {t("myContact.emailNote")}
               </span>
             </dd>
           </div>
         </dl>
       )}
 
-      {saved && <p className="mt-2 text-xs text-emerald-600">Saved. Thank you.</p>}
+      {saved && <p className="mt-2 text-xs text-emerald-600">{t("myContact.savedThanks")}</p>}
     </section>
   );
 }
