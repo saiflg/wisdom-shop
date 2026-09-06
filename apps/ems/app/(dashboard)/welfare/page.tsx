@@ -309,7 +309,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
           <p className="mt-1 text-xs text-slate-500">
             {isAdmin && `${request.user.firstName} ${request.user.lastName} · `}
             {new Date(request.createdAt).toLocaleDateString()}
-            {request.decidedByName && ` · decided by ${request.decidedByName}`}
+            {request.decidedByName && ` · ${t("welfare.decidedBy", { name: request.decidedByName })}`}
           </p>
           {request.decisionNote && <p className="mt-1 text-xs text-amber-600">{request.decisionNote}</p>}
         </div>

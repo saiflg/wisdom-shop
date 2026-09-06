@@ -30,7 +30,7 @@ function linesToList(value: string): string[] {
 const EMPTY_WEEK: WeekFormValues = { topic: "", objectivesText: "", activitiesText: "" };
 
 export default function SchemeOfWorkDetailPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const params = useParams<{ id: string }>();
   const { data: sow, isLoading, error } = useSchemeOfWork(params.id);
   const { data: lessonPlans } = useLessonPlans(params.id);
@@ -205,7 +205,7 @@ export default function SchemeOfWorkDetailPage() {
                     href={`/quizzes?schemeOfWorkId=${sow.id}`}
                     className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
                   >
-                    View {weekQuizzes.length} quiz{weekQuizzes.length === 1 ? "" : "zes"} →
+                    {tPlural("schemesOfWork.viewQuizzes", weekQuizzes.length)} →
                   </Link>
                 ) : (
                   <Link

@@ -74,8 +74,12 @@ export function ExamBuilder({ examId }: { examId: string }) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{exam.title}</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {exam.class?.name} · {exam.subject?.name} · {exam.durationMinutes} minutes ·{" "}
-            {toMarks(exam.totalMarksHundredths)} marks
+            {t("examBuilder.meta", {
+              className: exam.class?.name ?? "",
+              subject: exam.subject?.name ?? "",
+              minutes: exam.durationMinutes,
+              marks: toMarks(exam.totalMarksHundredths) ?? 0,
+            })}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -107,7 +111,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                     setNotice(
                       result.collected === 0
                         ? t("examBuilder.noneLeftRunning")
-                        : `Marked ${result.collected} paper(s) whose time had run out.`,
+                        : t("examBuilder.collected", { count: result.collected }),
                     );
                   }, t("errs.collectScripts"))
                 }
@@ -122,8 +126,11 @@ export function ExamBuilder({ examId }: { examId: string }) {
                     const result = await release.mutateAsync();
                     setNotice(
                       result.heldForReview > 0
-                        ? `Released ${result.released}. ${result.heldForReview} still need marking by you.`
-                        : `Released ${result.released} result(s).`,
+                        ? t("examBuilder.releasedSome", {
+                  released: result.released,
+                  held: result.heldForReview,
+                })
+                        : t("examBuilder.releasedAll", { count: result.released }),
                     );
                   }, t("errs.releaseResults"))
                 }
@@ -213,7 +220,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                     )
                   }
                   className="mt-1 h-4 w-4"
-                  aria-label={`Add "${question.prompt}" to the paper`}
+                  aria-label={t("examBuilder.addToPaper")}
                 />
                 <span className={alreadyOnPaper.has(question.id) ? "text-slate-400" : ""}>
                   {question.prompt}
@@ -234,8 +241,12 @@ export function ExamBuilder({ examId }: { examId: string }) {
             {t("examBuilder.theClass")}
           </h2>
           <p className="mt-1 text-xs text-slate-500">
-            {exam.progress?.submitted} of {exam.progress?.expected} handed in ·{" "}
-            {exam.progress?.needingReview} waiting for you · {exam.progress?.released} released
+            {t("examBuilder.progress", {
+              submitted: exam.progress?.submitted ?? 0,
+              expected: exam.progress?.expected ?? 0,
+              review: exam.progress?.needingReview ?? 0,
+              released: exam.progress?.released ?? 0,
+            })}
           </p>
 
           {(exam.attempts ?? []).length === 0 ? (

@@ -108,7 +108,7 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
           ) : (
             <>
               <Big>{data.attendanceRate}%</Big>
-              <Small>over {data.attendanceDays} days</Small>
+              <Small>{t("studentOverview.overDays", { count: data.attendanceDays })}</Small>
             </>
           )}
         </Card>
@@ -143,8 +143,10 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
             <>
               <Big>{data.behaviour.netPoints}</Big>
               <Small>
-                {data.behaviour.merits} merit{data.behaviour.merits === 1 ? "" : "s"} ·{" "}
-                {data.behaviour.concerns} concern{data.behaviour.concerns === 1 ? "" : "s"}
+                {t("studentOverview.meritsConcerns", {
+                  merits: data.behaviour.merits,
+                  concerns: data.behaviour.concerns,
+                })}
               </Small>
             </>
           )}

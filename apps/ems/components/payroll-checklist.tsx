@@ -68,7 +68,7 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
           <p className="mt-0.5 text-xs text-slate-500">
             {progress.total === 0
               ? t("payrollChecks.none")
-              : `${progress.done} of ${progress.total} checked`}
+              : t("payrollChecklist.progress", { done: progress.done, total: progress.total })}
           </p>
         </div>
 
@@ -124,7 +124,7 @@ export function PayrollChecklist({ runId, readOnly = false }: { runId: string; r
               <button
                 type="button"
                 onClick={() => void attempt(() => removeItem.mutateAsync(item.id), t("errs.removeCheck"))}
-                aria-label={`Remove "${item.label}" from the list`}
+                aria-label={t("payrollChecklist.removeItem")}
                 className="shrink-0 rounded px-1.5 text-xs font-semibold text-slate-400 opacity-0 transition hover:text-red-600 focus:opacity-100 group-hover:opacity-100"
               >
                 {t("shared.remove")}

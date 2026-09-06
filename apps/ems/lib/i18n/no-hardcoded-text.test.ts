@@ -37,6 +37,29 @@ const PROP =
 const TERNARY = /[:?]\s*"([A-Z][^"]{3,})"/g;
 /** An argument: `errorMessage(err, "...")`, `z.string().min(1, "...")`. */
 const ARGUMENT = /[(,]\s*"([A-Z][^"]{6,})"/g;
+/**
+ * Prose welded to a value, in either of the two shapes it takes here.
+ *
+ * This is the ninth blind spot, and the one that survived longest, because
+ * neither shape is a quoted string or text between two tags:
+ *
+ *     ` - paid by ${name}`          a template literal
+ *     {count} of {total} handed in  between two interpolations
+ *
+ * The payroll screen passed every other check while telling an Arabic reader
+ * "3 staff - net 450,000 - paid by Amina Yusuf - approved".
+ */
+const TEMPLATE = /`([^`]*)`/g;
+const BETWEEN = /\}([^{}<>`"]{3,}?)[{<]/g;
+/** Two Latin words in a row, which is the shortest thing that reads as prose. */
+const PROSE = /[A-Za-z]{2,}\s+[A-Za-z]{2,}/;
+/** Words that only look like prose because JavaScript spells them that way. */
+const KEYWORDS = new Set([
+  "finally", "catch", "else", "try", "return", "await", "const", "let", "var",
+  "function", "if", "for", "while", "case", "default", "break", "continue",
+  "new", "typeof", "instanceof", "in", "of", "do", "switch", "throw", "class",
+  "extends", "null", "undefined", "true", "false",
+]);
 
 /**
  * Text that is data, not language.
@@ -157,6 +180,18 @@ describe("no hardcoded English on a screen", () => {
           if (allowed(text) || insideTranslate(line, at)) return;
           findings.push(`${relative}:${index + 1}  ${text.trim()}`);
         };
+        // Anything with a class name on it is styling, not language.
+        if (!/className|clsx|import |require\(|href=|src=/.test(line)) {
+          for (const m of line.matchAll(TEMPLATE)) {
+            const literal = m[1]!.replace(/\$\{[^}]*\}/g, " ");
+            if (PROSE.test(literal)) report(literal.trim(), m.index!);
+          }
+          for (const m of line.matchAll(BETWEEN)) {
+            const segment = m[1]!.trim().replace(/^[.·\s]+|[.·\s]+$/g, "");
+            if (KEYWORDS.has(segment.toLowerCase())) continue;
+            if (PROSE.test(segment)) report(segment, m.index!);
+          }
+        }
         for (const m of line.matchAll(JSX_TEXT)) report(m[1], m.index!);
         for (const m of line.matchAll(PROP)) report(m[2], m.index!);
         for (const m of line.matchAll(TERNARY)) report(m[1], m.index!);

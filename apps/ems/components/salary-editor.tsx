@@ -91,7 +91,10 @@ export function SalaryEditor({ userId }: { userId: string }) {
             isBasic: draft.isBasic,
           })),
       );
-      setMessage({ tone: "ok", text: `Saved. Net pay is ${money(result.preview.netCents)} a month.` });
+      setMessage({
+        tone: "ok",
+        text: t("salary.savedNetPay", { amount: money(result.preview.netCents) }),
+      });
     } catch (err) {
       setMessage({ tone: "error", text: errorMessage(err, t("errs.saveSalary")) });
     }
@@ -103,7 +106,10 @@ export function SalaryEditor({ userId }: { userId: string }) {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("salary.title")}</h2>
         {data && (
           <p className="text-xs text-slate-500">
-            Gross {money(data.preview.grossCents)} · deductions {money(data.preview.deductionsCents)} · net{" "}
+            {t("salary.previewLine", {
+              gross: money(data.preview.grossCents),
+              deductions: money(data.preview.deductionsCents),
+            })}{" "}
             <strong>{money(data.preview.netCents)}</strong>
           </p>
         )}

@@ -24,7 +24,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * before "Send", and changing any field puts the check back.
  */
 export default function AnnouncementsPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: sent } = useAnnouncements();
   const { data: classes } = useClasses();
   const preview = usePreviewAnnouncement();
@@ -65,7 +65,7 @@ export default function AnnouncementsPage() {
     setProblem(null);
     try {
       const outcome = await send.mutateAsync(input);
-      setResult(`Sent to ${outcome.sent} ${outcome.sent === 1 ? "person" : "people"}.`);
+      setResult(tPlural("announcements.sentToPeople", outcome.sent));
       setChecked(null);
       setTitle("");
       setBody("");
@@ -186,7 +186,9 @@ export default function AnnouncementsPage() {
                 {plan.examples.length > 0 && (
                   <p className="text-xs text-slate-500">
                     e.g. {plan.examples.join(", ")}
-                    {plan.reach > plan.examples.length ? ` and ${plan.reach - plan.examples.length} more` : ""}
+                    {plan.reach > plan.examples.length
+              ? ` ${t("announcements.andMore", { count: plan.reach - plan.examples.length })}`
+              : ""}
                   </p>
                 )}
                 {plan.warning && (
@@ -220,7 +222,9 @@ export default function AnnouncementsPage() {
                 disabled={send.isPending || checked.totalSends === 0}
                 className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
               >
-                {send.isPending ? t("announcements.sending") : `Send to ${checked.totalSends}`}
+                {send.isPending
+                ? t("announcements.sending")
+                : t("announcements.sendToCount", { count: checked.totalSends })}
               </button>
               <button
                 type="button"
@@ -313,7 +317,7 @@ function DraftActions({ announcement }: { announcement: SentAnnouncement }) {
     setNote(null);
     try {
       const result = await send.mutateAsync();
-      setNote(`Sent to ${result.reached}.`);
+      setNote(t("announcements.sentToCount", { count: result.reached }));
     } catch (err) {
       setNote(errorMessage(err, t("errs.sendDraft")));
     }

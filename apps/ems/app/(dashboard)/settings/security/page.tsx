@@ -112,7 +112,8 @@ function SessionRow({ session }: { session: Session }) {
           )}
         </p>
         <p className="text-xs text-slate-500">
-          {session.ipAddress ?? "address not recorded"} · last used {relativeTime(session.lastUsedAt)}
+          {session.ipAddress ?? t("security.addressNotRecorded")} ·{" "}
+          {t("security.lastUsed", { when: relativeTime(session.lastUsedAt) })}
         </p>
         {note && <p className="text-xs text-amber-600">{note}</p>}
       </div>
@@ -131,7 +132,7 @@ function SessionRow({ session }: { session: Session }) {
 }
 
 function SignOutEverywhere({ active }: { active: number }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const signOut = useSignOutEverywhere();
   const [confirming, setConfirming] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -140,7 +141,7 @@ function SignOutEverywhere({ active }: { active: number }) {
     setNote(null);
     try {
       const result = await signOut.mutateAsync();
-      setNote(`${result.ended} session${result.ended === 1 ? "" : "s"} ended. You will be signed out here too.`);
+      setNote(tPlural("security.endedWithSelf", result.ended));
     } catch (err) {
       setNote(err instanceof ApiError ? err.message : t("security.signOutFailed"));
     }
@@ -166,7 +167,9 @@ function SignOutEverywhere({ active }: { active: number }) {
               disabled={signOut.isPending}
               className="rounded-lg bg-brand-gradient px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {signOut.isPending ? t("security.ending") : `Yes, end all ${active}`}
+              {signOut.isPending
+            ? t("security.ending")
+            : t("security.endAllConfirm", { count: active })}
             </button>
             <button
               type="button"
@@ -194,7 +197,7 @@ function SignOutEverywhere({ active }: { active: number }) {
 
 /** For a lost laptop. Deliberately gives back a count and nothing else. */
 function SignOutSomebody() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const signOut = useSignOutUser();
   const { data: staff } = useStaff();
   const me = useAuthStore((state) => state.user?.id ?? null);
@@ -205,7 +208,7 @@ function SignOutSomebody() {
     setNote(null);
     try {
       const result = await signOut.mutateAsync(userId);
-      setNote(`${result.ended} session${result.ended === 1 ? "" : "s"} ended.`);
+      setNote(tPlural("security.ended", result.ended));
       setUserId("");
     } catch (err) {
       setNote(err instanceof ApiError ? err.message : t("security.signThemOutFailed"));

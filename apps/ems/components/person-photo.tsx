@@ -165,7 +165,7 @@ export function PersonPhotoEditor({ userId, name }: { userId: string; name: stri
           ref={fileInput}
           type="file"
           accept="image/png,image/jpeg,image/webp"
-          aria-label={`Upload a photo for ${name}`}
+          aria-label={t("personPhoto.uploadFor", { name })}
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0];

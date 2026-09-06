@@ -123,7 +123,7 @@ function StaffRecord({ member }: { member: StaffMember }) {
     // An empty string clears; omitting the field leaves it alone. Asking first
     // because the two are one keystroke apart, and only the person whose
     // account it is can undo this.
-    if (!window.confirm(`Remove the account number on file for ${fullName}?`)) return;
+    if (!window.confirm(t("staffRecord.removeAccountConfirm", { name: fullName }))) return;
     void submit(
       { accountNumber: "" },
       "Account number removed. Payroll will skip them until a new one is entered.",
@@ -192,7 +192,9 @@ function StaffRecord({ member }: { member: StaffMember }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("staffRecord.bankDetails")}</h2>
           <p className="text-xs text-slate-500">
-            {member.bank.hasAccountNumber ? `On file: ${member.bank.accountNumberMasked}` : t("staffRecord.noAccount")}
+            {member.bank.hasAccountNumber
+            ? t("staffRecord.onFile", { masked: member.bank.accountNumberMasked ?? "" })
+            : t("staffRecord.noAccount")}
           </p>
         </div>
 

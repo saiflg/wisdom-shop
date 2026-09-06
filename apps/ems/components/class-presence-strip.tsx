@@ -35,7 +35,7 @@ export function ClassPresenceStrip({ classId }: { classId: string }) {
       <span className="shrink-0 text-xs font-medium text-slate-500">
         {online.length === 0
           ? t("presence.nobodyElse")
-          : `${online.length} here now`}
+          : t("presence.hereNow", { count: online.length })}
       </span>
 
       <ul className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">

@@ -182,7 +182,7 @@ function Setup({ blocks }: { blocks: HostelBlock[] }) {
 }
 
 function BlockCard({ block }: { block: HostelBlock }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -190,15 +190,18 @@ function BlockCard({ block }: { block: HostelBlock }) {
           <p className="font-medium">{block.name}</p>
           <p className="text-xs text-slate-500">
             {block.wardenName ? `Warden ${block.wardenName} · ` : ""}
-            {block.occupancy.occupied} of {block.occupancy.beds} beds taken
+            {t("hostel.bedsTakenOf", {
+              occupied: block.occupancy.occupied,
+              beds: block.occupancy.beds,
+            })}
             {block.occupancy.emptyRooms > 0 &&
-              ` · ${block.occupancy.emptyRooms} empty room${block.occupancy.emptyRooms === 1 ? "" : "s"}`}
+              ` · ${tPlural("hostel.emptyRooms", block.occupancy.emptyRooms)}`}
           </p>
         </div>
         {/* Called out, because somebody in that room has nowhere to sleep. */}
         {block.occupancy.overfullRooms > 0 && (
           <span className="rounded-full bg-red-600 px-2.5 py-1 text-xs font-semibold text-white">
-            {block.occupancy.overfullRooms} room{block.occupancy.overfullRooms === 1 ? "" : "s"} overfull
+            {tPlural("hostel.overfullRooms", block.occupancy.overfullRooms)}
           </span>
         )}
       </div>
@@ -214,7 +217,7 @@ function BlockCard({ block }: { block: HostelBlock }) {
 }
 
 function RoomRow({ room }: { room: HostelRoom }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: students } = useStudents();
   const allocate = useAllocateBed();
   const release = useReleaseBed();
@@ -237,7 +240,7 @@ function RoomRow({ room }: { room: HostelRoom }) {
     setNote(null);
     try {
       const result = await release.mutateAsync(allocationId);
-      if (result.alreadyReleased) setNote(`${name} had already been released.`);
+      if (result.alreadyReleased) setNote(t("hostel.alreadyReleased", { name }));
     } catch (err) {
       setNote(err instanceof ApiError ? err.message : t("hostel.releaseBedFailed"));
     }
@@ -281,7 +284,7 @@ function RoomRow({ room }: { room: HostelRoom }) {
                   <span className="min-w-0 truncate text-sm">
                     {name}
                     <span className="ms-2 text-xs text-slate-500">
-                      {allocation.nights} night{allocation.nights === 1 ? "" : "s"}
+                      {tPlural("hostel.nights", allocation.nights)}
                     </span>
                   </span>
                   <button

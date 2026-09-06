@@ -236,7 +236,7 @@ export default function VoucherLayoutPage() {
                       current.map((c, i) => (i === index ? { ...c, label: e.target.value } : c)),
                     );
                   }}
-                  aria-label={`Heading for column ${index + 1}`}
+                  aria-label={t("voucher.columnHeading", { number: index + 1 })}
                   className="min-w-[10rem] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
                 />
 
@@ -247,7 +247,7 @@ export default function VoucherLayoutPage() {
                     type="button"
                     onClick={() => move(index, -1)}
                     disabled={index === 0}
-                    aria-label={`Move ${column.label} left`}
+                    aria-label={t("voucher.moveLeft", { label: column.label })}
                     className="rounded border border-slate-300 px-2 py-1 text-xs disabled:opacity-30 dark:border-slate-700"
                   >
                     ↑
@@ -256,7 +256,7 @@ export default function VoucherLayoutPage() {
                     type="button"
                     onClick={() => move(index, 1)}
                     disabled={index === columns.length - 1}
-                    aria-label={`Move ${column.label} right`}
+                    aria-label={t("voucher.moveRight", { label: column.label })}
                     className="rounded border border-slate-300 px-2 py-1 text-xs disabled:opacity-30 dark:border-slate-700"
                   >
                     ↓

@@ -15,7 +15,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * a bursar signs against.
  */
 export default function VoucherPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: runs } = usePayrollRuns();
   const [runId, setRunId] = useState<string | null>(null);
   const [includeAccounts, setIncludeAccounts] = useState(false);
@@ -176,8 +176,9 @@ export default function VoucherPage() {
           {data.voucher.staffCount > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <span className="text-sm text-slate-600 dark:text-slate-400">
-                {data.voucher.staffCount} staff · {data.voucher.pages.length}{" "}
-                {data.voucher.pages.length === 1 ? "page" : "pages"}
+                {tPlural("voucher.staffAndPages", data.voucher.pages.length, {
+                  staff: data.voucher.staffCount,
+                })}
               </span>
               <span className="text-lg font-bold tabular-nums">
                 Total {money(data.voucher.grandTotalCents)}

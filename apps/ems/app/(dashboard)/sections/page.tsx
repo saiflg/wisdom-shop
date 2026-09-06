@@ -126,7 +126,10 @@ function SectionRow({ section, isAdmin }: { section: Section; isAdmin: boolean }
             {/* t("sections.noClasses") rather than "0 classes": an empty section is
                 a setup step somebody has not finished, not a statistic. */}
             {count === 0 ? t("sections.noClasses") : `${count} ${count === 1 ? "class" : "classes"}`}
-            {section.head && ` · headed by ${section.head.firstName} ${section.head.lastName}`}
+            {section.head &&
+            ` · ${t("sections.headedBy", {
+              name: `${section.head.firstName} ${section.head.lastName}`,
+            })}`}
           </p>
         </div>
         {isAdmin && (

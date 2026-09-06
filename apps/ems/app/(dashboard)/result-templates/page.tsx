@@ -132,7 +132,7 @@ function NewTemplate() {
                 min={1}
                 value={toMarks(row.maxScoreHundredths)}
                 onChange={(event) => setRow(index, { maxScoreHundredths: fromMarks(Number(event.target.value)) })}
-                aria-label={`${row.name} maximum mark`}
+                aria-label={t("resultTemplates.maxMark", { name: row.name })}
                 className="ms-1 w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
             </label>
@@ -144,7 +144,7 @@ function NewTemplate() {
                 max={100}
                 value={row.weightPercent}
                 onChange={(event) => setRow(index, { weightPercent: Number(event.target.value) })}
-                aria-label={`${row.name} weight percent`}
+                aria-label={t("resultTemplates.weightPercent", { name: row.name })}
                 className="ms-1 w-16 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
               %
@@ -242,7 +242,7 @@ function TemplateRow({ template }: { template: ResultTemplate }) {
 }
 
 function ApplyPanel({ template }: { template: ResultTemplate }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: classes } = useClasses();
   const { data: subjects } = useSubjects();
   const apply = useApplyResultTemplate(template.id);
@@ -270,8 +270,11 @@ function ApplyPanel({ template }: { template: ResultTemplate }) {
       // being left to wonder whether it doubled anything.
       setNote(
         result.alreadyPresent > 0
-          ? `${result.created} created, ${result.alreadyPresent} already there.`
-          : `${result.created} assessments created.`,
+          ? t("resultTemplates.createdSome", {
+                created: result.created,
+                already: result.alreadyPresent,
+              })
+          : t("resultTemplates.createdAll", { created: result.created }),
       );
     } catch (err) {
       setNote(err instanceof ApiError ? err.message : t("resultTemplates.applyFailed"));
@@ -348,8 +351,11 @@ function ApplyPanel({ template }: { template: ResultTemplate }) {
             somebody's behalf without telling them the number first. */}
         {willCreate > 0 && (
           <span className="text-xs text-slate-500">
-            Creates {willCreate} assessment{willCreate === 1 ? "" : "s"}
-            {schoolClass ? ` in ${schoolClass.name}, ${term} term` : ""}. Applying twice changes nothing.
+            {tPlural("resultTemplates.willCreate", willCreate)}
+            {schoolClass
+              ? t("resultTemplates.inClassTerm", { className: schoolClass.name, term })
+              : ""}
+            {t("resultTemplates.applyingTwice")}
           </span>
         )}
       </div>

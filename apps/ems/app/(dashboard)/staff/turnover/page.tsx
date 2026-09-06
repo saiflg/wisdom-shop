@@ -14,21 +14,23 @@ import type { TranslationKey } from "@/lib/i18n";
  * recruitment, not reminiscing.
  */
 export default function TurnoverPage() {
-  const { t } = useTranslation();
+  const { t, locale, tPlural } = useTranslation();
   const { data, isLoading, error } = useTurnover();
 
   const money = (cents: number) =>
     (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const date = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "—";
+    iso ? new Date(iso).toLocaleDateString(locale, { month: "long", year: "numeric" }) : "—";
 
   const averageLabel = (months: number | null) => {
     if (months === null) return "—";
     const years = Math.floor(months / 12);
     const rest = months % 12;
-    if (years === 0) return `${rest} mo`;
-    return rest === 0 ? `${years} yr` : `${years} yr ${rest} mo`;
+    if (years === 0) return t("turnover.months", { months: rest });
+    return rest === 0
+      ? t("turnover.years", { years })
+      : t("turnover.yearsMonths", { years, months: rest });
   };
 
   return (
@@ -77,9 +79,7 @@ export default function TurnoverPage() {
               people reads as complete and is not. */}
           {data.withoutSalary > 0 && (
             <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-              {data.withoutSalary} of these {data.withoutSalary === 1 ? "person was" : "people were"} never
-              on a payroll run, so the replacement figure above does not include{" "}
-              {data.withoutSalary === 1 ? "them" : "them"}.
+              {tPlural("turnover.neverOnPayroll", data.withoutSalary)}
             </p>
           )}
 

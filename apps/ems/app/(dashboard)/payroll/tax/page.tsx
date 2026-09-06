@@ -15,7 +15,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * the school has no answer to.
  */
 export default function TaxRegisterPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: runs } = usePayrollRuns();
   const [runId, setRunId] = useState<string | null>(null);
 
@@ -108,8 +108,7 @@ export default function TaxRegisterPage() {
                   missing staff are missing on purpose. */}
               {notTaxed > 0 && (
                 <p className="text-sm text-slate-500">
-                  {notTaxed} other {notTaxed === 1 ? "member" : "members"} of staff paid no tax this month
-                  and {notTaxed === 1 ? "is" : "are"} not listed.
+                  {tPlural("paye.notTaxed", notTaxed)}
                 </p>
               )}
             </>

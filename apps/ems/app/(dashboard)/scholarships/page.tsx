@@ -260,13 +260,17 @@ function AwardRow({
           </p>
           <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
             {scholarship.describedAs}
-            {scholarship.sponsor ? ` · funded by ${scholarship.sponsor}` : ""}
+            {scholarship.sponsor
+              ? ` · ${t("scholarships.fundedBy", { sponsor: scholarship.sponsor })}`
+              : ""}
           </p>
           <p className="mt-0.5 text-xs text-slate-500">
             {scholarship.timesApplied === 0
               ? t("scholarships.notReducedYet")
               : `Reduced ${scholarship.timesApplied} ${scholarship.timesApplied === 1 ? "bill" : "bills"}`}
-            {scholarship.awardedByName ? ` · awarded by ${scholarship.awardedByName}` : ""}
+            {scholarship.awardedByName
+              ? ` · ${t("scholarships.awardedBy", { name: scholarship.awardedByName })}`
+              : ""}
           </p>
           {scholarship.withdrawnReason && (
             <p className="mt-0.5 text-xs italic text-slate-500">“{scholarship.withdrawnReason}”</p>

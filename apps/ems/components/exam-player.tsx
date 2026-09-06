@@ -160,7 +160,11 @@ export function ExamPlayer({ examId }: { examId: string }) {
         <div>
           <h1 className="text-lg font-bold tracking-tight">{paper.title}</h1>
           <p className="text-xs text-slate-500">
-            {answered} of {paper.questions.length} answered · {toMarks(paper.totalMarksHundredths)} marks
+            {t("examPlayer.progress", {
+              answered,
+              total: paper.questions.length,
+              marks: toMarks(paper.totalMarksHundredths) ?? 0,
+            })}
           </p>
         </div>
         <div className="flex items-center gap-4">

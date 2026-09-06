@@ -226,7 +226,7 @@ function OnLoan() {
       const result = await takeBack.mutateAsync(loan.id);
       // Scanning a book that is already in is not an error worth shouting
       // about; it is the second scan of the same barcode.
-      if (result.alreadyReturned) setNote(`${loan.book.title} was already back in.`);
+      if (result.alreadyReturned) setNote(t("library.alreadyReturned", { title: loan.book.title }));
     } catch (err) {
       setNote(err instanceof ApiError ? err.message : t("library.returnFailed"));
     }

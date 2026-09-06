@@ -295,8 +295,9 @@ function ExpenseRow({ expense }: { expense: Expense }) {
           <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{expense.description}</p>
           <p className="mt-1 text-xs text-slate-500">
             {new Date(expense.incurredOn).toLocaleDateString()}
-            {expense.payee && ` · ${expense.payee}`} · asked by {expense.requestedByName}
-            {expense.decidedByName && ` · decided by ${expense.decidedByName}`}
+            {expense.payee && ` · ${expense.payee}`} ·{" "}
+            {t("expenses.askedBy", { name: expense.requestedByName })}
+            {expense.decidedByName && ` · ${t("expenses.decidedBy", { name: expense.decidedByName })}`}
             {expense.reference && ` · ref ${expense.reference}`}
           </p>
           {expense.decisionNote && <p className="mt-1 text-xs text-amber-600">{expense.decisionNote}</p>}

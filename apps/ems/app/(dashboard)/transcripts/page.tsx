@@ -200,8 +200,12 @@ export default function TranscriptsPage() {
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <p className="font-semibold">{subject.subjectName}</p>
                         <p className="text-sm text-slate-500">
-                          best <span className="font-semibold tabular-nums text-slate-700 dark:text-slate-300">{subject.best}</span>
-                          {" · "}average{" "}
+                          {t("transcripts.best")}{" "}
+                          <span className="font-semibold tabular-nums text-slate-700 dark:text-slate-300">
+                            {subject.best}
+                          </span>
+                          {" · "}
+                          {t("transcripts.average")}{" "}
                           <span className="font-semibold tabular-nums text-slate-700 dark:text-slate-300">{subject.average}</span>
                         </p>
                       </div>

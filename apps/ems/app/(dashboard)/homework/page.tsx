@@ -223,7 +223,9 @@ export default function HomeworkPage() {
                   {assignment.dueAt
                     ? ` · due ${new Date(assignment.dueAt).toLocaleString()}`
                     : " · no deadline"}
-                  {isStaff && assignment._count ? ` · ${assignment._count.submissions} handed in` : ""}
+                  {isStaff && assignment._count
+                    ? ` · ${t("homework.handedInCount", { count: assignment._count.submissions })}`
+                    : ""}
                 </span>
               </span>
               <span className={STATUS_BADGE[assignment.status]}>{assignment.status.toLowerCase()}</span>
@@ -248,7 +250,7 @@ function Detail({
   isStaff: boolean;
   summary: Assignment;
 }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const { data: assignment, isLoading, error } = useAssignment(id);
   const update = useUpdateAssignment(id);
   const release = useReleaseMarks(id);
@@ -316,7 +318,7 @@ function Detail({
                       text:
                         released === 0
                           ? t("homework.nothingToRelease")
-                          : `Released ${released} mark${released === 1 ? "" : "s"}.`,
+                          : tPlural("homework.releasedMarks", released),
                     });
                   },
                   t("errs.releaseMarks"),
@@ -330,9 +332,13 @@ function Detail({
 
           {assignment.progress && (
             <p className="text-xs text-slate-500">
-              {assignment.progress.submitted} of {assignment.progress.expected} handed in ·{" "}
-              {assignment.progress.marked} marked · {assignment.progress.late} late ·{" "}
-              {assignment.progress.outstanding} still to come
+              {t("homework.progress", {
+                submitted: assignment.progress.submitted,
+                expected: assignment.progress.expected,
+                marked: assignment.progress.marked,
+                late: assignment.progress.late,
+                outstanding: assignment.progress.outstanding,
+              })}
             </p>
           )}
 
@@ -386,7 +392,10 @@ function Detail({
               {mine.status === "RELEASED" ? (
                 <div className="mt-2 border-t border-slate-200 pt-2 dark:border-slate-800">
                   <p className="text-sm font-semibold">
-                    {toMarks(mine.scoreHundredths)} out of {toMarks(assignment.maxScoreHundredths)}
+                    {t("homework.scoreOutOf", {
+                      score: toMarks(mine.scoreHundredths) ?? 0,
+                      max: toMarks(assignment.maxScoreHundredths) ?? 0,
+                    })}
                   </p>
                   {mine.feedback && <p className="mt-1 text-sm">{mine.feedback}</p>}
                 </div>
@@ -465,7 +474,7 @@ function MarkRow({
           value={score}
           onChange={(event) => setScore(event.target.value)}
           inputMode="decimal"
-          aria-label={`Mark out of ${maxScoreHundredths / 100}`}
+          aria-label={t("homework.markOutOf", { max: maxScoreHundredths / 100 })}
           className="mt-1 block w-24 rounded-lg border border-slate-300 bg-white px-2 py-1 text-end text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
         />
       </label>
@@ -486,7 +495,7 @@ function MarkRow({
             ...(feedback.trim() ? { feedback: feedback.trim() } : {}),
           })
         }
-        aria-label={`Save mark for submission ${submissionId}`}
+        aria-label={t("homework.saveMark")}
         className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
       >
         {t("homework.saveMark")}

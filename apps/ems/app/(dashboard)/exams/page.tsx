@@ -240,7 +240,7 @@ export default function ExamsPage() {
                   <p className="mt-1 text-xs text-slate-500">
                     {exam.progress.submitted} of {exam.progress.expected} handed in
                     {exam.progress.needingReview > 0
-                      ? ` · ${exam.progress.needingReview} waiting for you`
+                      ? ` · ${t("exams.waitingForYou", { count: exam.progress.needingReview })}`
                       : ""}
                   </p>
                 )}

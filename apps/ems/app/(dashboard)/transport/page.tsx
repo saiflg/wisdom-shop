@@ -195,7 +195,11 @@ function RouteCard({ route }: { route: Route }) {
           </p>
           {/* Two figures, never one. */}
           <p className="mt-1 text-xs tabular-nums text-slate-500">
-            Morning {route.taken.morning}/{route.seats} · Afternoon {route.taken.afternoon}/{route.seats}
+            {t("transport.morningAfternoon", {
+              morning: route.taken.morning,
+              afternoon: route.taken.afternoon,
+              seats: route.seats,
+            })}
           </p>
         </div>
         <button
@@ -292,7 +296,7 @@ function RouteDetail({ route }: { route: Route }) {
                   setRows(rows.map((r, i) => (i === index ? { ...r, name: event.target.value } : r)))
                 }
                 placeholder={t("transport.stopName")}
-                aria-label={`Stop ${index + 1} name`}
+                aria-label={t("transport.stopNameAria", { number: index + 1 })}
                 className="w-44 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
               />
               <input
@@ -301,7 +305,7 @@ function RouteDetail({ route }: { route: Route }) {
                   setRows(rows.map((r, i) => (i === index ? { ...r, time: event.target.value } : r)))
                 }
                 placeholder="06:30"
-                aria-label={`Stop ${index + 1} pickup time`}
+                aria-label={t("transport.stopTime", { number: index + 1 })}
                 className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
               />
               <button

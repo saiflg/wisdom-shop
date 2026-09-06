@@ -240,8 +240,8 @@ function RunDetail({ id }: { id: string }) {
         tone: missingCount > 0 ? "error" : "ok",
         text:
           missingCount > 0
-            ? `${paidCount} in the file. ${missingCount} staff have no account number on file and are not in it — add their bank details and download again.`
-            : `${paidCount} payments in the file. Every disclosure has been recorded in the bank-detail access log.`,
+            ? t("payroll.fileMissingAccounts", { paid: paidCount, missing: missingCount })
+            : t("payroll.fileComplete", { paid: paidCount }),
       });
     } catch (err) {
       setMessage({ tone: "error", text: err instanceof ApiError ? err.message : t("payroll.fileFailed") });

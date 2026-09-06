@@ -200,7 +200,7 @@ export default function QuestionBankPage() {
                           return [option.key];
                         })
                       }
-                      aria-label={`Option ${option.key} is correct`}
+                      aria-label={t("questionBank.optionCorrect", { key: option.key })}
                       className="h-4 w-4"
                     />
                     <span className="w-5 text-sm font-semibold">{option.key}</span>

@@ -85,7 +85,7 @@ function BudgetDetail({ id }: { id: string }) {
           <p className="text-xs text-slate-500">
             {new Date(budget.fromDate).toLocaleDateString()} to {new Date(budget.toDate).toLocaleDateString()}
             {budget.term && ` · ${budget.term} term`}
-            {budget.createdByName && ` · set by ${budget.createdByName}`}
+            {budget.createdByName && ` · ${t("budget.setBy", { name: budget.createdByName })}`}
           </p>
         </div>
         <button
@@ -186,7 +186,9 @@ function Row({ row }: { row: BudgetComparisonRow }) {
         {/* Never capped: a line at 140% has to read as 140%, or a badly
             overspent line looks identical to one exactly on budget. */}
         {row.budgetedCents > 0 ? `${percent}% used` : "no allowance set"}
-        {row.overspent && row.budgetedCents > 0 && ` · over by ${formatAmount(-row.remainingCents)}`}
+        {row.overspent &&
+            row.budgetedCents > 0 &&
+            ` · ${t("budget.overByAmount", { amount: formatAmount(-row.remainingCents) })}`}
       </p>
     </li>
   );
@@ -318,7 +320,7 @@ function NewBudget() {
                 setRows(rows.map((r, i) => (i === index ? { ...r, category: event.target.value } : r)))
               }
               placeholder={t("budget.categoryPlaceholder")}
-              aria-label={`Line ${index + 1} category`}
+              aria-label={t("budget.lineCategory", { number: index + 1 })}
               className="w-40 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
             <input
@@ -328,7 +330,7 @@ function NewBudget() {
               }
               inputMode="decimal"
               placeholder="100000.00"
-              aria-label={`Line ${index + 1} amount`}
+              aria-label={t("budget.lineAmount", { number: index + 1 })}
               className="w-36 rounded-lg border border-slate-300 px-2 py-1 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900"
             />
             <button

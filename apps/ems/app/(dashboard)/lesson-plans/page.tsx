@@ -328,7 +328,8 @@ export default function LessonPlansPage() {
             <li key={plan.id} className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
               <div className="flex items-center justify-between">
                 <Link href={`/lesson-plans/${plan.id}`} className="font-medium hover:underline">
-                  {plan.schemeOfWork?.subject?.name ?? t("shared.subjectFallback")} · Week {plan.weekNumber}
+                  {plan.schemeOfWork?.subject?.name ?? t("shared.subjectFallback")} ·{" "}
+                  {t("lessonPlans.weekLabel", { number: plan.weekNumber })}
                 </Link>
                 <div className="flex gap-2">
                   <span

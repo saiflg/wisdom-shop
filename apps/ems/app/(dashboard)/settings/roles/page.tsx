@@ -159,7 +159,7 @@ export default function RolesPage() {
 }
 
 function Area({ area, role }: { area: AreaSummary; role: RoleName | "ALL" }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const [open, setOpen] = useState(false);
   const routes =
     role === "ALL"
@@ -172,9 +172,10 @@ function Area({ area, role }: { area: AreaSummary; role: RoleName | "ALL" }) {
         <div className="min-w-0">
           <p className="font-medium">{area.area}</p>
           <p className="mt-0.5 text-xs text-slate-500">
-            {routes.length} endpoint{routes.length === 1 ? "" : "s"} ·{" "}
-            {area.reachedBy.map((name) => t(ROLE_KEY[name])).join(", ") || "Nobody"}
-            {area.modules.length > 0 && ` · needs ${area.modules.join(", ")}`}
+            {tPlural("roles.endpointCount", routes.length)} ·{" "}
+            {area.reachedBy.map((name) => t(ROLE_KEY[name])).join(", ") || t("roles.nobody")}
+            {area.modules.length > 0 &&
+              ` · ${t("roles.needsModules", { modules: area.modules.join(", ") })}`}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
