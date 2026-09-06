@@ -2449,4 +2449,12 @@ export const tr: Partial<Dictionary> = {
 
   // ── Coming soon page ────────────────────────────────────────────
   "home.backToShop": "Wisdom Shop'a dön",
+
+  // ── Payroll run list ────────────────────────────────────────────
+  "payroll.statusDRAFT": "taslak",
+  "payroll.statusAPPROVED": "onaylandı",
+  "payroll.statusPAID": "ödendi",
+  "payroll.runSummary_one": "{count} personel · net {amount}",
+  "payroll.runSummary_other": "{count} personel · net {amount}",
+  "payroll.paidBy": "{name} tarafından ödendi",
 };

@@ -2471,6 +2471,14 @@ export const en = {
 
   // ── Coming soon page ────────────────────────────────────────────
   "home.backToShop": "Back to Wisdom Shop",
+
+  // ── Payroll run list ────────────────────────────────────────────
+  "payroll.statusDRAFT": "draft",
+  "payroll.statusAPPROVED": "approved",
+  "payroll.statusPAID": "paid",
+  "payroll.runSummary_one": "{count} staff · net {amount}",
+  "payroll.runSummary_other": "{count} staff · net {amount}",
+  "payroll.paidBy": "paid by {name}",
 } as const;
 
 /**

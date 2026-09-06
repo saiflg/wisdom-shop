@@ -2455,4 +2455,12 @@ export const ar: Partial<Dictionary> = {
 
   // ── Coming soon page ────────────────────────────────────────────
   "home.backToShop": "العودة إلى Wisdom Shop",
+
+  // ── Payroll run list ────────────────────────────────────────────
+  "payroll.statusDRAFT": "مسودة",
+  "payroll.statusAPPROVED": "معتمد",
+  "payroll.statusPAID": "مدفوع",
+  "payroll.runSummary_one": "موظف واحد · الصافي {amount}",
+  "payroll.runSummary_other": "{count} موظفين · الصافي {amount}",
+  "payroll.paidBy": "دفعها {name}",
 };

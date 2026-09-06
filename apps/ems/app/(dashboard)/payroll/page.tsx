@@ -18,6 +18,7 @@ import {
   type PayrollRunStatus,
 } from "@/lib/use-payroll";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import type { TranslationKey } from "@/lib/i18n";
 
 /** Minor units to a readable amount. Derived, never stored. */
 function money(cents: number): string {
@@ -25,6 +26,12 @@ function money(cents: number): string {
 }
 
 const BADGE = "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold";
+const STATUS_KEY: Record<PayrollRunStatus, TranslationKey> = {
+  DRAFT: "payroll.statusDRAFT",
+  APPROVED: "payroll.statusAPPROVED",
+  PAID: "payroll.statusPAID",
+};
+
 const STATUS_BADGE: Record<PayrollRunStatus, string> = {
   DRAFT: `${BADGE} bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300`,
   APPROVED: `${BADGE} bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300`,
@@ -32,7 +39,7 @@ const STATUS_BADGE: Record<PayrollRunStatus, string> = {
 };
 
 export default function PayrollPage() {
-  const { t } = useTranslation();
+  const { t, tPlural, locale } = useTranslation();
   const now = new Date();
   const { data: runs, isLoading, error } = usePayrollRuns();
   const createRun = useCreatePayrollRun();
@@ -85,7 +92,7 @@ export default function PayrollPage() {
           >
             {Array.from({ length: 12 }, (_, index) => (
               <option key={index + 1} value={index + 1}>
-                {new Date(2000, index, 1).toLocaleString(undefined, { month: "long" })}
+                {new Date(2000, index, 1).toLocaleString(locale, { month: "long" })}
               </option>
             ))}
           </select>
@@ -127,11 +134,13 @@ export default function PayrollPage() {
               <div className="min-w-0">
                 <p className="font-semibold">{run.period}</p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {run.summary.staffCount} staff · net {money(run.summary.netCents)}
-                  {run.paidByName ? ` · paid by ${run.paidByName}` : ""}
+                  {tPlural("payroll.runSummary", run.summary.staffCount, {
+                    amount: money(run.summary.netCents),
+                  })}
+                  {run.paidByName ? ` · ${t("payroll.paidBy", { name: run.paidByName })}` : ""}
                 </p>
               </div>
-              <span className={STATUS_BADGE[run.status]}>{run.status.toLowerCase()}</span>
+              <span className={STATUS_BADGE[run.status]}>{t(STATUS_KEY[run.status])}</span>
             </button>
 
             {selected === run.id && <RunDetail id={run.id} />}

@@ -2455,4 +2455,12 @@ export const ha: Partial<Dictionary> = {
 
   // ── Coming soon page ────────────────────────────────────────────
   "home.backToShop": "Koma zuwa Wisdom Shop",
+
+  // ── Payroll run list ────────────────────────────────────────────
+  "payroll.statusDRAFT": "daftari",
+  "payroll.statusAPPROVED": "an amince",
+  "payroll.statusPAID": "an biya",
+  "payroll.runSummary_one": "ma'aikaci {count} · saura {amount}",
+  "payroll.runSummary_other": "ma'aikata {count} · saura {amount}",
+  "payroll.paidBy": "{name} ya biya",
 };
