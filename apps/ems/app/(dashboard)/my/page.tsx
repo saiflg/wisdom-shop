@@ -181,12 +181,18 @@ export default function MyPage() {
                     </span>
                   ) : (
                     <span className="text-xs text-slate-500">
-                      {exam.opensAt ? `opens ${new Date(exam.opensAt).toLocaleString(formattingLocale(locale))}` : "not open yet"}
+                      {exam.opensAt
+                        ? t("my.opensAt", {
+                            when: new Date(exam.opensAt).toLocaleString(formattingLocale(locale)),
+                          })
+                        : t("my.notOpenYet")}
                     </span>
                   )}
                   {exam.closesAt && exam.open && (
                     <span className="w-full text-xs text-slate-500">
-                      closes {new Date(exam.closesAt).toLocaleString(formattingLocale(locale))}
+                      {t("my.closesAt", {
+                        when: new Date(exam.closesAt).toLocaleString(formattingLocale(locale)),
+                      })}
                     </span>
                   )}
                 </li>

@@ -301,7 +301,7 @@ function ExpenseRow({ expense }: { expense: Expense }) {
             {expense.payee && ` · ${expense.payee}`} ·{" "}
             {t("expenses.askedBy", { name: expense.requestedByName })}
             {expense.decidedByName && ` · ${t("expenses.decidedBy", { name: expense.decidedByName })}`}
-            {expense.reference && ` · ref ${expense.reference}`}
+            {expense.reference && ` · ${t("shared.reference", { reference: expense.reference })}`}
           </p>
           {expense.decisionNote && <p className="mt-1 text-xs text-amber-600">{expense.decisionNote}</p>}
         </div>

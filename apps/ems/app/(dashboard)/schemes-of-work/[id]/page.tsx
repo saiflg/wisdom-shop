@@ -184,7 +184,10 @@ export default function SchemeOfWorkDetailPage() {
                     href={`/lesson-plans/${existingPlan.id}`}
                     className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
                   >
-                    View lesson plan ({existingPlan.status.toLowerCase()}) →
+                    {t("schemesOfWork.viewPlan", {
+                      status: t(`lessonPlans.status${existingPlan.status}`),
+                    })}{" "}
+                    →
                   </Link>
                 ) : (
                   <Link

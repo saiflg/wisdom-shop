@@ -43,7 +43,7 @@ function examSchemaFor(t: (key: TranslationKey) => string) {
 type ExamValues = z.infer<ReturnType<typeof examSchemaFor>>;
 
 export default function ExamsPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const schema = useMemo(() => examSchemaFor(t), [t]);
   const user = useAuthStore((s) => s.user);
   const isStaff = Boolean(user?.roles.some((r) => r === "SCHOOL_ADMIN" || r === "TEACHER"));
@@ -233,7 +233,7 @@ export default function ExamsPage() {
                 </Link>
                 <p className="mt-1 text-xs text-slate-500">
                   {exam.class?.name} · {exam.subject?.name} · {exam.durationMinutes} minutes
-                  {exam._count ? ` · ${exam._count.questions} questions` : ""}
+                  {exam._count ? ` · ${tPlural("exams.questionCount", exam._count.questions)}` : ""}
                 </p>
 
                 {isStaff && exam.progress && (
@@ -264,7 +264,7 @@ export default function ExamsPage() {
               </div>
 
               <div className="flex shrink-0 items-center gap-3">
-                {isStaff && <span className={STATUS_BADGE[exam.status]}>{exam.status.toLowerCase()}</span>}
+                {isStaff && <span className={STATUS_BADGE[exam.status]}>{t(`exams.status${exam.status}`)}</span>}
                 <Link
                   href={`/exams/${exam.id}`}
                   className="text-xs font-semibold text-brand-600 hover:underline"

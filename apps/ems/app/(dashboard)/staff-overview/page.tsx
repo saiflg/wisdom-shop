@@ -73,7 +73,10 @@ function Overview({ userId }: { userId: string }) {
         <p className="text-lg font-semibold">{data.staff.name}</p>
         <p className="text-xs text-slate-500">
           {[data.staff.jobTitle, data.staff.section].filter(Boolean).join(" · ") || "No job title recorded"}
-          {data.staff.startDate && ` · since ${new Date(data.staff.startDate).toLocaleDateString(formattingLocale(locale))}`}
+          {data.staff.startDate &&
+            ` · ${t("staffOverview.since", {
+              when: new Date(data.staff.startDate).toLocaleDateString(formattingLocale(locale)),
+            })}`}
         </p>
       </div>
 

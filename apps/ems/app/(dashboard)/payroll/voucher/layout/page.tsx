@@ -267,7 +267,7 @@ export default function VoucherLayoutPage() {
                       setSaved(false);
                       setColumns((current) => current.filter((_, i) => i !== index));
                     }}
-                    aria-label={`Remove ${column.label}`}
+                    aria-label={t("voucher.removeColumn")}
                     className="rounded border border-slate-300 px-2 py-1 text-xs text-red-700 dark:border-slate-700 dark:text-red-400"
                   >
                     {t("shared.remove")}

@@ -26,9 +26,25 @@ jest.mock("@/lib/use-subjects", () => ({
 jest.mock("@/lib/use-homework", () => ({
   toMarks: (value: number | null) => (value === null ? null : value / 100),
   useAssignment: () => ({ data: null, isLoading: false }),
-  // Empty on purpose: the empty state is the one a demo hits first, and it is
-  // pure translated prose with no data to hide behind.
-  useAssignments: () => ({ data: [], isLoading: false, error: null }),
+  // One real assignment. The empty state is pure prose; a list row is where
+  // the status badge, the due date and the "N handed in" count live, and
+  // every one of those was English until the sweep that follows this test.
+  useAssignments: () => ({
+    data: [
+      {
+        id: "a1",
+        title: "Fractions worksheet",
+        status: "SET",
+        dueAt: "2026-09-12T15:00:00.000Z",
+        maxScoreHundredths: 1000,
+        subject: { id: "s1", name: "Mathematics" },
+        class: { id: "c1", name: "Grade 5" },
+        _count: { submissions: 3 },
+      },
+    ],
+    isLoading: false,
+    error: null,
+  }),
   useCreateAssignment: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useMarkSubmission: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useReleaseMarks: () => ({ mutateAsync: jest.fn(), isPending: false }),
@@ -60,13 +76,25 @@ describe("the homework screen in Arabic", () => {
     expect(document.documentElement.lang).toBe("ar");
   });
 
+  // The row a teacher sees before opening anything: a status the database
+  // spells in English, a date, and a count.
+  it("translates the status badge, the due date and the count on a list row", () => {
+    renderArabic();
+
+    expect(screen.getByText(translate("ar", "homework.statusSET"))).toBeInTheDocument();
+    expect(screen.queryByText("set")).not.toBeInTheDocument();
+    expect(screen.getByText(/Mathematics/)).toBeInTheDocument();
+  });
+
   it("leaves no English sentence on the screen", () => {
     const { container } = renderArabic();
 
     // Two or more Latin words in a row. Single words survive deliberately:
     // a class is called "Grade 5" and a subject "Mathematics", both of them
     // data the school typed, and neither ours to translate.
-    const english = (container.textContent ?? "").match(/[A-Za-z]{2,}\s+[A-Za-z]{2,}/g) ?? [];
-    expect(english).toEqual([]);
+    const text = (container.textContent ?? "").replace(/Fractions worksheet|Mathematics|Grade 5/g, " ");
+    expect(text.match(/[A-Za-z]{2,}\s+[A-Za-z]{2,}/g) ?? []).toEqual([]);
+    // Any figure that escaped the money and number formatters.
+    expect(text).not.toMatch(/\d{1,3},\d{3}/);
   });
 });

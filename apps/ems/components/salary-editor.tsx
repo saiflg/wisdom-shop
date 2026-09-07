@@ -167,7 +167,7 @@ export function SalaryEditor({ userId }: { userId: string }) {
               <button
                 type="button"
                 onClick={() => setDrafts((current) => (current ?? []).filter((_, i) => i !== index))}
-                aria-label={`Remove ${draft.label || "component"}`}
+                aria-label={t("salary.removeComponent")}
                 className="text-xs font-semibold text-red-600 hover:underline"
               >
                 {t("shared.remove")}

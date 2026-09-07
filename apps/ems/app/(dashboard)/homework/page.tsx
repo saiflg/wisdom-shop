@@ -222,14 +222,18 @@ export default function HomeworkPage() {
                   {assignment.subject?.name}
                   {assignment.class ? ` · ${assignment.class.name}` : ""}
                   {assignment.dueAt
-                    ? ` · due ${new Date(assignment.dueAt).toLocaleString(formattingLocale(locale))}`
-                    : " · no deadline"}
+                    ? ` · ${t("homework.dueAt", {
+                        when: new Date(assignment.dueAt).toLocaleString(formattingLocale(locale)),
+                      })}`
+                    : ` · ${t("homework.noDeadline")}`}
                   {isStaff && assignment._count
                     ? ` · ${t("homework.handedInCount", { count: assignment._count.submissions })}`
                     : ""}
                 </span>
               </span>
-              <span className={STATUS_BADGE[assignment.status]}>{assignment.status.toLowerCase()}</span>
+              <span className={STATUS_BADGE[assignment.status]}>
+                {t(`homework.status${assignment.status}`)}
+              </span>
             </button>
 
             {selected === assignment.id && (
@@ -359,7 +363,9 @@ function Detail({
                       : t("shared.student")}
                     {submission.isLate && <span className="ms-2 text-xs font-semibold text-amber-600">{t("homework.late")}</span>}
                   </span>
-                  <span className="text-xs text-slate-500">{submission.status.toLowerCase()}</span>
+                  <span className="text-xs text-slate-500">
+                      {t(`homework.submission${submission.status}`)}
+                    </span>
                 </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
                   {submission.content}

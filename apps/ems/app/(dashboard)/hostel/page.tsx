@@ -189,7 +189,7 @@ function BlockCard({ block }: { block: HostelBlock }) {
         <div>
           <p className="font-medium">{block.name}</p>
           <p className="text-xs text-slate-500">
-            {block.wardenName ? `Warden ${block.wardenName} · ` : ""}
+            {block.wardenName ? `${t("hostel.warden", { name: block.wardenName })} · ` : ""}
             {t("hostel.bedsTakenOf", {
               occupied: block.occupancy.occupied,
               beds: block.occupancy.beds,

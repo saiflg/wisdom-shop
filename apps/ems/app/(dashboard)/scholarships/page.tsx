@@ -246,7 +246,7 @@ function AwardRow({
   scholarship: Scholarship;
   onWithdraw?: (reason: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
 
@@ -267,7 +267,7 @@ function AwardRow({
           <p className="mt-0.5 text-xs text-slate-500">
             {scholarship.timesApplied === 0
               ? t("scholarships.notReducedYet")
-              : `Reduced ${scholarship.timesApplied} ${scholarship.timesApplied === 1 ? "bill" : "bills"}`}
+              : tPlural("scholarships.reducedBills", scholarship.timesApplied)}
             {scholarship.awardedByName
               ? ` · ${t("scholarships.awardedBy", { name: scholarship.awardedByName })}`
               : ""}

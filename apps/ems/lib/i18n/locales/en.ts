@@ -2573,6 +2573,46 @@ export const en = {
 
   // ── Two the sweep missed ────────────────────────────────────────
   "turnover.months": "{months} mo",
+
+  // ── One word welded to a value, and raw enums ───────────────────
+  "homework.statusDRAFT": "draft",
+  "homework.statusSET": "set",
+  "homework.statusCLOSED": "closed",
+  "homework.submissionSUBMITTED": "handed in",
+  "homework.submissionMARKED": "marked",
+  "homework.submissionRELEASED": "released",
+  "homework.dueAt": "due {when}",
+  "homework.noDeadline": "no deadline",
+  "exams.statusDRAFT": "draft",
+  "exams.statusPUBLISHED": "published",
+  "exams.statusCLOSED": "closed",
+  "exams.questionCount_one": "{count} question",
+  "exams.questionCount_other": "{count} questions",
+  "budget.termLabel": "{term} term",
+  "shared.reference": "ref {reference}",
+  "hostel.warden": "Warden {name}",
+  "announcements.reached": "reached {count}",
+  "announcements.skipped": ", {count} skipped",
+  "announcements.channelJoin": " and ",
+  "my.opensAt": "opens {when}",
+  "my.notOpenYet": "not open yet",
+  "my.closesAt": "closes {when}",
+  "scholarships.reducedBills_one": "Reduced {count} bill",
+  "scholarships.reducedBills_other": "Reduced {count} bills",
+  "staffOverview.since": "since {when}",
+  "studentOverview.overdue": "overdue",
+  "studentOverview.dueOn": "due {when}",
+  "leave.statusREQUESTED": "requested",
+  "leave.statusAPPROVED": "approved",
+  "leave.statusDECLINED": "declined",
+  "leave.statusCANCELLED": "cancelled",
+  "schemesOfWork.viewPlan": "View lesson plan ({status})",
+  "salary.removeComponent": "Remove this pay item",
+  "voucher.removeColumn": "Remove this column",
+
+  // ── Lesson plan status ──────────────────────────────────────────
+  "lessonPlans.statusDRAFT": "draft",
+  "lessonPlans.statusPUBLISHED": "published",
 } as const;
 
 /**

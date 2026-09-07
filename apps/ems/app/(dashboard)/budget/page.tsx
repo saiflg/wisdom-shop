@@ -85,7 +85,7 @@ function BudgetDetail({ id }: { id: string }) {
           <p className="font-medium">{budget.name}</p>
           <p className="text-xs text-slate-500">
             {new Date(budget.fromDate).toLocaleDateString(formattingLocale(locale))} to {new Date(budget.toDate).toLocaleDateString(formattingLocale(locale))}
-            {budget.term && ` · ${budget.term} term`}
+            {budget.term && ` · ${t("budget.termLabel", { term: budget.term })}`}
             {budget.createdByName && ` · ${t("budget.setBy", { name: budget.createdByName })}`}
           </p>
         </div>

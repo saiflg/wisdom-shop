@@ -282,9 +282,12 @@ export default function AnnouncementsPage() {
                 </p>
                 {announcement.status === "SENT" ? (
                   <p className="mt-1.5 text-xs text-slate-500">
-                    {announcement.audienceLabel} · {announcement.channels.join(" and ").toLowerCase()} ·{" "}
-                    reached {announcement.reached}
-                    {announcement.skipped > 0 ? `, ${announcement.skipped} skipped` : ""}
+                    {announcement.audienceLabel} ·{" "}
+                    {announcement.channels.join(t("announcements.channelJoin")).toLowerCase()} ·{" "}
+                    {t("announcements.reached", { count: announcement.reached })}
+                    {announcement.skipped > 0
+                      ? t("announcements.skipped", { count: announcement.skipped })
+                      : ""}
                   </p>
                 ) : (
                   <DraftActions announcement={announcement} />

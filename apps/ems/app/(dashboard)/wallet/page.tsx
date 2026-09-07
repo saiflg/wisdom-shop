@@ -123,6 +123,7 @@ function WalletPanel({ studentProfileId, isStaff }: { studentProfileId: string; 
 }
 
 function EntryRow({ entry }: { entry: WalletEntry }) {
+  const { t } = useTranslation();
   const formatAmount = useMoney();
   const { locale } = useTranslation();
   const credit = entry.amountCents > 0;
@@ -134,7 +135,7 @@ function EntryRow({ entry }: { entry: WalletEntry }) {
           {new Date(entry.createdAt).toLocaleString(formattingLocale(locale))} · {entry.recordedByName}
           {/* Shown because it is the thing a parent quotes back when they
               disagree about whether a payment landed. */}
-          {entry.reference && ` · ref ${entry.reference}`}
+          {entry.reference && ` · ${t("shared.reference", { reference: entry.reference })}`}
         </p>
       </div>
       <div className="text-end">
