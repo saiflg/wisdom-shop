@@ -50,7 +50,7 @@ export default function GuardiansPage() {
         />
         {guardians && (
           <span className="text-sm text-slate-500">
-            {shown.length} of {guardians.length}
+            {t("guardians.showingOf", { shown: shown.length, total: guardians.length })}
           </span>
         )}
       </div>

@@ -33,7 +33,7 @@ const REGISTER = {
       id: "rec1",
       status: "LATE",
       note: null,
-      amendments: [],
+      amendments: [{ id: "am1", from: "PRESENT", to: "LATE" }],
       studentProfile: { id: "sp1", user: { firstName: "Fatima", lastName: "Bello" } },
     },
   ],
@@ -94,6 +94,19 @@ describe("the attendance screen in Arabic", () => {
       expect(word).not.toMatch(/[A-Za-z]/);
     },
   );
+
+  // The amendment tag was "amended ×2" with a Latin 2 - a number written
+  // straight into JSX never passes through translate(), so it stayed in
+  // Latin digits beside a date and a count that had both moved to Arabic.
+  it("counts amendments in Arabic digits", async () => {
+    const user = userEvent.setup();
+    const { container } = renderArabic();
+
+    await user.selectOptions(screen.getByRole("combobox"), "c1");
+
+    expect(container.textContent).toContain(translate("ar", "attendance.amended"));
+    expect(container.textContent).toMatch(/×[٠-٩]/);
+  });
 
   it("leaves no English sentence on the screen, class chosen", async () => {
     const user = userEvent.setup();

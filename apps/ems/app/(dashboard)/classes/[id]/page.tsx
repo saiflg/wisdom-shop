@@ -40,7 +40,7 @@ function leadershipLabel(
 }
 
 export default function ClassPage() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const params = useParams<{ id: string }>();
   const classId = params?.id ?? "";
   const { data, isLoading, error } = useClassMembers(classId);
@@ -70,8 +70,8 @@ export default function ClassPage() {
         <h1 className="mt-2 text-2xl font-bold tracking-tight">{data.class.name}</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           {data.class.gradeLevel ? `${data.class.gradeLevel} · ` : ""}
-          {data.class.academicYear} · {data.students.length}{" "}
-          {data.students.length === 1 ? "student" : "students"}
+          {data.class.academicYear} ·{" "}
+          {tPlural("classes.studentCount", data.students.length)}
         </p>
       </div>
 

@@ -140,7 +140,9 @@ function Summary({ summary }: { summary: BehaviourSummary }) {
 
       {summary.topCategories.length > 0 && (
         <p className="mt-4 text-xs text-slate-500">
-          Most often: {summary.topCategories.map((c) => `${c.category} (${c.count})`).join(" · ")}
+          {t("behaviour.mostOften", {
+            list: summary.topCategories.map((c) => `${c.category} (${c.count})`).join(" · "),
+          })}
         </p>
       )}
     </section>

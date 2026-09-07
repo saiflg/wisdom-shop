@@ -122,7 +122,7 @@ export default function QuizDetailPage() {
           )}
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{quiz.title}</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Week {quiz.weekNumber} · {quiz.source === "AI_GENERATED" ? t("quizzes.wisdomGenerated") : t("quizzes.manual")} · {totalMarks} marks
+            {t("quizzes.weekLabel", { number: quiz.weekNumber })} · {quiz.source === "AI_GENERATED" ? t("quizzes.wisdomGenerated") : t("quizzes.manual")} · {totalMarks} marks
           </p>
         </div>
         <div className="flex items-center gap-3">

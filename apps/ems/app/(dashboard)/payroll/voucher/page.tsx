@@ -163,7 +163,7 @@ export default function VoucherPage() {
                   <tfoot>
                     <tr className="border-t-2 border-slate-300 font-semibold dark:border-slate-700">
                       <td className="px-2 py-2" colSpan={data.columns.length - 1}>
-                        Page {page.pageNumber} total
+                        {t("voucher.pageTotal", { number: page.pageNumber })}
                       </td>
                       <td className="px-2 py-2 text-end tabular-nums">{money(page.subtotalCents)}</td>
                     </tr>

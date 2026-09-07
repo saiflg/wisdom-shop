@@ -202,7 +202,7 @@ export default function AnnouncementsPage() {
                 {plan.skippedCount > 0 && (
                   <details className="mt-1">
                     <summary className="cursor-pointer text-xs text-slate-500">
-                      {plan.skippedCount} will not receive it — see who
+                      {t("announcements.willNotReceive", { count: plan.skippedCount })}
                     </summary>
                     <ul className="mt-1 space-y-0.5">
                       {plan.skipped.map((person) => (

@@ -226,7 +226,7 @@ function PeriodSummary({ data }: { data: NonNullable<ReturnType<typeof useStaffA
                 leave has no attendance rate, and inventing one puts a number
                 no fact supports into a conversation about pay. */}
             <p className="mt-1 text-2xl font-bold tabular-nums">
-              {data.rate === null ? "—" : `${data.rate}%`}
+              {data.rate === null ? "—" : t("shared.percent", { value: data.rate })}
             </p>
             {data.rate === null && <p className="text-xs text-slate-500">{t("staffAttendance.nobodyExpected")}</p>}
           </div>

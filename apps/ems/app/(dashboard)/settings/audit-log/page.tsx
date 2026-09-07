@@ -188,8 +188,11 @@ export default function AuditLogPage() {
           no log: a reader should know exactly what it does and does not see. */}
       {data && (
         <p className="text-xs text-slate-500">
-          {data.truncated && "Showing the most recent matches only. Narrow the dates to see further back. "}
-          Assembled from {data.sources.length} trails: {data.sources.join(", ")}.
+          {data.truncated && t("audit.showingRecent")}
+          {t("audit.assembledFrom", {
+            count: data.sources.length,
+            sources: data.sources.join(", "),
+          })}
         </p>
       )}
     </div>

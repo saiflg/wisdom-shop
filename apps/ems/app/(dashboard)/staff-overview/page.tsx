@@ -8,6 +8,7 @@ import { formatDuration, useStaffOverview } from "@/lib/use-staff-overview";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
 import { formattingLocale } from "@/lib/i18n/formatting";
+import { useCount } from "@/lib/i18n/use-money";
 
 /**
  * Where one member of staff stands.
@@ -61,6 +62,7 @@ export default function StaffOverviewPage() {
 }
 
 function Overview({ userId }: { userId: string }) {
+  const count = useCount();
   const { t, locale } = useTranslation();
   const { data, isLoading } = useStaffOverview(userId);
 
@@ -104,9 +106,12 @@ function Overview({ userId }: { userId: string }) {
             <NotRecorded>{t("staffOverview.nobodyExpected")}</NotRecorded>
           ) : (
             <>
-              <Big>{data.attendance.rate}%</Big>
+              <Big>{t("shared.percent", { value: data.attendance.rate })}</Big>
               <Small>
-                {data.attendance.attended} of {data.attendance.expected} days
+                {t("staffOverview.attendedOf", {
+                  attended: data.attendance.attended,
+                  expected: data.attendance.expected,
+                })}
               </Small>
             </>
           )}
@@ -117,15 +122,18 @@ function Overview({ userId }: { userId: string }) {
             // A zero entitlement means the school is not tracking allowances,
             // not that this person has none left.
             <>
-              <Big>{data.leave.takenDays}</Big>
+              <Big>{count(data.leave.takenDays)}</Big>
               <Small>{t("staffOverview.daysTakenNoAllowance")}</Small>
             </>
           ) : (
             <>
-              <Big tone={data.leave.remainingDays < 0 ? "bad" : undefined}>{data.leave.remainingDays}</Big>
+              <Big tone={data.leave.remainingDays < 0 ? "bad" : undefined}>
+                {count(data.leave.remainingDays)}
+              </Big>
               <Small>
-                of {data.leave.entitlementDays} days left
-                {data.leave.pendingDays > 0 && ` · ${data.leave.pendingDays} awaiting a decision`}
+                {t("staffOverview.ofDaysLeft", { count: data.leave.entitlementDays })}
+                {data.leave.pendingDays > 0 &&
+                  ` · ${t("staffOverview.awaitingDecision", { count: data.leave.pendingDays })}`}
               </Small>
             </>
           )}

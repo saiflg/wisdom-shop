@@ -91,8 +91,8 @@ export default function TurnoverPage() {
                   {group.section}
                 </h2>
                 <span className="text-sm text-slate-500">
-                  {group.rows.length} {group.rows.length === 1 ? "person" : "people"} ·{" "}
-                  {money(group.monthlyCents)} monthly
+                  {tPlural("turnover.people", group.rows.length)} ·{" "}
+                  {t("turnover.monthly", { amount: money(group.monthlyCents) })}
                 </span>
               </div>
 

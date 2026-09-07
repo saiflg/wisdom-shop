@@ -123,7 +123,7 @@ export default function StaffFeesPage() {
       {blocked.length > 0 && (
         <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
           <p className="font-medium">
-            {blocked.length} {blocked.length === 1 ? "person cannot" : "people cannot"} be recovered against
+            {tPlural("staffFees.blocked", blocked.length)}
           </p>
           {blocked.map((row) => (
             <p key={row.staffProfileId} className="mt-0.5">

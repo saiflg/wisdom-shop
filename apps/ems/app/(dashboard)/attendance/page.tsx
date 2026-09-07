@@ -265,7 +265,8 @@ function RecordRow({ record }: { record: AttendanceRecord }) {
           </span>
           {record.amendments.length > 0 && (
             <span className="text-xs text-amber-600 dark:text-amber-400">
-              {t("attendance.amended")} ×{record.amendments.length}
+              {t("attendance.amended")}{" "}
+              {t("attendance.amendedTimes", { count: record.amendments.length })}
             </span>
           )}
           <button

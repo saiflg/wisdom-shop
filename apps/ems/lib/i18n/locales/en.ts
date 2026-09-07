@@ -2613,6 +2613,29 @@ export const en = {
   // ── Lesson plan status ──────────────────────────────────────────
   "lessonPlans.statusDRAFT": "draft",
   "lessonPlans.statusPUBLISHED": "published",
+
+  // ── Numbers rendered straight into JSX ──────────────────────────
+  "shared.percent": "{value}%",
+  "behaviour.mostOften": "Most often: {list}",
+  "guardians.showingOf": "{shown} of {total}",
+  "announcements.willNotReceive": "{count} will not receive it — see who",
+  "my.lessonFinished": "finished",
+  "staffFees.blocked_one": "{count} person cannot be recovered against",
+  "staffFees.blocked_other": "{count} people cannot be recovered against",
+  "voucher.pageTotal": "Page {number} total",
+  "quizzes.weekLabel": "Week {number}",
+  "audit.showingRecent": "Showing the most recent matches only. Narrow the dates to see further back. ",
+  "audit.assembledFrom": "Assembled from {count} trails: {sources}.",
+  "leave.pendingDaysTotal": "{count} days in total",
+  "turnover.people_one": "{count} person",
+  "turnover.people_other": "{count} people",
+  "turnover.monthly": "{amount} monthly",
+  "staffOverview.attendedOf": "{attended} of {expected} days",
+  "staffOverview.ofDaysLeft": "of {count} days left",
+  "staffOverview.awaitingDecision": "{count} awaiting a decision",
+  "classes.studentCount_one": "{count} student",
+  "classes.studentCount_other": "{count} students",
+  "attendance.amendedTimes": "×{count}",
 } as const;
 
 /**

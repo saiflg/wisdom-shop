@@ -11,6 +11,7 @@ import {
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import { useMoney } from "@/lib/i18n/use-money";
 import { formattingLocale } from "@/lib/i18n/formatting";
+import { useCount } from "@/lib/i18n/use-money";
 
 /**
  * Everything about one child, in one view.
@@ -67,6 +68,7 @@ export default function StudentOverviewPage() {
 }
 
 function Overview({ studentProfileId }: { studentProfileId: string }) {
+  const count = useCount();
   const formatAmount = useMoney();
   const { t, locale } = useTranslation();
   const { data, isLoading } = useStudentOverview(studentProfileId);
@@ -109,7 +111,7 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
             <NotRecorded>{t("studentOverview.noRegisters")}</NotRecorded>
           ) : (
             <>
-              <Big>{data.attendanceRate}%</Big>
+              <Big>{t("shared.percent", { value: data.attendanceRate })}</Big>
               <Small>{t("studentOverview.overDays", { count: data.attendanceDays })}</Small>
             </>
           )}
@@ -143,7 +145,7 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
             <NotRecorded>{t("studentOverview.nothingRecorded")}</NotRecorded>
           ) : (
             <>
-              <Big>{data.behaviour.netPoints}</Big>
+              <Big>{count(data.behaviour.netPoints)}</Big>
               <Small>
                 {t("studentOverview.meritsConcerns", {
                   merits: data.behaviour.merits,

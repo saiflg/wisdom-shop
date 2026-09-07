@@ -2597,4 +2597,27 @@ export const ha: Partial<Dictionary> = {
   // ── Lesson plan status ──────────────────────────────────────────
   "lessonPlans.statusDRAFT": "daftari",
   "lessonPlans.statusPUBLISHED": "an buga",
+
+  // ── Numbers rendered straight into JSX ──────────────────────────
+  "shared.percent": "{value}%",
+  "behaviour.mostOften": "Mafi yawa: {list}",
+  "guardians.showingOf": "{shown} daga {total}",
+  "announcements.willNotReceive": "{count} ba za su karɓa ba — duba waɗanne",
+  "my.lessonFinished": "an gama",
+  "staffFees.blocked_one": "Ba za a iya karɓa daga mutum {count} ba",
+  "staffFees.blocked_other": "Ba za a iya karɓa daga mutane {count} ba",
+  "voucher.pageTotal": "Jimillar shafi {number}",
+  "quizzes.weekLabel": "Mako {number}",
+  "audit.showingRecent": "Ana nuna sabbin sakamako kawai. Ka rage kwanakin don ganin na baya. ",
+  "audit.assembledFrom": "An tara daga hanyoyi {count}: {sources}.",
+  "leave.pendingDaysTotal": "jimillar kwanaki {count}",
+  "turnover.people_one": "mutum {count}",
+  "turnover.people_other": "mutane {count}",
+  "turnover.monthly": "{amount} kowane wata",
+  "staffOverview.attendedOf": "{attended} daga kwanaki {expected}",
+  "staffOverview.ofDaysLeft": "daga kwanaki {count} da suka rage",
+  "staffOverview.awaitingDecision": "{count} suna jiran shawara",
+  "classes.studentCount_one": "ɗalibi {count}",
+  "classes.studentCount_other": "ɗalibai {count}",
+  "attendance.amendedTimes": "×{count}",
 };

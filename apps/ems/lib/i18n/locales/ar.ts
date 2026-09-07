@@ -2597,4 +2597,27 @@ export const ar: Partial<Dictionary> = {
   // ── Lesson plan status ──────────────────────────────────────────
   "lessonPlans.statusDRAFT": "مسودة",
   "lessonPlans.statusPUBLISHED": "منشورة",
+
+  // ── Numbers rendered straight into JSX ──────────────────────────
+  "shared.percent": "{value}٪",
+  "behaviour.mostOften": "الأكثر تكرارًا: {list}",
+  "guardians.showingOf": "{shown} من {total}",
+  "announcements.willNotReceive": "{count} لن يصلهم — اعرف من",
+  "my.lessonFinished": "منتهٍ",
+  "staffFees.blocked_one": "لا يمكن الاسترداد من شخص واحد",
+  "staffFees.blocked_other": "لا يمكن الاسترداد من {count} أشخاص",
+  "voucher.pageTotal": "إجمالي الصفحة {number}",
+  "quizzes.weekLabel": "الأسبوع {number}",
+  "audit.showingRecent": "تُعرض أحدث النتائج فقط. ضيّق نطاق التواريخ لرؤية ما هو أقدم. ",
+  "audit.assembledFrom": "جُمِّع من {count} سجلات: {sources}.",
+  "leave.pendingDaysTotal": "{count} يومًا إجمالًا",
+  "turnover.people_one": "شخص واحد",
+  "turnover.people_other": "{count} أشخاص",
+  "turnover.monthly": "{amount} شهريًا",
+  "staffOverview.attendedOf": "{attended} من {expected} يومًا",
+  "staffOverview.ofDaysLeft": "من {count} يومًا متبقية",
+  "staffOverview.awaitingDecision": "{count} في انتظار قرار",
+  "classes.studentCount_one": "طالب واحد",
+  "classes.studentCount_other": "{count} طلاب",
+  "attendance.amendedTimes": "×{count}",
 };

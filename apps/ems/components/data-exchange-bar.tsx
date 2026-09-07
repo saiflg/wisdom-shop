@@ -14,6 +14,7 @@ import {
   type ImportResult,
   type SheetFormat,
 } from "@/lib/use-data-exchange";
+import { useCount } from "@/lib/i18n/use-money";
 
 /**
  * Import and export, offered where the records actually live.
@@ -228,6 +229,7 @@ export function PreviewPanel({
   onCommit: () => void;
   committing: boolean;
 }) {
+  const count = useCount();
   const { t } = useTranslation();
   const problemRows = preview.rows.filter((row) => row.action === "error");
 
@@ -266,7 +268,7 @@ export function PreviewPanel({
                 {/* The spreadsheet's own row number — that is what the person
                     fixing the file is looking at. */}
                 <span className="shrink-0 font-mono text-xs text-slate-500">
-                  {t("data.row")} {row.rowNumber}
+                  {t("data.row")} {count(row.rowNumber)}
                 </span>
                 <span className="text-red-600">{row.problems.join("; ")}</span>
               </li>
@@ -292,6 +294,7 @@ export function PreviewPanel({
 }
 
 export function ResultPanel({ result, onReset }: { result: ImportResult; onReset: () => void }) {
+  const count = useCount();
   const { t } = useTranslation();
   return (
     <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-900/20">
@@ -310,7 +313,7 @@ export function ResultPanel({ result, onReset }: { result: ImportResult; onReset
             {result.failures.map((failure) => (
               <li key={failure.rowNumber} className="flex gap-2">
                 <span className="shrink-0 font-mono text-xs text-slate-500">
-                  {t("data.row")} {failure.rowNumber}
+                  {t("data.row")} {count(failure.rowNumber)}
                 </span>
                 <span className="text-red-600">{failure.problem}</span>
               </li>

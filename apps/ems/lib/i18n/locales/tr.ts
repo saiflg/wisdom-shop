@@ -2591,4 +2591,27 @@ export const tr: Partial<Dictionary> = {
   // ── Lesson plan status ──────────────────────────────────────────
   "lessonPlans.statusDRAFT": "taslak",
   "lessonPlans.statusPUBLISHED": "yayımlandı",
+
+  // ── Numbers rendered straight into JSX ──────────────────────────
+  "shared.percent": "%{value}",
+  "behaviour.mostOften": "En sık: {list}",
+  "guardians.showingOf": "{total} içinden {shown}",
+  "announcements.willNotReceive": "{count} kişi almayacak — kimler olduğunu görün",
+  "my.lessonFinished": "bitti",
+  "staffFees.blocked_one": "{count} kişiden tahsil edilemiyor",
+  "staffFees.blocked_other": "{count} kişiden tahsil edilemiyor",
+  "voucher.pageTotal": "{number}. sayfa toplamı",
+  "quizzes.weekLabel": "{number}. hafta",
+  "audit.showingRecent": "Yalnızca en son eşleşmeler gösteriliyor. Daha eskiyi görmek için tarihleri daraltın. ",
+  "audit.assembledFrom": "{count} kayıt izinden derlendi: {sources}.",
+  "leave.pendingDaysTotal": "toplam {count} gün",
+  "turnover.people_one": "{count} kişi",
+  "turnover.people_other": "{count} kişi",
+  "turnover.monthly": "aylık {amount}",
+  "staffOverview.attendedOf": "{expected} günün {attended} günü",
+  "staffOverview.ofDaysLeft": "kalan {count} günden",
+  "staffOverview.awaitingDecision": "{count} karar bekliyor",
+  "classes.studentCount_one": "{count} öğrenci",
+  "classes.studentCount_other": "{count} öğrenci",
+  "attendance.amendedTimes": "×{count}",
 };

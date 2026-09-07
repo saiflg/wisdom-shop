@@ -220,7 +220,7 @@ export default function LeavePage() {
             {t("leave.waitingForDecision")}
             {office.data.pendingDays > 0 && (
               <span className="ms-2 font-normal normal-case text-slate-400">
-                {office.data.pendingDays} days in total
+                {t("leave.pendingDaysTotal", { count: office.data.pendingDays })}
               </span>
             )}
           </h2>

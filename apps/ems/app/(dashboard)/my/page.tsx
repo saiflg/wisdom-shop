@@ -295,7 +295,7 @@ export default function MyPage() {
                     registers yet is a lie a parent would panic about. */}
                 {data.attendance?.presentRate === null || data.attendance === null
                   ? t("my.notTakenYet")
-                  : `${data.attendance.presentRate}%`}
+                  : t("shared.percent", { value: data.attendance.presentRate })}
               </dd>
             </div>
             <div className="flex justify-between">
@@ -332,7 +332,9 @@ export default function MyPage() {
                   ) : null}
                 </Link>
                 <span className="shrink-0 text-xs text-slate-500">
-                  {lesson.status === "ENDED" ? "finished" : `${lesson.percent}%`}
+                  {lesson.status === "ENDED"
+                        ? t("my.lessonFinished")
+                        : t("shared.percent", { value: lesson.percent })}
                 </span>
               </li>
             ))}
