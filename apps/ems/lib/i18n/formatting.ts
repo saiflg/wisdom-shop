@@ -16,15 +16,9 @@
  * minor digits, which can only ever be 00 to 99, go through a fraction.
  */
 
-import { DEFAULT_LOCALE, type Locale } from "./index";
+import { formattingLocale, type Locale } from "./index";
 
-/**
- * The locale to format numbers and dates with, which is not always the
- * locale the reader chose.
- */
-export function formattingLocale(locale: string): string {
-  return locale === "ar" ? "ar-u-nu-arab" : locale || DEFAULT_LOCALE;
-}
+export { formattingLocale };
 
 /**
  * Minor units to a display string, in the reader's digits.

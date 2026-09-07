@@ -58,11 +58,29 @@ export function isLocale(value: unknown): value is Locale {
  * Resolves one key, falling back to English when the active locale hasn't
  * translated it. `vars` interpolates `{name}` placeholders.
  */
+/**
+ * The locale to format numbers and dates with, which is not the locale the
+ * reader chose.
+ *
+ * "ar" on its own resolves to the latn numbering system, so it produces the
+ * same Latin digits an English reader sees. Arabic-Indic digits need the
+ * numbering system named: ar-u-nu-arab.
+ */
+export function formattingLocale(locale: string): string {
+  return locale === "ar" ? "ar-u-nu-arab" : locale || DEFAULT_LOCALE;
+}
+
 export function translate(locale: Locale, key: TranslationKey, vars?: Record<string, string | number>): string {
   const raw = DICTIONARIES[locale]?.[key] ?? en[key];
   if (!vars) return raw;
+  // Numbers are written in the reader's digits. Without this a count is
+  // substituted with String(3), and an Arabic sentence reads "3 موظفين"
+  // beside an amount in Arabic numerals - two scripts in one line, which is
+  // worse than leaving the whole page in Latin.
+  const shown = (value: string | number) =>
+    typeof value === "number" ? value.toLocaleString(formattingLocale(locale)) : value;
   return Object.entries(vars).reduce(
-    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    (text, [name, value]) => text.replaceAll(`{${name}}`, shown(value)),
     raw as string,
   );
 }

@@ -75,6 +75,19 @@ describe("the payroll screen in Arabic", () => {
     expect(screen.getByRole("option", { name: september })).toBeInTheDocument();
   });
 
+  // Both halves of the summary line, which is where the two number paths
+  // meet: the count comes through a plural placeholder and the amount
+  // through the money formatter. Before this they disagreed, and the row
+  // read "3 موظفين · الصافي ٤٥٠٬٠٠٠٫٠٠" - one Latin digit, one Arabic.
+  it("writes the count and the amount in the same digits", () => {
+    const { container } = renderArabic();
+    const text = container.textContent ?? "";
+
+    expect(text).toContain("٣");
+    expect(text).toContain("٤٥٠٬٠٠٠٫٠٠");
+    expect(text).not.toMatch(/3 /);
+  });
+
   it("leaves no English sentence on the screen", () => {
     const { container } = renderArabic();
 

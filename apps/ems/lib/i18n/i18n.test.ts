@@ -138,6 +138,9 @@ describe("translate", () => {
     expect(translatePlural("en", "fees.structures.invoiceCount", 1)).toBe("1 invoice raised");
     expect(translatePlural("en", "fees.structures.invoiceCount", 4)).toBe("4 invoices raised");
     expect(translatePlural("ar", "fees.structures.invoiceCount", 1)).not.toContain("{count}");
-    expect(translatePlural("ar", "fees.structures.invoiceCount", 40)).toContain("40");
+    // Arabic-Indic digits, not "40". A count substituted as a Latin numeral
+    // sat next to an amount in Arabic ones - two scripts in a single line.
+    expect(translatePlural("ar", "fees.structures.invoiceCount", 40)).toContain("٤٠");
+    expect(translatePlural("ar", "fees.structures.invoiceCount", 40)).not.toContain("40");
   });
 });
