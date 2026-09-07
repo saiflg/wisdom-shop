@@ -2620,4 +2620,7 @@ export const ha: Partial<Dictionary> = {
   "classes.studentCount_one": "ɗalibi {count}",
   "classes.studentCount_other": "ɗalibai {count}",
   "attendance.amendedTimes": "×{count}",
+
+  // ── Dashboard counts ────────────────────────────────────────────
+  "dashboard.publishedCount": "{count} an buga",
 };

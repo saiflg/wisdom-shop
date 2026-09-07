@@ -2614,4 +2614,7 @@ export const tr: Partial<Dictionary> = {
   "classes.studentCount_one": "{count} öğrenci",
   "classes.studentCount_other": "{count} öğrenci",
   "attendance.amendedTimes": "×{count}",
+
+  // ── Dashboard counts ────────────────────────────────────────────
+  "dashboard.publishedCount": "{count} yayımlandı",
 };

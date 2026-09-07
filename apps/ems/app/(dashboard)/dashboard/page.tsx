@@ -14,6 +14,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useBranding } from "@/lib/branding-context";
 import { GatewayHealthBanner } from "@/components/gateway-health-banner";
 import type { TranslationKey } from "@/lib/i18n";
+import { useCount } from "@/lib/i18n/use-money";
 
 /**
  * Every widget is driven by data that actually exists — no placeholder
@@ -77,14 +78,22 @@ export default function DashboardPage() {
         <StatCard
           label={t("dashboard.curriculum")}
           value={schemes.data?.length}
-          detail={publishedSchemes === undefined ? undefined : `${publishedSchemes} ${t("dashboard.published")}`}
+          detail={
+            publishedSchemes === undefined
+              ? undefined
+              : t("dashboard.publishedCount", { count: publishedSchemes })
+          }
           href="/schemes-of-work"
         />
         <StatCard label={t("dashboard.lessonPlans")} value={lessonPlans.data?.length} href="/lesson-plans" />
         <StatCard
           label={t("dashboard.quizzes")}
           value={quizzes.data?.length}
-          detail={publishedQuizzes === undefined ? undefined : `${publishedQuizzes} ${t("dashboard.published")}`}
+          detail={
+            publishedQuizzes === undefined
+              ? undefined
+              : t("dashboard.publishedCount", { count: publishedQuizzes })
+          }
           href="/quizzes"
         />
         <StatCard label={t("dashboard.curriculumMode")} textValue={t(modeKey)} href="/curriculum-settings" />
@@ -107,7 +116,8 @@ function StatCard({
   href: string;
 }) {
   const { t } = useTranslation();
-  const display = textValue ?? (value === undefined ? null : String(value));
+  const count = useCount();
+  const display = textValue ?? (value === undefined ? null : count(value));
 
   return (
     <Link

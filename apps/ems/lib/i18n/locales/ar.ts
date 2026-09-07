@@ -2620,4 +2620,7 @@ export const ar: Partial<Dictionary> = {
   "classes.studentCount_one": "طالب واحد",
   "classes.studentCount_other": "{count} طلاب",
   "attendance.amendedTimes": "×{count}",
+
+  // ── Dashboard counts ────────────────────────────────────────────
+  "dashboard.publishedCount": "{count} منشورة",
 };

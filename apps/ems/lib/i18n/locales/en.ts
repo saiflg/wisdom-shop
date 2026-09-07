@@ -2636,6 +2636,9 @@ export const en = {
   "classes.studentCount_one": "{count} student",
   "classes.studentCount_other": "{count} students",
   "attendance.amendedTimes": "×{count}",
+
+  // ── Dashboard counts ────────────────────────────────────────────
+  "dashboard.publishedCount": "{count} published",
 } as const;
 
 /**
