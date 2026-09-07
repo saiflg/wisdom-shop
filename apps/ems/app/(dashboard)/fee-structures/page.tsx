@@ -5,7 +5,6 @@ import { ApiError } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import { useClasses } from "@/lib/use-classes";
 import {
-  formatMoney,
   parseMoneyToCents,
   useCreateStructure,
   useFeeStructures,
@@ -13,6 +12,7 @@ import {
   useGenerateInvoices,
   type FeeStructure,
 } from "@/lib/use-fees";
+import { useMoney } from "@/lib/i18n/use-money";
 
 const INPUT =
   "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900";
@@ -25,6 +25,7 @@ interface DraftItem {
 }
 
 export default function FeeStructuresPage() {
+  const formatMoney = useMoney();
   const { t, tPlural } = useTranslation();
   const { data: settings } = useFinanceSettings();
   const { data: structures, isLoading } = useFeeStructures();
@@ -200,6 +201,7 @@ export default function FeeStructuresPage() {
 }
 
 function StructureCard({ structure, currency }: { structure: FeeStructure; currency: string }) {
+  const formatMoney = useMoney();
   const { t, tPlural } = useTranslation();
   const generate = useGenerateInvoices(structure.id);
   const [dueDate, setDueDate] = useState("");

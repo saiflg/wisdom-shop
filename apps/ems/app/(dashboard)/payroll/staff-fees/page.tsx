@@ -6,6 +6,7 @@ import { errorMessage } from "@/lib/api";
 import { usePayrollRuns } from "@/lib/use-payroll";
 import { useApplyStaffFees, useStaffFeesPreview, type AppliedFees } from "@/lib/use-staff-fees";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { useMoney } from "@/lib/i18n/use-money";
 
 /**
  * Settling staff children's school fees out of salary.
@@ -30,8 +31,7 @@ export default function StaffFeesPage() {
     if (!runId && runs?.[0]) setRunId(runs[0].id);
   }, [runs, runId]);
 
-  const money = (cents: number) =>
-    (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money = useMoney();
 
   const active = (rows ?? []).filter((row) => row.plan.totalCents > 0);
   const blocked = (rows ?? []).filter((row) => row.blocked);

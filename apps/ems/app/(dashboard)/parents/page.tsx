@@ -5,6 +5,7 @@ import { errorMessage } from "@/lib/api";
 import { useParentsOverview, type ParentAlert, type ParentAlertKind } from "@/lib/use-parents-overview";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * The school office's morning view of its families.
@@ -86,7 +87,7 @@ function AlertRow({ alert }: { alert: ParentAlert }) {
 }
 
 export default function ParentsDashboardPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data, isLoading, error } = useParentsOverview();
 
   return (
@@ -128,7 +129,7 @@ export default function ParentsDashboardPage() {
               <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1">
                 {data.outstandingTotals.map((total) => (
                   <p key={total.currency} className="text-lg font-semibold tabular-nums">
-                    {total.currency} {(total.cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {total.currency} {(total.cents / 100).toLocaleString(formattingLocale(locale), { minimumFractionDigits: 2 })}
                   </p>
                 ))}
               </div>

@@ -6,7 +6,6 @@ import { useCanAuthor } from "@/lib/use-can-author";
 import { useStudents } from "@/lib/use-students";
 import {
   ENTRY_KINDS,
-  formatAmount,
   toMinorUnits,
   usePortalChildren,
   useRecordWalletEntry,
@@ -16,6 +15,8 @@ import {
 } from "@/lib/use-wallet";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { useMoney } from "@/lib/i18n/use-money";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * Money a family has placed with the school for a child to draw on.
@@ -84,7 +85,8 @@ export default function WalletPage() {
 }
 
 function WalletPanel({ studentProfileId, isStaff }: { studentProfileId: string; isStaff: boolean }) {
-  const { t } = useTranslation();
+  const formatAmount = useMoney();
+  const { t, locale } = useTranslation();
   const { data, isLoading } = useWalletStatement(studentProfileId);
 
   if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
@@ -121,13 +123,15 @@ function WalletPanel({ studentProfileId, isStaff }: { studentProfileId: string; 
 }
 
 function EntryRow({ entry }: { entry: WalletEntry }) {
+  const formatAmount = useMoney();
+  const { locale } = useTranslation();
   const credit = entry.amountCents > 0;
   return (
     <li className="flex flex-wrap items-baseline justify-between gap-2 py-3">
       <div className="min-w-0">
         <p className="text-sm font-medium">{entry.description}</p>
         <p className="text-xs text-slate-500">
-          {new Date(entry.createdAt).toLocaleString()} · {entry.recordedByName}
+          {new Date(entry.createdAt).toLocaleString(formattingLocale(locale))} · {entry.recordedByName}
           {/* Shown because it is the thing a parent quotes back when they
               disagree about whether a payment landed. */}
           {entry.reference && ` · ref ${entry.reference}`}

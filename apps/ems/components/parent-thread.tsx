@@ -8,6 +8,7 @@ import {
   useWithdrawParentMessage,
 } from "@/lib/use-parent-messages";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * One conversation between a family and the school.
@@ -17,7 +18,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * is how they drift into disagreeing about what was said.
  */
 export function ParentThread({ studentProfileId }: { studentProfileId: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data, isLoading, error } = useParentThread(studentProfileId);
   const post = usePostParentMessage(studentProfileId);
   const withdraw = useWithdrawParentMessage(studentProfileId);
@@ -87,7 +88,7 @@ export function ParentThread({ studentProfileId }: { studentProfileId: string })
               </div>
 
               <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
-                <span>{new Date(message.createdAt).toLocaleString()}</span>
+                <span>{new Date(message.createdAt).toLocaleString(formattingLocale(locale))}</span>
                 {!message.deleted && message.mine && (
                   <button
                     type="button"

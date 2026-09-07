@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { formatDuration, useStaffOverview } from "@/lib/use-staff-overview";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * Where one member of staff stands.
@@ -60,7 +61,7 @@ export default function StaffOverviewPage() {
 }
 
 function Overview({ userId }: { userId: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data, isLoading } = useStaffOverview(userId);
 
   if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
@@ -72,7 +73,7 @@ function Overview({ userId }: { userId: string }) {
         <p className="text-lg font-semibold">{data.staff.name}</p>
         <p className="text-xs text-slate-500">
           {[data.staff.jobTitle, data.staff.section].filter(Boolean).join(" · ") || "No job title recorded"}
-          {data.staff.startDate && ` · since ${new Date(data.staff.startDate).toLocaleDateString()}`}
+          {data.staff.startDate && ` · since ${new Date(data.staff.startDate).toLocaleDateString(formattingLocale(locale))}`}
         </p>
       </div>
 

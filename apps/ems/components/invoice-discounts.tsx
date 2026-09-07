@@ -9,13 +9,8 @@ import {
   type DiscountKind,
 } from "@/lib/use-discounts";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { useMoney } from "@/lib/i18n/use-money";
 
-function money(cents: number, currency: string): string {
-  return `${currency} ${(cents / 100).toLocaleString("en-GB", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 /**
  * What has been taken off one bill, and how to take more off.
@@ -29,6 +24,7 @@ function money(cents: number, currency: string): string {
  * says so before the button is pressed rather than only afterwards.
  */
 export function InvoiceDiscounts({ invoiceId }: { invoiceId: string }) {
+  const money = useMoney();
   const { t } = useTranslation();
   const { data, isLoading } = useInvoiceDiscounts(invoiceId);
   const grant = useGrantDiscount(invoiceId);

@@ -16,6 +16,7 @@ import {
   type StaffAttendanceStatus,
 } from "@/lib/use-staff-attendance";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 const STATUSES: StaffAttendanceStatus[] = ["PRESENT", "LATE", "ABSENT", "ON_LEAVE"];
 
@@ -210,7 +211,7 @@ function MyRecord() {
 }
 
 function PeriodSummary({ data }: { data: NonNullable<ReturnType<typeof useStaffAttendancePeriod>["data"]> }) {
-  const { t, tPlural } = useTranslation();
+  const { t, locale, tPlural } = useTranslation();
   return (
     <>
       <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
@@ -240,7 +241,7 @@ function PeriodSummary({ data }: { data: NonNullable<ReturnType<typeof useStaffA
       <ul className="divide-y divide-slate-200 dark:divide-slate-800">
         {data.days.map((day) => (
           <li key={day.id} className="flex items-center justify-between gap-3 py-2">
-            <span className="text-sm">{new Date(day.date).toLocaleDateString()}</span>
+            <span className="text-sm">{new Date(day.date).toLocaleDateString(formattingLocale(locale))}</span>
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[day.status]}`}>
               {t(STATUS_KEY[day.status])}
               {day.minutesLate ? ` · ${tPlural("staffAttendance.minutesShort", day.minutesLate)}` : ""}

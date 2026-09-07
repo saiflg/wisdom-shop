@@ -9,6 +9,7 @@ import { useStudents } from "@/lib/use-students";
 import { usePortalChildren } from "@/lib/use-wallet";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 interface Document {
   id: string;
@@ -115,7 +116,7 @@ function Documents({ studentProfileId, isStaff }: { studentProfileId: string; is
 }
 
 function DocumentRow({ document: doc }: { document: Document }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const isAdmin = useIsSchoolAdmin();
   const queryClient = useQueryClient();
   const accessToken = useAuthQueryState().accessToken;
@@ -163,7 +164,7 @@ function DocumentRow({ document: doc }: { document: Document }) {
         <p className="text-sm font-medium">{doc.label}</p>
         <p className="text-xs text-slate-500">
           {readableSize(doc.bytes)} · {doc.uploadedByName} ·{" "}
-          {new Date(doc.createdAt).toLocaleDateString()}
+          {new Date(doc.createdAt).toLocaleDateString(formattingLocale(locale))}
         </p>
         {note && <p className="text-xs text-red-600">{note}</p>}
       </div>

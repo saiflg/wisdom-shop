@@ -23,6 +23,7 @@ import {
 } from "@/lib/use-homework";
 import { FormField } from "@/components/form-field";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 function setSchemaFor(t: (key: TranslationKey) => string) {
   return z.object({
@@ -46,7 +47,7 @@ const STATUS_BADGE: Record<AssignmentStatus, string> = {
 };
 
 export default function HomeworkPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const schema = useMemo(() => setSchemaFor(t), [t]);
   const user = useAuthStore((s) => s.user);
   const isStaff = Boolean(user?.roles.some((r) => r === "SCHOOL_ADMIN" || r === "TEACHER"));
@@ -221,7 +222,7 @@ export default function HomeworkPage() {
                   {assignment.subject?.name}
                   {assignment.class ? ` · ${assignment.class.name}` : ""}
                   {assignment.dueAt
-                    ? ` · due ${new Date(assignment.dueAt).toLocaleString()}`
+                    ? ` · due ${new Date(assignment.dueAt).toLocaleString(formattingLocale(locale))}`
                     : " · no deadline"}
                   {isStaff && assignment._count
                     ? ` · ${t("homework.handedInCount", { count: assignment._count.submissions })}`

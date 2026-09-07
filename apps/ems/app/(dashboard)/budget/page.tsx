@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import {
-  formatAmount,
   toMinorUnits,
   useBudgets,
   useBudgetWithActual,
@@ -15,6 +14,8 @@ import {
   type BudgetLine,
 } from "@/lib/use-budgets";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { useMoney } from "@/lib/i18n/use-money";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * What the school meant to spend, beside what it actually spent.
@@ -70,7 +71,7 @@ export default function BudgetPage() {
 }
 
 function BudgetDetail({ id }: { id: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data } = useBudgetWithActual(id);
   const remove = useDeleteBudget();
 
@@ -83,7 +84,7 @@ function BudgetDetail({ id }: { id: string }) {
         <div>
           <p className="font-medium">{budget.name}</p>
           <p className="text-xs text-slate-500">
-            {new Date(budget.fromDate).toLocaleDateString()} to {new Date(budget.toDate).toLocaleDateString()}
+            {new Date(budget.fromDate).toLocaleDateString(formattingLocale(locale))} to {new Date(budget.toDate).toLocaleDateString(formattingLocale(locale))}
             {budget.term && ` · ${budget.term} term`}
             {budget.createdByName && ` · ${t("budget.setBy", { name: budget.createdByName })}`}
           </p>
@@ -113,6 +114,7 @@ function BudgetDetail({ id }: { id: string }) {
 }
 
 function Totals({ comparison }: { comparison: BudgetComparison }) {
+  const formatAmount = useMoney();
   const { t } = useTranslation();
   const over = comparison.remainingCents < 0;
   return (
@@ -152,6 +154,7 @@ function Totals({ comparison }: { comparison: BudgetComparison }) {
 }
 
 function Row({ row }: { row: BudgetComparisonRow }) {
+  const formatAmount = useMoney();
   const { t } = useTranslation();
   const percent = usedPercent(row);
 

@@ -5,12 +5,13 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
 import { useStudents } from "@/lib/use-students";
 import { PdfButton } from "@/components/pdf-button";
 import { formatPercent, useReportCard } from "@/lib/use-grading";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 const INPUT =
   "mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900";
 
 export default function ReportCardsPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data: students } = useStudents();
 
   const [studentProfileId, setStudentProfileId] = useState("");
@@ -111,7 +112,7 @@ export default function ReportCardsPage() {
           {card.publishedByName && (
             <p className="mt-4 text-xs text-slate-500">
               {t("grading.results.publishedBy")} {card.publishedByName}
-              {card.publishedAt && ` · ${new Date(card.publishedAt).toLocaleDateString()}`}
+              {card.publishedAt && ` · ${new Date(card.publishedAt).toLocaleDateString(formattingLocale(locale))}`}
             </p>
           )}
 

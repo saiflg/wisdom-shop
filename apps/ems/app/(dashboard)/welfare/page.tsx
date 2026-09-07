@@ -7,6 +7,8 @@ import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useIsSchoolAdmin } from "@/lib/use-can-author";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { useMoney } from "@/lib/i18n/use-money";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 type WelfareKind = "MEDICAL" | "HARDSHIP" | "BEREAVEMENT" | "LOAN" | "OTHER";
 type WelfareStatus = "REQUESTED" | "APPROVED" | "PAID" | "DECLINED";
@@ -69,10 +71,6 @@ interface WelfareList {
 
 const KEY = ["welfare"];
 
-function formatAmount(cents: number): string {
-  const major = Math.floor(Math.abs(cents) / 100).toLocaleString("en-NG");
-  return `${major}.${String(Math.abs(cents) % 100).padStart(2, "0")}`;
-}
 
 function useWelfare() {
   const { accessToken, enabled } = useAuthQueryState();
@@ -153,6 +151,7 @@ export default function WelfarePage() {
 }
 
 function Summary({ summary }: { summary: WelfareList["summary"] }) {
+  const formatAmount = useMoney();
   const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
@@ -279,7 +278,8 @@ function AskForHelp() {
 }
 
 function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: boolean }) {
-  const { t } = useTranslation();
+  const formatAmount = useMoney();
+  const { t, locale } = useTranslation();
   const decide = useDecide(request.id);
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -308,7 +308,7 @@ function RequestCard({ request, isAdmin }: { request: WelfareRequest; isAdmin: b
           <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{request.reason}</p>
           <p className="mt-1 text-xs text-slate-500">
             {isAdmin && `${request.user.firstName} ${request.user.lastName} · `}
-            {new Date(request.createdAt).toLocaleDateString()}
+            {new Date(request.createdAt).toLocaleDateString(formattingLocale(locale))}
             {request.decidedByName && ` · ${t("welfare.decidedBy", { name: request.decidedByName })}`}
           </p>
           {request.decisionNote && <p className="mt-1 text-xs text-amber-600">{request.decisionNote}</p>}

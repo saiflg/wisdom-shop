@@ -19,6 +19,7 @@ import {
   type AppraisalStatus,
 } from "@/lib/use-appraisals";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * Staff appraisals.
@@ -175,11 +176,11 @@ function AppraisalCard({ appraisal }: { appraisal: Appraisal }) {
             {t("appraisals.reviewer", { name: appraisal.reviewerName })}
             {appraisal.sharedAt &&
               ` · ${t("appraisals.sharedOn", {
-                date: new Date(appraisal.sharedAt).toLocaleDateString(locale),
+                date: new Date(appraisal.sharedAt).toLocaleDateString(formattingLocale(locale)),
               })}`}
             {appraisal.acknowledgedAt &&
               ` · ${t("appraisals.acknowledgedOn", {
-                date: new Date(appraisal.acknowledgedAt).toLocaleDateString(locale),
+                date: new Date(appraisal.acknowledgedAt).toLocaleDateString(formattingLocale(locale)),
               })}`}
           </p>
         </div>

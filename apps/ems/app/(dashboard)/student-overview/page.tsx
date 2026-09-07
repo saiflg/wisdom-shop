@@ -5,11 +5,12 @@ import { useCanAuthor } from "@/lib/use-can-author";
 import { useStudents } from "@/lib/use-students";
 import { usePortalChildren } from "@/lib/use-wallet";
 import {
-  formatAmount,
   formatMinute,
   useStudentOverview,
 } from "@/lib/use-student-overview";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { useMoney } from "@/lib/i18n/use-money";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * Everything about one child, in one view.
@@ -66,7 +67,8 @@ export default function StudentOverviewPage() {
 }
 
 function Overview({ studentProfileId }: { studentProfileId: string }) {
-  const { t } = useTranslation();
+  const formatAmount = useMoney();
+  const { t, locale } = useTranslation();
   const { data, isLoading } = useStudentOverview(studentProfileId);
 
   if (isLoading) return <p className="text-sm text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
@@ -174,7 +176,7 @@ function Overview({ studentProfileId }: { studentProfileId: string }) {
                 <li key={loan.title} className="text-sm">
                   {loan.title}
                   <span className={`ms-2 text-xs ${loan.overdue ? "text-red-600" : "text-slate-500"}`}>
-                    {loan.overdue ? "overdue" : `due ${new Date(loan.dueOn).toLocaleDateString()}`}
+                    {loan.overdue ? "overdue" : `due ${new Date(loan.dueOn).toLocaleDateString(formattingLocale(locale))}`}
                   </span>
                 </li>
               ))}

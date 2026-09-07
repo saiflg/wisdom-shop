@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { useMoney } from "@/lib/i18n/use-money";
 
 interface MoneyLine {
   label: string;
@@ -24,10 +25,6 @@ interface Statement {
   excludes: string[];
 }
 
-function formatAmount(cents: number): string {
-  const major = Math.floor(Math.abs(cents) / 100).toLocaleString("en-NG");
-  return `${cents < 0 ? "-" : ""}${major}.${String(Math.abs(cents) % 100).padStart(2, "0")}`;
-}
 
 function useStatement(from: string, to: string) {
   const { accessToken, enabled } = useAuthQueryState();
@@ -50,6 +47,7 @@ function useStatement(from: string, to: string) {
  * board, so what is not counted is listed as prominently as what is.
  */
 export default function AccountingPage() {
+  const formatAmount = useMoney();
   const { t } = useTranslation();
   const [from, setFrom] = useState(() => {
     const d = new Date();
@@ -164,6 +162,7 @@ export default function AccountingPage() {
 }
 
 function Lines({ title, lines }: { title: string; lines: MoneyLine[] }) {
+  const formatAmount = useMoney();
   const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">

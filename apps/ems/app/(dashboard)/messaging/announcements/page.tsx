@@ -14,6 +14,7 @@ import {
   type SentAnnouncement,
 } from "@/lib/use-announcements";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * Telling the whole school something.
@@ -24,7 +25,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * before "Send", and changing any field puts the check back.
  */
 export default function AnnouncementsPage() {
-  const { t, tPlural } = useTranslation();
+  const { t, locale, tPlural } = useTranslation();
   const { data: sent } = useAnnouncements();
   const { data: classes } = useClasses();
   const preview = usePreviewAnnouncement();
@@ -271,7 +272,7 @@ export default function AnnouncementsPage() {
                     {/* A draft has no send date, and inventing one would make
                         it read as sent in the one place people look. */}
                     {announcement.sentAt
-                      ? new Date(announcement.sentAt).toLocaleString()
+                      ? new Date(announcement.sentAt).toLocaleString(formattingLocale(locale))
                       : "not sent yet"}
                     {announcement.sentByName ? ` · ${announcement.sentByName}` : ""}
                   </p>

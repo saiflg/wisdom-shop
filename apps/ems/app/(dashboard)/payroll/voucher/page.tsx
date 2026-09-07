@@ -6,6 +6,7 @@ import { errorMessage } from "@/lib/api";
 import { usePayrollRuns } from "@/lib/use-payroll";
 import { useDownloadVoucher, useVoucher } from "@/lib/use-voucher";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { useMoney } from "@/lib/i18n/use-money";
 
 /**
  * The salary voucher for one payroll run.
@@ -30,8 +31,7 @@ export default function VoucherPage() {
   const { data, isLoading, error } = useVoucher(runId);
   const download = useDownloadVoucher();
 
-  const money = (cents: number) =>
-    (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money = useMoney();
 
   return (
     <div className="space-y-6">

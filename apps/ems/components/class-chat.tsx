@@ -15,6 +15,7 @@ import { ChatAttachmentView } from "./chat-attachment";
 import { ClassPresenceStrip } from "./class-presence-strip";
 import { ACCEPTED_UPLOADS, formatSeconds, useVoiceRecorder } from "./chat-compose-extras";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * The class conversation.
@@ -286,7 +287,7 @@ function Message({
   onRemove: () => void;
   onReport: (reason: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [reporting, setReporting] = useState(false);
   const [reason, setReason] = useState("");
 
@@ -327,7 +328,7 @@ function Message({
       </div>
 
       <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
-        <span>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+        <span>{new Date(message.createdAt).toLocaleTimeString(formattingLocale(locale), { hour: "2-digit", minute: "2-digit" })}</span>
         {!message.deleted && (message.mine || canModerate) && (
           <button type="button" onClick={onRemove} className="hover:underline">
             {t("shared.remove")}

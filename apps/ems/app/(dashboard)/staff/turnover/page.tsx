@@ -5,6 +5,8 @@ import { errorMessage } from "@/lib/api";
 import { useTurnover } from "@/lib/use-turnover";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { useMoney } from "@/lib/i18n/use-money";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * Who has left the school.
@@ -17,11 +19,10 @@ export default function TurnoverPage() {
   const { t, locale, tPlural } = useTranslation();
   const { data, isLoading, error } = useTurnover();
 
-  const money = (cents: number) =>
-    (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money = useMoney();
 
   const date = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleDateString(locale, { month: "long", year: "numeric" }) : "—";
+    iso ? new Date(iso).toLocaleDateString(formattingLocale(locale), { month: "long", year: "numeric" }) : "—";
 
   const averageLabel = (months: number | null) => {
     if (months === null) return "—";

@@ -6,6 +6,7 @@ import { apiFetch, errorMessage } from "@/lib/api";
 import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 type AuditCategory =
   | "STAFF_PRIVACY"
@@ -61,7 +62,7 @@ const TONE: Record<AuditCategory, string> = {
  * Read-only by construction: there is no write route to call.
  */
 export default function AuditLogPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { accessToken, enabled } = useAuthQueryState();
 
   const [query, setQuery] = useState("");
@@ -175,7 +176,7 @@ export default function AuditLogPage() {
                   {entry.categoryLabel}
                 </span>
                 <time dateTime={entry.at} className="text-xs text-slate-500">
-                  {new Date(entry.at).toLocaleString()}
+                  {new Date(entry.at).toLocaleString(formattingLocale(locale))}
                 </time>
               </div>
             </li>

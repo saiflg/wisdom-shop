@@ -6,6 +6,7 @@ import { useParentThreads } from "@/lib/use-parent-messages";
 import { ParentThread } from "@/components/parent-thread";
 import { PersonPhoto } from "@/components/person-photo";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * The school's side of its conversations with families.
@@ -16,7 +17,7 @@ import { useTranslation } from "@/lib/i18n/i18n-provider";
  * needs to see, and chronological order buries it.
  */
 export default function ParentMessagesPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data: threads, isLoading, error } = useParentThreads();
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -78,7 +79,7 @@ export default function ParentMessagesPage() {
               </span>
               {thread.lastMessageAt && (
                 <span className="shrink-0 text-xs text-slate-400">
-                  {new Date(thread.lastMessageAt).toLocaleDateString()}
+                  {new Date(thread.lastMessageAt).toLocaleDateString(formattingLocale(locale))}
                 </span>
               )}
             </button>

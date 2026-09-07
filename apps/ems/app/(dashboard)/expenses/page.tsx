@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import {
-  formatAmount,
   STATUS_KEY,
   STATUS_STYLE,
   toMinorUnits,
@@ -16,6 +15,8 @@ import {
   type ExpenseSummary,
 } from "@/lib/use-expenses";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { useMoney } from "@/lib/i18n/use-money";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * Money going out.
@@ -88,6 +89,7 @@ function Filter({ label, active, onClick }: { label: string; active: boolean; on
 }
 
 function Summary({ summary }: { summary: ExpenseSummary }) {
+  const formatAmount = useMoney();
   const { t } = useTranslation();
   return (
     <section className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
@@ -264,7 +266,8 @@ function NewExpense() {
 }
 
 function ExpenseRow({ expense }: { expense: Expense }) {
-  const { t } = useTranslation();
+  const formatAmount = useMoney();
+  const { t, locale } = useTranslation();
   const decide = useDecideExpense(expense.id);
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -294,7 +297,7 @@ function ExpenseRow({ expense }: { expense: Expense }) {
           </p>
           <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{expense.description}</p>
           <p className="mt-1 text-xs text-slate-500">
-            {new Date(expense.incurredOn).toLocaleDateString()}
+            {new Date(expense.incurredOn).toLocaleDateString(formattingLocale(locale))}
             {expense.payee && ` · ${expense.payee}`} ·{" "}
             {t("expenses.askedBy", { name: expense.requestedByName })}
             {expense.decidedByName && ` · ${t("expenses.decidedBy", { name: expense.decidedByName })}`}

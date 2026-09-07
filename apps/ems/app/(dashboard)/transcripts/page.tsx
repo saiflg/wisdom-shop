@@ -7,6 +7,7 @@ import { authHeaders, useAuthQueryState } from "@/lib/api-auth";
 import { useStudents } from "@/lib/use-students";
 import { PdfButton } from "@/components/pdf-button";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 interface TranscriptTerm {
   academicYear: string;
@@ -231,7 +232,7 @@ export default function TranscriptsPage() {
 
           <p className="text-xs text-slate-500">
             {t("transcripts.producedAt", {
-              when: new Date(data.issuedAt).toLocaleString(locale),
+              when: new Date(data.issuedAt).toLocaleString(formattingLocale(locale)),
             })}
           </p>
         </>

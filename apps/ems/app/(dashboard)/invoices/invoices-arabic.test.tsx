@@ -32,7 +32,6 @@ const INVOICE = {
 
 jest.mock("@/lib/use-fees", () => ({
   FEE_PAYMENT_METHODS: ["CASH", "TRANSFER"],
-  formatMoney: (cents: number) => `₦${(cents / 100).toLocaleString()}`,
   parseMoneyToCents: () => 0,
   useInvoices: () => ({
     data: {
@@ -92,6 +91,18 @@ describe("the invoices screen in Arabic", () => {
 
     expect(screen.getByText(translate("ar", "fees.status.ISSUED"))).toBeInTheDocument();
     expect(screen.getByText(translate("ar", "fees.invoices.balance"))).toBeInTheDocument();
+  });
+
+  // What "Arabic numerals" actually means, asserted on a rendered page.
+  // "ar" on its own resolves to the latn numbering system, so this passing
+  // is the difference between asking for Arabic and getting it.
+  it("writes the money in Arabic digits", () => {
+    const { container } = renderArabic();
+    const text = container.textContent ?? "";
+
+    expect(text).toMatch(/[٠-٩]/);
+    expect(text).toContain("٥٠٬٠٠٠٫٠٠");
+    expect(text).not.toContain("50,000.00");
   });
 
   it("leaves no English sentence on the screen", () => {

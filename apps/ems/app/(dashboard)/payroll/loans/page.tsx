@@ -13,6 +13,7 @@ import {
 } from "@/lib/use-loans";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { useMoney } from "@/lib/i18n/use-money";
 
 /**
  * Loans and salary advances.
@@ -37,8 +38,6 @@ const STATUS_STYLE: Record<LoanStatus, string> = {
   CANCELLED: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 };
 
-const money = (cents: number) =>
-  (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Naira in, minor units out. Rejects anything that is not a clean amount. */
 function toCents(value: string): number | null {
@@ -48,6 +47,7 @@ function toCents(value: string): number | null {
 }
 
 export default function LoansPage() {
+  const money = useMoney();
   const { t, tPlural } = useTranslation();
   const [includeSettled, setIncludeSettled] = useState(false);
   const { data, isLoading, error } = useLoans(includeSettled);

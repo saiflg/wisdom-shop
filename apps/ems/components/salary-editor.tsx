@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { errorMessage } from "@/lib/api";
 import { useSalary, useSetSalary, type PayComponentBasis, type PayComponentKind } from "@/lib/use-payroll";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { useMoney } from "@/lib/i18n/use-money";
 
 interface Draft {
   label: string;
@@ -14,9 +15,6 @@ interface Draft {
   isBasic: boolean;
 }
 
-function money(cents: number): string {
-  return (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 /**
  * Amounts are shown and typed in major units and stored in minor ones.
@@ -35,6 +33,7 @@ function toHundredths(text: string): number {
 }
 
 export function SalaryEditor({ userId }: { userId: string }) {
+  const money = useMoney();
   const { t } = useTranslation();
   const { data, isLoading, error } = useSalary(userId);
   const save = useSetSalary(userId);

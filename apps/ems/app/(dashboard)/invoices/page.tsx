@@ -9,7 +9,6 @@ import type { TranslationKey } from "@/lib/i18n";
 import { InvoiceDiscounts } from "@/components/invoice-discounts";
 import {
   FEE_PAYMENT_METHODS,
-  formatMoney,
   parseMoneyToCents,
   useInvoices,
   useRecordPayment,
@@ -20,6 +19,8 @@ import {
   type FeeInvoiceStatus,
   type FeePaymentMethod,
 } from "@/lib/use-fees";
+import { useMoney } from "@/lib/i18n/use-money";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 const STATUS_STYLE: Record<FeeInvoiceStatus, string> = {
   DRAFT: "bg-slate-400 text-white",
@@ -33,6 +34,7 @@ const statusKey = (status: FeeInvoiceStatus) => `fees.status.${status}` as Trans
 const methodKey = (method: FeePaymentMethod) => `fees.method.${method}` as TranslationKey;
 
 export default function InvoicesPage() {
+  const formatMoney = useMoney();
   const { t } = useTranslation();
   const { data, isLoading } = useInvoices();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -97,7 +99,8 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "ok
 }
 
 function InvoiceCard({ invoice, open, onToggle }: { invoice: FeeInvoice; open: boolean; onToggle: () => void }) {
-  const { t } = useTranslation();
+  const formatMoney = useMoney();
+  const { t, locale } = useTranslation();
   const student = invoice.studentProfile?.user;
 
   return (
@@ -110,7 +113,7 @@ function InvoiceCard({ invoice, open, onToggle }: { invoice: FeeInvoice; open: b
           </p>
           <p className="text-sm text-slate-500">
             {invoice.academicYear} · {invoice.term}
-            {invoice.dueDate && ` · ${t("fees.invoices.due")} ${new Date(invoice.dueDate).toLocaleDateString()}`}
+            {invoice.dueDate && ` · ${t("fees.invoices.due")} ${new Date(invoice.dueDate).toLocaleDateString(formattingLocale(locale))}`}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -161,6 +164,7 @@ function InvoiceCard({ invoice, open, onToggle }: { invoice: FeeInvoice; open: b
  * set up, pay the office" is useful, "payment failed" is not.
  */
 function PayOnline({ invoice }: { invoice: FeeInvoice }) {
+  const formatMoney = useMoney();
   const { t } = useTranslation();
   const startCheckout = useStartCheckout(invoice.id);
   const { data, isLoading } = usePaymentOptions(invoice.id);
@@ -271,7 +275,8 @@ function PayOnline({ invoice }: { invoice: FeeInvoice }) {
 }
 
 function InvoiceDetail({ invoice }: { invoice: FeeInvoice }) {
-  const { t } = useTranslation();
+  const formatMoney = useMoney();
+  const { t, locale } = useTranslation();
   const recordPayment = useRecordPayment(invoice.id);
 
   const [amount, setAmount] = useState("");
@@ -341,7 +346,7 @@ function InvoiceDetail({ invoice }: { invoice: FeeInvoice }) {
             {invoice.payments.map((payment) => (
               <li key={payment.id} className="flex flex-wrap justify-between gap-2">
                 <span className="text-slate-600 dark:text-slate-400">
-                  {new Date(payment.receivedAt).toLocaleDateString()} · {t(methodKey(payment.method))}
+                  {new Date(payment.receivedAt).toLocaleDateString(formattingLocale(locale))} · {t(methodKey(payment.method))}
                   {payment.reference && ` · ${payment.reference}`}
                   <span className="ms-1 text-xs text-slate-500">
                     {t("fees.invoices.recordedBy")} {payment.recordedByName}

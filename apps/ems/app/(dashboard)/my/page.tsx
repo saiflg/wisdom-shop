@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   clockTime,
-  money,
   toMarks,
   usePortalHome,
   type PortalHomeworkItem,
@@ -15,11 +14,14 @@ import { MyContactDetails } from "@/components/my-contact-details";
 import { ReportAbsence } from "@/components/report-absence";
 import { useAuthStore } from "@/store/auth-store";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { useMoney } from "@/lib/i18n/use-money";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 const CARD = "rounded-xl border border-slate-200 p-4 dark:border-slate-800";
 
 export default function MyPage() {
-  const { t } = useTranslation();
+  const money = useMoney();
+  const { t, locale } = useTranslation();
   const [childId, setChildId] = useState<string | null>(null);
   const { data, isLoading, error } = usePortalHome(childId);
   const isGuardian = useAuthStore((state) => state.user?.roles.includes("GUARDIAN")) ?? false;
@@ -179,12 +181,12 @@ export default function MyPage() {
                     </span>
                   ) : (
                     <span className="text-xs text-slate-500">
-                      {exam.opensAt ? `opens ${new Date(exam.opensAt).toLocaleString()}` : "not open yet"}
+                      {exam.opensAt ? `opens ${new Date(exam.opensAt).toLocaleString(formattingLocale(locale))}` : "not open yet"}
                     </span>
                   )}
                   {exam.closesAt && exam.open && (
                     <span className="w-full text-xs text-slate-500">
-                      closes {new Date(exam.closesAt).toLocaleString()}
+                      closes {new Date(exam.closesAt).toLocaleString(formattingLocale(locale))}
                     </span>
                   )}
                 </li>
@@ -344,6 +346,7 @@ function HomeworkList({
   items: PortalHomeworkItem[];
   tone?: "overdue";
 }) {
+  const { locale } = useTranslation();
   return (
     <div className="mt-2">
       <p
@@ -364,7 +367,7 @@ function HomeworkList({
             {item.subject && <span className="ms-2 text-xs text-slate-500">{item.subject}</span>}
             {item.dueAt && (
               <span className="ms-2 text-xs text-slate-500">
-                {new Date(item.dueAt).toLocaleDateString()}
+                {new Date(item.dueAt).toLocaleDateString(formattingLocale(locale))}
               </span>
             )}
           </li>

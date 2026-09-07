@@ -16,6 +16,7 @@ import {
 } from "@/lib/use-behaviour";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /**
  * What the school has written down about one child.
@@ -147,7 +148,7 @@ function Summary({ summary }: { summary: BehaviourSummary }) {
 }
 
 function RecordRow({ record, isStaff }: { record: BehaviourRecord; isStaff: boolean }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const withdraw = useWithdrawBehaviourRecord();
   const isAdmin = useIsSchoolAdmin();
   const merit = record.kind === "MERIT";
@@ -169,7 +170,7 @@ function RecordRow({ record, isStaff }: { record: BehaviourRecord; isStaff: bool
           </p>
           <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{record.description}</p>
           <p className="mt-1 text-xs text-slate-500">
-            {new Date(record.occurredAt).toLocaleDateString()} · {record.recordedByName}
+            {new Date(record.occurredAt).toLocaleDateString(formattingLocale(locale))} · {record.recordedByName}
             {record.class && ` · ${record.class.name}`}
             {/* Said out loud. A record about a child that could be rewritten
                 with no trace would be worth nothing to a family disputing

@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useBankAccessLog } from "@/lib/use-staff";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 function when(iso: string, locale: string): string {
-  return new Date(iso).toLocaleString(locale, {
+  return new Date(iso).toLocaleString(formattingLocale(locale), {
     dateStyle: "medium",
     timeStyle: "short",
   });

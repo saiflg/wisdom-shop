@@ -9,6 +9,7 @@ import { useClasses } from "@/lib/use-classes";
 import { useSubjects } from "@/lib/use-subjects";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 type MeetingState = "CANCELLED" | "FINISHED" | "LIVE" | "SOON" | "SCHEDULED";
 
@@ -110,7 +111,7 @@ export default function LiveClassroomPage() {
 }
 
 function LessonRow({ lesson, isStaff }: { lesson: Lesson; isStaff: boolean }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const queryClient = useQueryClient();
   const accessToken = useAuthQueryState().accessToken;
   const cancel = useMutation({
@@ -131,7 +132,7 @@ function LessonRow({ lesson, isStaff }: { lesson: Lesson; isStaff: boolean }) {
             {lesson.subject && <span className="ms-2 text-xs text-slate-500">{lesson.subject.name}</span>}
           </p>
           <p className="text-xs text-slate-500">
-            {new Date(lesson.startsAt).toLocaleString()} · {lesson.createdByName}
+            {new Date(lesson.startsAt).toLocaleString(formattingLocale(locale))} · {lesson.createdByName}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

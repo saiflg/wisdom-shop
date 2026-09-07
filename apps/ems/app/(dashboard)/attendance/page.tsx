@@ -14,6 +14,7 @@ import {
   type AttendanceRecord,
   type AttendanceStatus,
 } from "@/lib/use-attendance";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 const STATUS_KEY: Record<AttendanceStatus, TranslationKey> = {
   PRESENT: "attendance.present",
@@ -219,7 +220,7 @@ export default function AttendancePage() {
               {registers.map((register) => (
                 <li key={register.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
                   <p className="text-sm font-medium">
-                    {new Date(register.date).toLocaleDateString(locale)}
+                    {new Date(register.date).toLocaleDateString(formattingLocale(locale))}
                     {register.session && ` · ${register.session}`}
                     {register.takenBy && (
                       <span className="ms-2 text-xs font-normal text-slate-500">

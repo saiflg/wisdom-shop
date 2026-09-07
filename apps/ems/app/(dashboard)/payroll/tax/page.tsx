@@ -5,6 +5,7 @@ import { errorMessage } from "@/lib/api";
 import { usePayrollRuns } from "@/lib/use-payroll";
 import { useTaxRegister } from "@/lib/use-statutory";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
+import { useMoney } from "@/lib/i18n/use-money";
 
 /**
  * PAYE for one month.
@@ -25,8 +26,7 @@ export default function TaxRegisterPage() {
 
   const { data, isLoading, error } = useTaxRegister(runId);
 
-  const money = (cents: number) =>
-    (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money = useMoney();
 
   const notTaxed = data ? data.register.staffConsidered - data.register.rows.length : 0;
 

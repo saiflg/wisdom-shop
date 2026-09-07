@@ -19,11 +19,10 @@ import {
 } from "@/lib/use-payroll";
 import { useTranslation } from "@/lib/i18n/i18n-provider";
 import type { TranslationKey } from "@/lib/i18n";
+import { useMoney } from "@/lib/i18n/use-money";
+import { formattingLocale } from "@/lib/i18n/formatting";
 
 /** Minor units to a readable amount. Derived, never stored. */
-function money(cents: number): string {
-  return (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 const BADGE = "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold";
 const STATUS_KEY: Record<PayrollRunStatus, TranslationKey> = {
@@ -39,6 +38,7 @@ const STATUS_BADGE: Record<PayrollRunStatus, string> = {
 };
 
 export default function PayrollPage() {
+  const money = useMoney();
   const { t, tPlural, locale } = useTranslation();
   const now = new Date();
   const { data: runs, isLoading, error } = usePayrollRuns();
@@ -92,7 +92,7 @@ export default function PayrollPage() {
           >
             {Array.from({ length: 12 }, (_, index) => (
               <option key={index + 1} value={index + 1}>
-                {new Date(2000, index, 1).toLocaleString(locale, { month: "long" })}
+                {new Date(2000, index, 1).toLocaleString(formattingLocale(locale), { month: "long" })}
               </option>
             ))}
           </select>
@@ -209,6 +209,7 @@ function Salaries() {
 }
 
 function RunDetail({ id }: { id: string }) {
+  const money = useMoney();
   const { t } = useTranslation();
   const accessToken = useAuthQueryState().accessToken;
   const { data: run, isLoading } = usePayrollRun(id);
